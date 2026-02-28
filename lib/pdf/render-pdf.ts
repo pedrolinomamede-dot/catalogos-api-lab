@@ -32,6 +32,17 @@ function resolveEngine(value: string | undefined): PdfRenderEngine {
   return "html";
 }
 
+function resolveAllowHtmlNativeFallback() {
+  const raw = process.env.PDF_HTML_ALLOW_NATIVE_FALLBACK?.trim().toLowerCase();
+  if (raw === "true") {
+    return true;
+  }
+  if (raw === "false") {
+    return false;
+  }
+  return process.env.NODE_ENV !== "production";
+}
+
 export async function renderPdf(
   data: ShareLinkPdfData,
   options: RenderPdfOptions = {},
@@ -55,9 +66,8 @@ export async function renderPdf(
           : "";
       return value.length > 0;
     });
-    const allowNativeFallbackByEnv =
-      (process.env.PDF_HTML_ALLOW_NATIVE_FALLBACK ?? "true").toLowerCase() !== "false";
-    const allowNativeFallback = allowNativeFallbackByEnv && !hasCatalogSpecificBackground;
+    const allowNativeFallback =
+      resolveAllowHtmlNativeFallback() && !hasCatalogSpecificBackground;
     try {
       return await generateShareLinkHtmlPdf(payload);
     } catch (error) {

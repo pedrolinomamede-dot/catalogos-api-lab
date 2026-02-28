@@ -22,6 +22,7 @@ import {
 import { getErrorMessage } from "@/lib/api/error";
 import { getShareLinkDeleteImpactV2 } from "@/lib/api/v2/share-links";
 import type { ShareLinkDeleteImpact } from "@/lib/api/v2/share-links";
+import { copyTextToClipboard } from "@/lib/browser/copy-to-clipboard";
 import {
   useDeleteShareLinkV2,
   useGenerateShareLinkPdfV2,
@@ -175,7 +176,7 @@ export function ShareLinksPageClient() {
   const handleCopy = async (token: string) => {
     const url = buildShareLinkUrl(token);
     try {
-      await navigator.clipboard.writeText(url);
+      await copyTextToClipboard(url);
       toastSuccess("Link copiado");
     } catch {
       toastError("Falha ao copiar", "Copie manualmente: " + url);

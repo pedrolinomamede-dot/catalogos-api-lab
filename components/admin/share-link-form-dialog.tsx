@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/error";
 import { useCatalogsV2, useCreateShareLinkV2 } from "@/lib/api/hooks";
 import { listAllCatalogIds } from "@/lib/api/v2/catalogs";
+import { copyTextToClipboard } from "@/lib/browser/copy-to-clipboard";
 import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 const PAGE_SIZE = 100;
@@ -168,7 +169,7 @@ export function ShareLinkFormDialog({ open, onOpenChange }: ShareLinkFormDialogP
     }
     const url = buildShareLinkUrl(createdToken);
     try {
-      await navigator.clipboard.writeText(url);
+      await copyTextToClipboard(url);
       toastSuccess("Link copiado");
     } catch {
       toastError("Falha ao copiar", "Copie manualmente: " + url);

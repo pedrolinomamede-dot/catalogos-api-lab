@@ -31,24 +31,6 @@ Aplicacao full-stack em `Next.js` para operacao de catalogos B2B.
 - `files/`: documentacao estrutural selecionada
 - `v2/`: notas e mapeamentos da arquitetura V2
 
-## O que esta nesta copia
-
-Esta exportacao foi curada para manter apenas o que eh necessario para construir, executar e entender o projeto:
-
-- codigo-fonte
-- configuracoes de build e lint
-- schema/migrations Prisma
-- assets publicos do app
-- documentacao principal da arquitetura
-
-Nao foram incluidos:
-
-- `public/uploads/`
-- artefatos locais de analise
-- dumps, PDFs e planilhas de referencia
-- pastas auxiliares de agentes/IDE
-- logs e arquivos temporarios
-
 ## Setup
 
 1. Instale dependencias:
@@ -87,7 +69,23 @@ npm run start
 
 - O app espera `PostgreSQL` acessivel via `DATABASE_URL`.
 - Para PDF HTML em producao, o servidor precisa de um navegador compativel e `PDF_HTML_BROWSER_PATH` configurado.
-- Uploads de imagens nao fazem parte deste repositorio. Em runtime, use storage local ou S3 conforme as variaveis de ambiente.
+- Defina `PDF_RENDER_BASE_URL` para a URL interna do app no servidor, por exemplo `http://127.0.0.1:3000`.
+- Em producao, mantenha `PDF_HTML_ALLOW_NATIVE_FALLBACK=false` para evitar regressao silenciosa para o layout nativo.
+- Para uploads locais persistentes, use `LOCAL_UPLOAD_DIR` absoluto fora da release, por exemplo `/srv/ipe-distribuidora/uploads`.
+- Sirva `/uploads/` diretamente pelo `Nginx` com `alias` para o diretório persistente.
+- Uploads de imagens nao devem depender da pasta versionada do repositorio.
+
+Exemplo de bloco `Nginx` para uploads persistentes:
+
+```nginx
+location /uploads/ {
+    alias /srv/ipe-distribuidora/uploads/;
+    try_files $uri =404;
+    access_log off;
+    expires 7d;
+    add_header Cache-Control "public, max-age=604800";
+}
+```
 
 ## Documentacao adicional
 
