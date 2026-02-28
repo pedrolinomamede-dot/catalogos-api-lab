@@ -1,0 +1,452 @@
+openapi: 3.0.3
+info:
+  title: Ipe Distribuidora API
+  version: "1.0.0"
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/auth/signup:
+    post:
+      summary: Create account and brand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Validation error
+  /api/auth/me:
+    get:
+      summary: Get current user session info
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+  /api/brands:
+    get:
+      summary: Get current brand
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandResponse"
+    post:
+      summary: Create brand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrandCreateRequest"
+      responses:
+        "201":
+          description: Created
+  /api/brands/{id}:
+    get:
+      summary: Get brand by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+    patch:
+      summary: Update brand
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrandUpdateRequest"
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete brand
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /api/categories:
+    get:
+      summary: List categories
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryCreateRequest"
+      responses:
+        "201":
+          description: Created
+  /api/categories/{id}:
+    get:
+      summary: Get category by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+    patch:
+      summary: Update category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryUpdateRequest"
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /api/products:
+    get:
+      summary: List products
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: categoryId
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductCreateRequest"
+      responses:
+        "201":
+          description: Created
+  /api/products/{id}:
+    get:
+      summary: Get product by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+    patch:
+      summary: Update product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdateRequest"
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Soft delete product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /api/products/bulk:
+    post:
+      summary: Bulk insert products
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkProductRequest"
+      responses:
+        "201":
+          description: Created
+  /api/images/upload:
+    post:
+      summary: Upload product images
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "201":
+          description: Created
+components:
+  schemas:
+    Brand:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        icon:
+          type: string
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+    ProductVariation:
+      type: object
+      properties:
+        id:
+          type: string
+        variantType:
+          type: string
+          nullable: true
+        variantValue:
+          type: string
+          nullable: true
+        price:
+          type: number
+        stockQuantity:
+          type: integer
+        barcode:
+          type: string
+          nullable: true
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: string
+        imageUrl:
+          type: string
+        thumbnailUrl:
+          type: string
+          nullable: true
+        altText:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        sku:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        categoryId:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+    BrandResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/Brand"
+    SignupRequest:
+      type: object
+      required:
+        - brandName
+        - brandSlug
+        - email
+        - password
+      properties:
+        brandName:
+          type: string
+        brandSlug:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        name:
+          type: string
+    BrandCreateRequest:
+      type: object
+      required:
+        - name
+        - slug
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        logoUrl:
+          type: string
+    BrandUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        logoUrl:
+          type: string
+    CategoryCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        sortOrder:
+          type: integer
+    CategoryUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        sortOrder:
+          type: integer
+    ProductCreateRequest:
+      type: object
+      required:
+        - sku
+        - name
+      properties:
+        sku:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: string
+        isActive:
+          type: boolean
+        variations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductVariation"
+    ProductUpdateRequest:
+      type: object
+      properties:
+        sku:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+    BulkProductRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductCreateRequest"

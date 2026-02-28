@@ -1,0 +1,321 @@
+"use client";
+
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Loader2, Trash2 } from "lucide-react";
+
+import type { BaseProductV2, ProductBaseImageV2 } from "@/types/api";
+
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { uploadImages } from "@/lib/api/admin";
+import { getErrorMessage } from "@/lib/api/error";
+import {
+  useAddBaseProductImageV2,
+  useBaseProductImagesV2,
+  useDeleteBaseProductImageV2,
+  useUpdateBaseProductImageV2,
+} from "@/lib/api/hooks";
+import { toastError, toastSuccess } from "@/lib/ui/toast";
+
+type BaseProductEditDialogProps = {
+  open: boolean;
+  baseProduct: BaseProductV2 | null;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function BaseProductEditDialog({
+  open,
+  baseProduct,
+  onOpenChange,
+}: BaseProductEditDialogProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [mainImageUrl, setMainImageUrl] = useState<string | null>(baseProduct?.imageUrl ?? null);
+  const [isUploading, setIsUploading] = useState(false);
+  const updateImageMutation = useUpdateBaseProductImageV2();
+  
+  const { data: galleryImages = [], isLoading: isLoadingGallery } = useBaseProductImagesV2(
+    baseProduct?.id ?? "",
+  );
+  const addImageMutation = useAddBaseProductImageV2(baseProduct?.id ?? "");
+  const deleteImageMutation = useDeleteBaseProductImageV2(baseProduct?.id ?? "");
+
+  const previewUrl = useMemo(() => {
+    if (!selectedFile) {
+      return null;
+    }
+    return URL.createObjectURL(selectedFile);
+  }, [selectedFile]);
+
+  useEffect(() => {
+    if (!previewUrl) {
+      return undefined;
+    }
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
+    setMainImageUrl(baseProduct?.imageUrl ?? null);
+    if (!open) {
+      setSelectedFile(null);
+    }
+  }, [baseProduct?.id, baseProduct?.imageUrl, open]);
+
+  const isSaving = isUploading || updateImageMutation.isPending || addImageMutation.isPending || deleteImageMutation.isPending;
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (isSaving) {
+      return;
+    }
+    if (!nextOpen) {
+      setSelectedFile(null);
+    }
+    onOpenChange(nextOpen);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!baseProduct) {
+      return;
+    }
+
+    if (!selectedFile) {
+      toastError("Selecione uma imagem", "Escolha um arquivo para enviar.");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const formPayload = new FormData();
+      formPayload.append("files", selectedFile);
+      const response = (await uploadImages(formPayload)) as {
+        data?: Array<{ imageUrl: string }>;
+      };
+      const uploadedUrl = response?.data?.[0]?.imageUrl;
+      if (!uploadedUrl) {
+        toastError("Upload falhou", "Nao foi possivel obter a imagem enviada.");
+        return;
+      }
+
+      // Add to gallery instead of replacing main image
+      await addImageMutation.mutateAsync(uploadedUrl);
+
+      if (!mainImageUrl) {
+        setMainImageUrl(uploadedUrl);
+      }
+
+      toastSuccess("Imagem adicionada a galeria");
+      setSelectedFile(null);
+    } catch (err) {
+      const message = getErrorMessage(err);
+      toastError(message.title, message.description);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveMainImage = async () => {
+    if (!baseProduct || !mainImageUrl) {
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const updated = await updateImageMutation.mutateAsync({
+        id: baseProduct.id,
+        imageUrl: null,
+      });
+      setMainImageUrl(updated.imageUrl ?? null);
+      toastSuccess(
+        updated.imageUrl
+          ? "Imagem principal atualizada com a galeria"
+          : "Imagem principal removida",
+      );
+    } catch (err) {
+      const message = getErrorMessage(err);
+      toastError(message.title, message.description);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteGalleryImage = async (image: ProductBaseImageV2) => {
+    try {
+      await deleteImageMutation.mutateAsync(image.id);
+      toastSuccess("Imagem removida da galeria");
+    } catch (err) {
+      const message = getErrorMessage(err);
+      toastError(message.title, message.description);
+    }
+  };
+
+  const handleSetAsMain = async (image: ProductBaseImageV2) => {
+    if (!baseProduct) return;
+    try {
+      setIsUploading(true);
+      const updated = await updateImageMutation.mutateAsync({
+        id: baseProduct.id,
+        imageUrl: image.imageUrl,
+      });
+      setMainImageUrl(updated.imageUrl ?? null);
+      toastSuccess("Imagem definida como principal");
+    } catch (err) {
+      const message = getErrorMessage(err);
+      toastError(message.title, message.description);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Editar produto</DialogTitle>
+          <DialogDescription>
+            Gerencie as imagens do produto da Base Geral.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form className="grid gap-4 max-h-[60vh] overflow-y-auto pr-2" onSubmit={handleSubmit}>
+          <div className="grid gap-2 text-sm">
+            <Label>Produto</Label>
+            <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-foreground">
+              {baseProduct?.name ?? "Produto"} — SKU {baseProduct?.sku ?? "-"}
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Imagem principal</Label>
+            {!mainImageUrl ? (
+              <Card className="p-4 text-sm text-muted-foreground">
+                Nenhuma imagem principal cadastrada.
+              </Card>
+            ) : (
+              <Card className="space-y-2 p-3">
+                <div className="aspect-video overflow-hidden rounded-md bg-muted">
+                  <img
+                    src={mainImageUrl}
+                    alt={baseProduct?.name ?? "Imagem principal"}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleRemoveMainImage}
+                    disabled={isSaving}
+                  >
+                    Remover imagem principal
+                  </Button>
+                </div>
+              </Card>
+            )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Galeria de imagens</Label>
+            {isLoadingGallery ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando galeria...
+              </div>
+            ) : galleryImages.length === 0 ? (
+              <Card className="p-4 text-sm text-muted-foreground">
+                Nenhuma imagem na galeria.
+              </Card>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {galleryImages.map((image) => (
+                  <Card key={image.id} className="relative overflow-hidden">
+                    <div className="aspect-square">
+                      <img
+                        src={image.imageUrl}
+                        alt="Imagem da galeria"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="absolute inset-x-0 bottom-0 flex gap-1 bg-black/50 p-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 flex-1 text-xs text-white hover:bg-white/20"
+                        onClick={() => handleSetAsMain(image)}
+                        disabled={isSaving || image.imageUrl === mainImageUrl}
+                      >
+                        Principal
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-white hover:bg-red-500/50"
+                        onClick={() => handleDeleteGalleryImage(image)}
+                        disabled={isSaving}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="base-product-image">Adicionar imagem</Label>
+            <Input
+              id="base-product-image"
+              type="file"
+              accept="image/*"
+              disabled={isSaving}
+              className="cursor-pointer file:cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                setSelectedFile(file);
+              }}
+            />
+            {previewUrl ? (
+              <Card className="p-3">
+                <div className="aspect-video overflow-hidden rounded-md bg-muted">
+                  <img
+                    src={previewUrl}
+                    alt={selectedFile?.name ?? "Preview"}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              </Card>
+            ) : null}
+          </div>
+
+          <DialogFooter className="sticky bottom-0 bg-background pt-2">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isSaving}>
+                Fechar
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={isSaving || !selectedFile}>
+              {isSaving ? "Enviando..." : "Adicionar a galeria"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -1,0 +1,245 @@
+.page {
+  min-height: 100vh;
+  padding: 48px 24px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 28px;
+  border: 1px solid var(--stroke);
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  animation: fadeUp 0.6s ease both;
+}
+
+.kicker {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--muted);
+}
+
+.brandTitle {
+  font-size: clamp(2.2rem, 3vw, 3.4rem);
+  margin: 12px 0 8px;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: var(--surface-soft);
+  min-width: min(360px, 100%);
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 15px;
+}
+
+.searchButton {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.searchButton:hover {
+  background: var(--accent-strong);
+  transform: translateY(-1px);
+}
+
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.categoryPill {
+  border: 1px solid var(--stroke);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.categoryPill:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.categoryPillActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.grid {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--stroke);
+  background: var(--surface);
+  box-shadow: 0 12px 22px rgba(24, 18, 10, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: fadeUp 0.5s ease both;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 28px rgba(24, 18, 10, 0.14);
+}
+
+.cardMedia {
+  position: relative;
+  height: 180px;
+  background: linear-gradient(135deg, #f1e5d2 0%, #f7f0e7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cardMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cardContent {
+  padding: 16px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cardTitle {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.cardMeta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.cardPrice {
+  font-size: 18px;
+  color: var(--accent-strong);
+  font-weight: 600;
+  font-family: var(--font-display), serif;
+}
+
+.emptyState {
+  padding: 40px;
+  text-align: center;
+  border: 1px dashed var(--stroke);
+  border-radius: 18px;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.pageLink {
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: var(--surface);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.pageLink:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.pageLinkDisabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.pageIndicator {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .hero {
+    animation: none;
+  }
+
+  .card:hover,
+  .searchButton:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .hero {
+    padding: 20px;
+  }
+
+  .searchBar {
+    width: 100%;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+}

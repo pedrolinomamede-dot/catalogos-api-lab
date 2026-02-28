@@ -1,0 +1,243 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  VIEWER
+}
+
+model Brand {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  slug       String   @unique
+  logoUrl    String?
+  users      User[]
+  categories Category[]
+  products   Product[]
+  variations ProductVariation[]
+  images     ProductImage[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model User {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId      String   @db.Uuid
+  name         String?
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(ADMIN)
+  brand        Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId   String    @db.Uuid
+  name      String
+  icon      String?
+  color     String?
+  sortOrder Int       @default(0)
+  brand     Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([brandId, name])
+  @@index([brandId])
+}
+
+model Product {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId     String             @db.Uuid
+  sku         String
+  name        String
+  description String?
+  categoryId  String?            @db.Uuid
+  isActive    Boolean            @default(true)
+  brand       Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  category    Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variations  ProductVariation[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([brandId, sku])
+  @@index([brandId])
+  @@index([updatedAt])
+  @@index([categoryId])
+  @@index([sku])
+}
+
+model ProductVariation {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId      String         @db.Uuid
+  productId    String         @db.Uuid
+  variantType  String?
+  variantValue String?
+  price        Decimal        @db.Decimal(10, 2)
+  stockQuantity Int           @default(0)
+  barcode      String?
+  brand        Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  product      Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images       ProductImage[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([productId, brandId])
+}
+
+model ProductImage {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId     String           @db.Uuid
+  variationId String           @db.Uuid
+  imageUrl    String
+  thumbnailUrl String?
+  altText     String?
+  sortOrder   Int              @default(0)
+  brand       Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  variation   ProductVariation @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([variationId, brandId])
+}
+
+model ProductBaseV2 {
+  id          String   @id @default(uuid()) @db.Uuid
+  brandId     String   @db.Uuid
+  sku         String
+  name        String
+  description String?
+  barcode     String?
+  size        String?
+  brand       String?
+  imageUrl   String?
+  isActive    Boolean  @default(true)
+  categoryId  String?  @db.Uuid
+  subcategoryId String? @db.Uuid
+  category    CategoryV2?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategory SubcategoryV2? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  catalogItems CatalogItemV2[]
+  images      ProductBaseImageV2[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([brandId, sku])
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+}
+
+model ProductBaseImageV2 {
+  id            String        @id @default(uuid()) @db.Uuid
+  brandId       String        @db.Uuid
+  productBaseId String        @db.Uuid
+  imageUrl      String
+  sortOrder     Int           @default(0)
+  productBase   ProductBaseV2 @relation(fields: [productBaseId], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+
+  @@index([brandId])
+  @@index([productBaseId])
+}
+
+model CategoryV2 {
+  id           String         @id @default(uuid()) @db.Uuid
+  brandId      String         @db.Uuid
+  name         String
+  subcategories SubcategoryV2[]
+  products     ProductBaseV2[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([brandId, name])
+  @@index([brandId])
+}
+
+model SubcategoryV2 {
+  id         String        @id @default(uuid()) @db.Uuid
+  brandId    String        @db.Uuid
+  categoryId String        @db.Uuid
+  name       String
+  category   CategoryV2    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products   ProductBaseV2[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([brandId, categoryId, name])
+  @@index([brandId])
+  @@index([categoryId])
+}
+
+model CatalogV2 {
+  id          String          @id @default(uuid()) @db.Uuid
+  brandId     String          @db.Uuid
+  name        String
+  description String?
+  pdfBackgroundImageUrl String?
+  items       CatalogItemV2[]
+  shareLinks  ShareLinkCatalogV2[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([brandId, name])
+  @@index([brandId])
+}
+
+model CatalogItemV2 {
+  id            String       @id @default(uuid()) @db.Uuid
+  brandId       String       @db.Uuid
+  catalogId     String       @db.Uuid
+  productBaseId String       @db.Uuid
+  sortOrder     Int?
+  catalog       CatalogV2    @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  productBase   ProductBaseV2 @relation(fields: [productBaseId], references: [id], onDelete: Restrict)
+  createdAt     DateTime     @default(now())
+
+  @@unique([catalogId, productBaseId])
+  @@index([brandId])
+  @@index([catalogId])
+  @@index([productBaseId])
+}
+
+model ShareLinkV2 {
+  id        String                @id @default(uuid()) @db.Uuid
+  brandId   String                @db.Uuid
+  token     String                @unique
+  name      String
+  isRevoked Boolean               @default(false)
+  revokedAt DateTime?
+  catalogs  ShareLinkCatalogV2[]
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@index([brandId])
+}
+
+model ShareLinkCatalogV2 {
+  id          String      @id @default(uuid()) @db.Uuid
+  brandId     String      @db.Uuid
+  shareLinkId String      @db.Uuid
+  catalogId   String      @db.Uuid
+  shareLink   ShareLinkV2 @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  catalog     CatalogV2   @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+
+  @@unique([shareLinkId, catalogId])
+  @@index([brandId])
+  @@index([shareLinkId])
+  @@index([catalogId])
+}
