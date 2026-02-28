@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole } from "@/lib/authz";
+import { parseCatalogSnapshotGallery } from "@/lib/catalog-snapshots/snapshot-types";
 import { withBrand } from "@/lib/prisma";
 import { renderPdf } from "@/lib/pdf/render-pdf";
 import type { ShareLinkPdfData, ShareLinkPdfProduct } from "@/lib/pdf/share-link-pdf";
@@ -68,6 +69,18 @@ export async function GET(
             },
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
             select: {
+              snapshot: {
+                select: {
+                  name: true,
+                  code: true,
+                  brand: true,
+                  description: true,
+                  categoryName: true,
+                  subcategoryName: true,
+                  primaryImageUrl: true,
+                  galleryJson: true,
+                },
+              },
               productBase: {
                 select: {
                   id: true,
@@ -122,22 +135,36 @@ export async function GET(
             }
           });
 
-          const products: ShareLinkPdfProduct[] = items
-            .map((item) => item.productBase)
-            .filter((product): product is NonNullable<(typeof items)[number]["productBase"]> =>
-              Boolean(product),
-            )
-            .map((product) => ({
-              id: product.id,
-              name: product.name,
-              sku: product.sku,
-              brand: product.brand,
-              description: product.description,
-              categoryName: product.category?.name ?? null,
-              subcategoryName: product.subcategory?.name ?? null,
-              primaryImageUrl: product.imageUrl ?? null,
-              fallbackImageUrl: fallbackByProductId.get(product.id) ?? null,
-            }));
+          const products = items.reduce<ShareLinkPdfProduct[]>((acc, item) => {
+              const snapshot = item.snapshot;
+              const product = item.productBase;
+              if (!snapshot && !product) {
+                return acc;
+              }
+
+              const fallbackImageUrl = product?.id
+                ? fallbackByProductId.get(product.id) ?? null
+                : null;
+              const snapshotGallery = parseCatalogSnapshotGallery(snapshot?.galleryJson);
+
+              acc.push({
+                id: product?.id ?? `${entry.catalog.id}-${snapshot?.code ?? "snapshot"}`,
+                name: snapshot?.name ?? product?.name ?? "Produto",
+                sku: snapshot?.code ?? product?.sku ?? null,
+                brand: snapshot?.brand ?? product?.brand ?? null,
+                description: snapshot?.description ?? product?.description ?? null,
+                categoryName:
+                  snapshot?.categoryName ?? product?.category?.name ?? null,
+                subcategoryName:
+                  snapshot?.subcategoryName ?? product?.subcategory?.name ?? null,
+                primaryImageUrl:
+                  snapshot?.primaryImageUrl ?? product?.imageUrl ?? null,
+                fallbackImageUrl:
+                  snapshotGallery[0]?.imageUrl ?? fallbackImageUrl ?? null,
+              });
+
+              return acc;
+            }, []);
 
           return {
             id: entry.catalog.id,

@@ -3,9 +3,38 @@ export type Brand = {
   name: string;
   slug: string;
   logoUrl?: string | null;
+  integrationMode: IntegrationMode;
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type IntegrationMode = "MANUAL_CSV" | "INTEGRATION";
+
+export type IntegrationProvider =
+  | "VAREJONLINE"
+  | "OMIE"
+  | "TINY"
+  | "BLING"
+  | "CUSTOM";
+
+export type ProductSourceType = "MANUAL" | "CSV" | "INTEGRATION";
+
+export type IntegrationConnectionStatus =
+  | "CONNECTED"
+  | "EXPIRED"
+  | "ERROR"
+  | "DISCONNECTED";
+
+export type IntegrationSyncJobStatus =
+  | "QUEUED"
+  | "RUNNING"
+  | "SUCCESS"
+  | "PARTIAL"
+  | "FAILED";
+
+export type IntegrationSyncJobMode = "MANUAL" | "SCHEDULED" | "WEBHOOK";
+
+export type IntegrationSyncResource = "FULL" | "PRODUCTS" | "CATEGORIES" | "IMAGES";
 
 export type Category = {
   id: string;
@@ -134,6 +163,16 @@ export type BaseProductV2 = {
   brand?: string | null;
   barcode?: string | null;
   size?: string | null;
+  sourceType: ProductSourceType;
+  sourceProvider?: IntegrationProvider | null;
+  integrationConnectionId?: string | null;
+  sourceExternalId?: string | null;
+  sourceExternalCode?: string | null;
+  sourceUpdatedAt?: Date | null;
+  lastSyncedAt?: Date | null;
+  price?: number | null;
+  stockQuantity?: number | null;
+  externalMetadataJson?: unknown;
   images?: ProductBaseImageV2[];
   createdAt: Date;
   updatedAt: Date;
@@ -216,11 +255,41 @@ export type CatalogV2 = {
 
 export type CatalogItemV2 = {
   id: string;
+  brandId?: string;
   catalogId: string;
   productBaseId: string;
   sortOrder?: number | null;
   createdAt: Date;
-  productBase?: Pick<BaseProductV2, "id" | "name" | "sku">;
+  productBase?: Pick<
+    BaseProductV2,
+    "id" | "name" | "sku" | "sourceType" | "sourceProvider"
+  >;
+  snapshot?: CatalogItemSnapshotV2 | null;
+};
+
+export type CatalogItemSnapshotV2 = {
+  id: string;
+  catalogItemId: string;
+  snapshotVersion: number;
+  sourceType: ProductSourceType;
+  sourceProvider?: IntegrationProvider | null;
+  sourceExternalId?: string | null;
+  sourceExternalCode?: string | null;
+  name: string;
+  code: string;
+  barcode?: string | null;
+  brand?: string | null;
+  description?: string | null;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  subcategoryId?: string | null;
+  subcategoryName?: string | null;
+  price?: number | null;
+  primaryImageUrl?: string | null;
+  galleryJson?: unknown;
+  attributesJson?: unknown;
+  capturedAt: Date;
+  refreshedAt?: Date | null;
 };
 
 export type CreateCatalogV2Request = {
@@ -254,6 +323,68 @@ export type ShareLinkV2 = {
   updatedAt: Date;
   catalogCount?: number;
   catalogs?: ShareLinkCatalogV2[];
+};
+
+export type IntegrationProviderDescriptor = {
+  provider: IntegrationProvider;
+  label: string;
+  supportsOauth: boolean;
+  supportsWebhook: boolean;
+  supportsSync: boolean;
+  capabilities: {
+    products: boolean;
+    categories: boolean;
+    images: boolean;
+    stock: boolean;
+    price: boolean;
+  };
+  configured: boolean;
+};
+
+export type IntegrationConnectionV2 = {
+  id: string;
+  brandId: string;
+  provider: IntegrationProvider;
+  status: IntegrationConnectionStatus;
+  externalCompanyId?: string | null;
+  externalCompanyName?: string | null;
+  externalCompanyDocument?: string | null;
+  tokenExpiresAt?: Date | null;
+  lastSyncAt?: Date | null;
+  lastSuccessfulSyncAt?: Date | null;
+  lastSyncError?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type IntegrationSyncJobV2 = {
+  id: string;
+  brandId: string;
+  integrationConnectionId: string;
+  provider: IntegrationProvider;
+  resource: IntegrationSyncResource;
+  mode: IntegrationSyncJobMode;
+  status: IntegrationSyncJobStatus;
+  statsJson?: unknown;
+  errorJson?: unknown;
+  startedAt?: Date | null;
+  finishedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type IntegrationConnectionCreateRequest = {
+  provider: IntegrationProvider;
+};
+
+export type IntegrationConnectionCreateResponse = {
+  connection?: IntegrationConnectionV2 | null;
+  authorizationUrl?: string | null;
+};
+
+export type IntegrationSyncRequest = {
+  resource?: IntegrationSyncResource;
+  mode?: IntegrationSyncJobMode;
 };
 
 export type CreateShareLinkV2Request = {

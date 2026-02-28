@@ -580,6 +580,7 @@ export async function POST(request: Request) {
             size: row.size,
             categoryId: row.categoryId,
             subcategoryId: row.subcategoryId,
+            sourceType: "CSV",
           },
         });
         created += 1;

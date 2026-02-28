@@ -29,6 +29,7 @@ import {
   useCreateShareLinkV2,
   useDeleteCatalogItemV2,
   useGenerateShareLinkPdfV2,
+  useRefreshCatalogFromSourceV2,
 } from "@/lib/api/hooks";
 import { toastError, toastSuccess } from "@/lib/ui/toast";
 
@@ -85,6 +86,7 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
   const deleteMutation = useDeleteCatalogItemV2(catalogId);
   const createShareLinkMutation = useCreateShareLinkV2();
   const generatePdfMutation = useGenerateShareLinkPdfV2();
+  const refreshCatalogMutation = useRefreshCatalogFromSourceV2(catalogId);
 
   const items = useMemo(() => itemsData ?? [], [itemsData]);
   const selectedCount = selectedItemIds.size;
@@ -193,6 +195,16 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
     }
   };
 
+  const handleRefreshFromSource = async () => {
+    try {
+      const result = await refreshCatalogMutation.mutateAsync();
+      toastSuccess(`${result.refreshedCount} snapshot(s) atualizados`);
+    } catch (err) {
+      const message = getErrorMessage(err);
+      toastError(message.title, message.description ?? "Tente novamente.");
+    }
+  };
+
   if (isCatalogLoading) {
     return <LoadingState label="Carregando catálogo" />;
   }
@@ -230,6 +242,15 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
               disabled={isExportingPdf}
             >
               {isExportingPdf ? "Gerando PDF..." : "Exportar PDF"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRefreshFromSource}
+              disabled={refreshCatalogMutation.isPending}
+            >
+              {refreshCatalogMutation.isPending
+                ? "Atualizando..."
+                : "Atualizar snapshots"}
             </Button>
             <Button variant="outline" onClick={() => setIsImportOpen(true)}>
               Importar CSV (SKUs)

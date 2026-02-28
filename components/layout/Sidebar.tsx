@@ -14,6 +14,7 @@ const links = [
   { href: "/dashboard", label: "Visão geral" },
   { href: "/dashboard/base-products", label: "Base Geral" },
   { href: "/dashboard/base-categories", label: "Categorias (Base Geral)" },
+  { href: "/dashboard/integrations", label: "Integrações" },
   { href: "/dashboard/catalogs", label: "Catálogos" },
   { href: "/dashboard/share-links", label: "Share Links" },
 ];

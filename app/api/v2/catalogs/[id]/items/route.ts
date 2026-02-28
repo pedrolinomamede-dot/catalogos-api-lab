@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole, requireUser } from "@/lib/authz";
+import { createOrRefreshCatalogItemSnapshot } from "@/lib/catalog-snapshots/create-catalog-item-snapshot";
 import { withBrand } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
 
@@ -104,6 +105,34 @@ export async function GET(
             id: true,
             name: true,
             sku: true,
+            sourceType: true,
+            sourceProvider: true,
+          },
+        },
+        snapshot: {
+          select: {
+            id: true,
+            catalogItemId: true,
+            snapshotVersion: true,
+            sourceType: true,
+            sourceProvider: true,
+            sourceExternalId: true,
+            sourceExternalCode: true,
+            name: true,
+            code: true,
+            barcode: true,
+            brand: true,
+            description: true,
+            categoryId: true,
+            categoryName: true,
+            subcategoryId: true,
+            subcategoryName: true,
+            price: true,
+            primaryImageUrl: true,
+            galleryJson: true,
+            attributesJson: true,
+            capturedAt: true,
+            refreshedAt: true,
           },
         },
       },
@@ -180,6 +209,7 @@ export async function POST(
         },
         select: {
           id: true,
+          brandId: true,
           catalogId: true,
           productBaseId: true,
           sortOrder: true,
@@ -189,12 +219,29 @@ export async function POST(
               id: true,
               name: true,
               sku: true,
+              sourceType: true,
+              sourceProvider: true,
             },
           },
         },
       });
 
-      return NextResponse.json({ ok: true, data: item }, { status: 201 });
+      const snapshot = await createOrRefreshCatalogItemSnapshot(tx, {
+        brandId: auth.brandId,
+        catalogItemId: item.id,
+        productBaseId: productBase.id,
+      });
+
+      return NextResponse.json(
+        {
+          ok: true,
+          data: {
+            ...item,
+            snapshot,
+          },
+        },
+        { status: 201 },
+      );
     });
   } catch (error) {
     if (

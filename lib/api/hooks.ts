@@ -62,6 +62,17 @@ import {
   updateCatalogV2,
 } from "@/lib/api/v2/catalogs";
 import {
+  createIntegrationConnectionV2,
+  disconnectIntegrationConnectionV2,
+  getIntegrationConnectionV2,
+  listIntegrationConnectionJobsV2,
+  listIntegrationConnectionsV2,
+  listIntegrationProvidersV2,
+  refreshCatalogFromSourceV2,
+  refreshCatalogItemFromSourceV2,
+  syncIntegrationConnectionV2,
+} from "@/lib/api/v2/integrations";
+import {
   createShareLinkV2,
   deleteShareLinkV2,
   downloadShareLinkPdfV2,
@@ -124,6 +135,7 @@ type CategoriesV2Params = Parameters<typeof listCategoriesV2>[0];
 type SubcategoriesV2Params = Parameters<typeof listSubcategoriesV2>[1];
 type CatalogsV2Params = Parameters<typeof listCatalogsV2>[0];
 type ShareLinksV2Params = Parameters<typeof listShareLinksV2>[0];
+type IntegrationConnectionJobsParams = Parameters<typeof listIntegrationConnectionJobsV2>[1];
 
 type CatalogItemsBatchFailure = {
   productBaseId: string;
@@ -271,6 +283,40 @@ export function useShareLinkV2(id: string) {
     queryKey: queryKeys.v2.shareLinks.byId(id),
     queryFn: () => getShareLinkV2(id),
     enabled: Boolean(id),
+  });
+}
+
+export function useIntegrationProviders() {
+  return useQuery({
+    queryKey: queryKeys.v2.integrations.providers,
+    queryFn: listIntegrationProvidersV2,
+  });
+}
+
+export function useIntegrationConnections() {
+  return useQuery({
+    queryKey: queryKeys.v2.integrations.connections,
+    queryFn: listIntegrationConnectionsV2,
+  });
+}
+
+export function useIntegrationConnection(id: string) {
+  return useQuery({
+    queryKey: queryKeys.v2.integrations.connectionById(id),
+    queryFn: () => getIntegrationConnectionV2(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useIntegrationConnectionJobs(
+  connectionId: string,
+  params?: IntegrationConnectionJobsParams,
+) {
+  const paramsKey = params ?? {};
+  return useQuery({
+    queryKey: queryKeys.v2.integrations.jobs(connectionId, paramsKey),
+    queryFn: () => listIntegrationConnectionJobsV2(connectionId, params),
+    enabled: Boolean(connectionId),
   });
 }
 
@@ -527,6 +573,27 @@ export function useDeleteCatalogItemV2(catalogId: string) {
   });
 }
 
+export function useRefreshCatalogFromSourceV2(catalogId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => refreshCatalogFromSourceV2(catalogId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.catalogItems.list(catalogId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.catalogs.byId(catalogId) });
+    },
+  });
+}
+
+export function useRefreshCatalogItemFromSourceV2(catalogId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: string) => refreshCatalogItemFromSourceV2(catalogId, itemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.catalogItems.list(catalogId) });
+    },
+  });
+}
+
 export function useCreateShareLinkV2() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -559,6 +626,43 @@ export function useDeleteShareLinkV2() {
     mutationFn: (shareLinkId: string) => deleteShareLinkV2(shareLinkId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.shareLinks.root });
+    },
+  });
+}
+
+export function useCreateIntegrationConnectionV2() {
+  return useMutation({
+    mutationFn: (body: Parameters<typeof createIntegrationConnectionV2>[0]) =>
+      createIntegrationConnectionV2(body),
+  });
+}
+
+export function useDisconnectIntegrationConnectionV2() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (connectionId: string) => disconnectIntegrationConnectionV2(connectionId),
+    onSuccess: (_data, connectionId) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connections });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connectionById(connectionId) });
+    },
+  });
+}
+
+export function useSyncIntegrationConnectionV2() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      connectionId,
+      body,
+    }: {
+      connectionId: string;
+      body: Parameters<typeof syncIntegrationConnectionV2>[1];
+    }) => syncIntegrationConnectionV2(connectionId, body),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connections });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.v2.integrations.jobs(variables.connectionId),
+      });
     },
   });
 }

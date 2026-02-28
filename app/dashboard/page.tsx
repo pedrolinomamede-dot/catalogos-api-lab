@@ -18,6 +18,12 @@ const cards = [
     action: "Gerenciar categorias",
   },
   {
+    title: "Integracoes",
+    description: "Conecte ERPs e acompanhe a sincronizacao da Base Geral.",
+    href: "/dashboard/integrations",
+    action: "Abrir integrações",
+  },
+  {
     title: "Catálogos",
     description: "Monte catálogos com produtos da Base Geral.",
     href: "/dashboard/catalogs",
@@ -33,6 +39,7 @@ const cards = [
 
 const quickActions = [
   { href: "/dashboard/base-products", label: "Importar Base Geral" },
+  { href: "/dashboard/integrations", label: "Conectar ERP" },
   { href: "/dashboard/base-categories", label: "Criar categoria" },
   { href: "/dashboard/catalogs", label: "Criar catálogo" },
   { href: "/dashboard/share-links", label: "Criar Share Link" },

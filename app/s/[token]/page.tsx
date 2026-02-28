@@ -11,6 +11,7 @@ import {
   type PublicSubcategoryInfo,
   type ShareLinkProduct,
 } from "@/components/public/share-link-shell";
+import { parseCatalogSnapshotGallery } from "@/lib/catalog-snapshots/snapshot-types";
 import { withBrand } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,15 @@ export const dynamic = "force-dynamic";
 type CatalogItemResponse = {
   catalogId: string;
   productBaseId: string;
+  snapshot?: {
+    name: string;
+    code: string;
+    description?: string | null;
+    primaryImageUrl?: string | null;
+    galleryJson?: unknown;
+    categoryId?: string | null;
+    subcategoryId?: string | null;
+  } | null;
   productBase?: {
     id: string;
     name: string;
@@ -171,6 +181,17 @@ export default async function ShareLinkPage({
               select: {
                 catalogId: true,
                 productBaseId: true,
+                snapshot: {
+                  select: {
+                    name: true,
+                    code: true,
+                    description: true,
+                    primaryImageUrl: true,
+                    galleryJson: true,
+                    categoryId: true,
+                    subcategoryId: true,
+                  },
+                },
                 productBase: {
                   select: {
                     id: true,
@@ -223,22 +244,28 @@ export default async function ShareLinkPage({
     productsByCatalog[catalog.id] = [];
   });
   catalogItems.forEach((item: CatalogItemResponse) => {
-    const primaryImageUrl = item.productBase?.imageUrl ?? null;
-    const galleryImageUrls = buildGalleryImageUrls(
-      primaryImageUrl,
-      galleryByProductBaseId[item.productBaseId] ?? [],
-    );
+    const snapshotGallery = parseCatalogSnapshotGallery(item.snapshot?.galleryJson);
+    const primaryImageUrl =
+      item.snapshot?.primaryImageUrl ?? item.productBase?.imageUrl ?? null;
+    const galleryImageUrls =
+      snapshotGallery.length > 0
+        ? buildGalleryImageUrls(primaryImageUrl, snapshotGallery)
+        : buildGalleryImageUrls(
+            primaryImageUrl,
+            galleryByProductBaseId[item.productBaseId] ?? [],
+          );
 
     const list = productsByCatalog[item.catalogId] ?? [];
     list.push({
       id: item.productBaseId,
-      name: item.productBase?.name ?? "Produto",
-      sku: item.productBase?.sku ?? null,
-      description: item.productBase?.description ?? null,
+      name: item.snapshot?.name ?? item.productBase?.name ?? "Produto",
+      sku: item.snapshot?.code ?? item.productBase?.sku ?? null,
+      description: item.snapshot?.description ?? item.productBase?.description ?? null,
       imageUrl: primaryImageUrl,
       galleryImageUrls,
-      categoryId: item.productBase?.categoryId ?? null,
-      subcategoryId: item.productBase?.subcategoryId ?? null,
+      categoryId: item.snapshot?.categoryId ?? item.productBase?.categoryId ?? null,
+      subcategoryId:
+        item.snapshot?.subcategoryId ?? item.productBase?.subcategoryId ?? null,
       catalogId: item.catalogId,
     });
     productsByCatalog[item.catalogId] = list;

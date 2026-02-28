@@ -30,6 +30,20 @@ import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 const PAGE_SIZE = 100;
 
+function getSourceLabel(product: BaseProductV2) {
+  if (product.sourceType === "INTEGRATION") {
+    return product.sourceProvider
+      ? `Integracao ${product.sourceProvider}`
+      : "Integracao";
+  }
+
+  if (product.sourceType === "CSV") {
+    return "CSV";
+  }
+
+  return "Manual";
+}
+
 export function BaseProductsList() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -334,9 +348,12 @@ export function BaseProductsList() {
                 </TableCell>
                 <TableCell>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {product.name}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">
+                        {product.name}
+                      </p>
+                      <Badge variant="outline">{getSourceLabel(product)}</Badge>
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       SKU {product.sku}
                     </p>

@@ -221,6 +221,7 @@ export async function POST(request: Request) {
           barcode: parsed.data.barcode,
           size: parsed.data.size,
           isActive: parsed.data.isActive,
+          sourceType: "MANUAL",
         },
       });
 

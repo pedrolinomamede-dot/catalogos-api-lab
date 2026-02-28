@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "binary"
 }
 
@@ -18,18 +18,67 @@ enum UserRole {
   VIEWER
 }
 
+enum IntegrationMode {
+  MANUAL_CSV
+  INTEGRATION
+}
+
+enum IntegrationProvider {
+  VAREJONLINE
+  OMIE
+  TINY
+  BLING
+  CUSTOM
+}
+
+enum IntegrationConnectionStatus {
+  CONNECTED
+  EXPIRED
+  ERROR
+  DISCONNECTED
+}
+
+enum ProductSourceType {
+  MANUAL
+  CSV
+  INTEGRATION
+}
+
+enum IntegrationSyncJobStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+enum IntegrationSyncJobMode {
+  MANUAL
+  SCHEDULED
+  WEBHOOK
+}
+
+enum IntegrationSyncResource {
+  FULL
+  PRODUCTS
+  CATEGORIES
+  IMAGES
+}
+
 model Brand {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name       String
-  slug       String   @unique
-  logoUrl    String?
-  users      User[]
-  categories Category[]
-  products   Product[]
-  variations ProductVariation[]
-  images     ProductImage[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                     String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                   String
+  slug                   String                    @unique
+  logoUrl                String?
+  integrationMode        IntegrationMode           @default(MANUAL_CSV)
+  users                  User[]
+  categories             Category[]
+  products               Product[]
+  variations             ProductVariation[]
+  images                 ProductImage[]
+  integrationConnections IntegrationConnectionV2[]
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
 }
 
 model User {
@@ -82,63 +131,78 @@ model Product {
 }
 
 model ProductVariation {
-  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  brandId      String         @db.Uuid
-  productId    String         @db.Uuid
-  variantType  String?
-  variantValue String?
-  price        Decimal        @db.Decimal(10, 2)
-  stockQuantity Int           @default(0)
-  barcode      String?
-  brand        Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  product      Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  images       ProductImage[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId       String         @db.Uuid
+  productId     String         @db.Uuid
+  variantType   String?
+  variantValue  String?
+  price         Decimal        @db.Decimal(10, 2)
+  stockQuantity Int            @default(0)
+  barcode       String?
+  brand         Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images        ProductImage[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([productId, brandId])
 }
 
 model ProductImage {
-  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  brandId     String           @db.Uuid
-  variationId String           @db.Uuid
-  imageUrl    String
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId      String           @db.Uuid
+  variationId  String           @db.Uuid
+  imageUrl     String
   thumbnailUrl String?
-  altText     String?
-  sortOrder   Int              @default(0)
-  brand       Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  variation   ProductVariation @relation(fields: [variationId], references: [id], onDelete: Cascade)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  altText      String?
+  sortOrder    Int              @default(0)
+  brand        Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  variation    ProductVariation @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   @@index([variationId, brandId])
 }
 
 model ProductBaseV2 {
-  id          String   @id @default(uuid()) @db.Uuid
-  brandId     String   @db.Uuid
-  sku         String
-  name        String
-  description String?
-  barcode     String?
-  size        String?
-  brand       String?
-  imageUrl   String?
-  isActive    Boolean  @default(true)
-  categoryId  String?  @db.Uuid
-  subcategoryId String? @db.Uuid
-  category    CategoryV2?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  subcategory SubcategoryV2? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
-  catalogItems CatalogItemV2[]
-  images      ProductBaseImageV2[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                      String                   @id @default(uuid()) @db.Uuid
+  brandId                 String                   @db.Uuid
+  sku                     String
+  name                    String
+  description             String?
+  barcode                 String?
+  size                    String?
+  brand                   String?
+  imageUrl                String?
+  isActive                Boolean                  @default(true)
+  categoryId              String?                  @db.Uuid
+  subcategoryId           String?                  @db.Uuid
+  sourceType              ProductSourceType        @default(MANUAL)
+  sourceProvider          IntegrationProvider?
+  sourceExternalId        String?
+  sourceExternalCode      String?
+  sourceUpdatedAt         DateTime?
+  lastSyncedAt            DateTime?
+  price                   Decimal?                 @db.Decimal(10, 2)
+  stockQuantity           Int?
+  externalMetadataJson    Json?
+  integrationConnectionId String?                  @db.Uuid
+  category                CategoryV2?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategory             SubcategoryV2?           @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  integrationConnection   IntegrationConnectionV2? @relation(fields: [integrationConnectionId], references: [id], onDelete: SetNull)
+  catalogItems            CatalogItemV2[]
+  images                  ProductBaseImageV2[]
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
 
   @@unique([brandId, sku])
+  @@unique([integrationConnectionId, sourceExternalId])
   @@index([brandId])
   @@index([categoryId])
   @@index([subcategoryId])
+  @@index([sourceType])
+  @@index([sourceProvider])
+  @@index([integrationConnectionId])
 }
 
 model ProductBaseImageV2 {
@@ -155,27 +219,29 @@ model ProductBaseImageV2 {
 }
 
 model CategoryV2 {
-  id           String         @id @default(uuid()) @db.Uuid
-  brandId      String         @db.Uuid
-  name         String
-  subcategories SubcategoryV2[]
-  products     ProductBaseV2[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id                  String                         @id @default(uuid()) @db.Uuid
+  brandId             String                         @db.Uuid
+  name                String
+  subcategories       SubcategoryV2[]
+  products            ProductBaseV2[]
+  integrationMappings IntegrationCategoryMappingV2[]
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
 
   @@unique([brandId, name])
   @@index([brandId])
 }
 
 model SubcategoryV2 {
-  id         String        @id @default(uuid()) @db.Uuid
-  brandId    String        @db.Uuid
-  categoryId String        @db.Uuid
-  name       String
-  category   CategoryV2    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  products   ProductBaseV2[]
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id                  String                            @id @default(uuid()) @db.Uuid
+  brandId             String                            @db.Uuid
+  categoryId          String                            @db.Uuid
+  name                String
+  category            CategoryV2                        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products            ProductBaseV2[]
+  integrationMappings IntegrationSubcategoryMappingV2[]
+  createdAt           DateTime                          @default(now())
+  updatedAt           DateTime                          @updatedAt
 
   @@unique([brandId, categoryId, name])
   @@index([brandId])
@@ -183,29 +249,30 @@ model SubcategoryV2 {
 }
 
 model CatalogV2 {
-  id          String          @id @default(uuid()) @db.Uuid
-  brandId     String          @db.Uuid
-  name        String
-  description String?
+  id                    String               @id @default(uuid()) @db.Uuid
+  brandId               String               @db.Uuid
+  name                  String
+  description           String?
   pdfBackgroundImageUrl String?
-  items       CatalogItemV2[]
-  shareLinks  ShareLinkCatalogV2[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  items                 CatalogItemV2[]
+  shareLinks            ShareLinkCatalogV2[]
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
   @@unique([brandId, name])
   @@index([brandId])
 }
 
 model CatalogItemV2 {
-  id            String       @id @default(uuid()) @db.Uuid
-  brandId       String       @db.Uuid
-  catalogId     String       @db.Uuid
-  productBaseId String       @db.Uuid
+  id            String                 @id @default(uuid()) @db.Uuid
+  brandId       String                 @db.Uuid
+  catalogId     String                 @db.Uuid
+  productBaseId String                 @db.Uuid
   sortOrder     Int?
-  catalog       CatalogV2    @relation(fields: [catalogId], references: [id], onDelete: Cascade)
-  productBase   ProductBaseV2 @relation(fields: [productBaseId], references: [id], onDelete: Restrict)
-  createdAt     DateTime     @default(now())
+  catalog       CatalogV2              @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  productBase   ProductBaseV2          @relation(fields: [productBaseId], references: [id], onDelete: Restrict)
+  snapshot      CatalogItemSnapshotV2?
+  createdAt     DateTime               @default(now())
 
   @@unique([catalogId, productBaseId])
   @@index([brandId])
@@ -213,16 +280,49 @@ model CatalogItemV2 {
   @@index([productBaseId])
 }
 
+model CatalogItemSnapshotV2 {
+  id                 String               @id @default(uuid()) @db.Uuid
+  brandId            String               @db.Uuid
+  catalogItemId      String               @unique @db.Uuid
+  snapshotVersion    Int                  @default(1)
+  sourceType         ProductSourceType
+  sourceProvider     IntegrationProvider?
+  sourceExternalId   String?
+  sourceExternalCode String?
+  name               String
+  code               String
+  barcode            String?
+  brand              String?
+  description        String?
+  categoryId         String?              @db.Uuid
+  categoryName       String?
+  subcategoryId      String?              @db.Uuid
+  subcategoryName    String?
+  price              Decimal?             @db.Decimal(10, 2)
+  primaryImageUrl    String?
+  galleryJson        Json?
+  attributesJson     Json?
+  catalogItem        CatalogItemV2        @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  capturedAt         DateTime             @default(now())
+  refreshedAt        DateTime?
+
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([sourceType])
+  @@index([sourceProvider])
+}
+
 model ShareLinkV2 {
-  id        String                @id @default(uuid()) @db.Uuid
-  brandId   String                @db.Uuid
-  token     String                @unique
+  id        String               @id @default(uuid()) @db.Uuid
+  brandId   String               @db.Uuid
+  token     String               @unique
   name      String
-  isRevoked Boolean               @default(false)
+  isRevoked Boolean              @default(false)
   revokedAt DateTime?
   catalogs  ShareLinkCatalogV2[]
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
 
   @@index([brandId])
 }
@@ -240,4 +340,130 @@ model ShareLinkCatalogV2 {
   @@index([brandId])
   @@index([shareLinkId])
   @@index([catalogId])
+}
+
+model IntegrationConnectionV2 {
+  id                      String                            @id @default(uuid()) @db.Uuid
+  brandId                 String                            @db.Uuid
+  provider                IntegrationProvider
+  status                  IntegrationConnectionStatus       @default(DISCONNECTED)
+  externalCompanyId       String?
+  externalCompanyName     String?
+  externalCompanyDocument String?
+  accessTokenEncrypted    String?
+  refreshTokenEncrypted   String?
+  tokenExpiresAt          DateTime?
+  lastSyncAt              DateTime?
+  lastSuccessfulSyncAt    DateTime?
+  lastSyncError           String?
+  brand                   Brand                             @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  products                ProductBaseV2[]
+  categoryMappings        IntegrationCategoryMappingV2[]
+  subcategoryMappings     IntegrationSubcategoryMappingV2[]
+  syncJobs                IntegrationSyncJobV2[]
+  syncCursors             IntegrationSyncCursorV2[]
+  webhookEvents           IntegrationWebhookEventV2[]
+  createdAt               DateTime                          @default(now())
+  updatedAt               DateTime                          @updatedAt
+
+  @@unique([brandId, provider])
+  @@index([brandId])
+  @@index([provider])
+  @@index([status])
+}
+
+model IntegrationCategoryMappingV2 {
+  id                      String                  @id @default(uuid()) @db.Uuid
+  brandId                 String                  @db.Uuid
+  integrationConnectionId String                  @db.Uuid
+  provider                IntegrationProvider
+  externalCategoryId      String?
+  externalCategoryName    String
+  localCategoryId         String                  @db.Uuid
+  integrationConnection   IntegrationConnectionV2 @relation(fields: [integrationConnectionId], references: [id], onDelete: Cascade)
+  localCategory           CategoryV2              @relation(fields: [localCategoryId], references: [id], onDelete: Cascade)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+
+  @@unique([integrationConnectionId, localCategoryId, externalCategoryName])
+  @@index([brandId])
+  @@index([provider])
+  @@index([localCategoryId])
+}
+
+model IntegrationSubcategoryMappingV2 {
+  id                      String                  @id @default(uuid()) @db.Uuid
+  brandId                 String                  @db.Uuid
+  integrationConnectionId String                  @db.Uuid
+  provider                IntegrationProvider
+  externalSubcategoryId   String?
+  externalSubcategoryName String
+  localSubcategoryId      String                  @db.Uuid
+  integrationConnection   IntegrationConnectionV2 @relation(fields: [integrationConnectionId], references: [id], onDelete: Cascade)
+  localSubcategory        SubcategoryV2           @relation(fields: [localSubcategoryId], references: [id], onDelete: Cascade)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+
+  @@unique([integrationConnectionId, localSubcategoryId, externalSubcategoryName])
+  @@index([brandId])
+  @@index([provider])
+  @@index([localSubcategoryId])
+}
+
+model IntegrationSyncJobV2 {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  brandId                 String                   @db.Uuid
+  integrationConnectionId String                   @db.Uuid
+  provider                IntegrationProvider
+  resource                IntegrationSyncResource
+  mode                    IntegrationSyncJobMode
+  status                  IntegrationSyncJobStatus @default(QUEUED)
+  statsJson               Json?
+  errorJson               Json?
+  integrationConnection   IntegrationConnectionV2  @relation(fields: [integrationConnectionId], references: [id], onDelete: Cascade)
+  startedAt               DateTime?
+  finishedAt              DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+
+  @@index([brandId])
+  @@index([integrationConnectionId])
+  @@index([provider])
+  @@index([status])
+}
+
+model IntegrationSyncCursorV2 {
+  id                      String                  @id @default(uuid()) @db.Uuid
+  brandId                 String                  @db.Uuid
+  integrationConnectionId String                  @db.Uuid
+  provider                IntegrationProvider
+  resource                IntegrationSyncResource
+  cursorValue             String?
+  integrationConnection   IntegrationConnectionV2 @relation(fields: [integrationConnectionId], references: [id], onDelete: Cascade)
+  updatedAt               DateTime                @updatedAt
+  createdAt               DateTime                @default(now())
+
+  @@unique([integrationConnectionId, resource])
+  @@index([brandId])
+  @@index([provider])
+}
+
+model IntegrationWebhookEventV2 {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  brandId                 String                   @db.Uuid
+  integrationConnectionId String?                  @db.Uuid
+  provider                IntegrationProvider
+  eventType               String
+  externalEventId         String?
+  payloadJson             Json
+  status                  IntegrationSyncJobStatus @default(QUEUED)
+  errorMessage            String?
+  integrationConnection   IntegrationConnectionV2? @relation(fields: [integrationConnectionId], references: [id], onDelete: SetNull)
+  receivedAt              DateTime                 @default(now())
+  processedAt             DateTime?
+  createdAt               DateTime                 @default(now())
+
+  @@index([brandId])
+  @@index([provider])
+  @@index([integrationConnectionId])
 }
