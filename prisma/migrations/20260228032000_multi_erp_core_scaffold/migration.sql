@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "IntegrationMode" AS ENUM ('MANUAL_CSV', 'INTEGRATION');
 
 -- CreateEnum
