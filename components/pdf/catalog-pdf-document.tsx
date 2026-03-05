@@ -69,8 +69,8 @@ const BLOCK_HEIGHT_MM = {
   brandHeader: 37,
   catalogHeader: 17,
   catalogHeaderWithDescription: 22,
-  categoryLead: 67,
-  categoryRow: 60,
+  categoryLead: 81,
+  categoryRow: 74,
   catalogEmpty: 26,
 };
 
@@ -376,7 +376,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         boxShadow: "0 14px 28px rgba(113, 57, 86, 0.12)",
       }}
     >
-      <div className="relative h-32 w-full p-2" style={{ backgroundColor: "hsl(335 40% 99%)" }}>
+      <div className="relative h-44 w-full p-2" style={{ backgroundColor: "hsl(335 40% 99%)" }}>
         {imageSrc ? (
           <img
             src={imageSrc}
@@ -391,9 +391,9 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         )}
       </div>
 
-      <div className="space-y-2 p-3">
+      <div className="space-y-3 p-4">
         <div className="space-y-1">
-          <p className="line-clamp-2 text-sm font-semibold text-slate-900">{product.name}</p>
+          <p className="line-clamp-2 text-base font-semibold text-slate-900">{product.name}</p>
           <span
             className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
             style={{
@@ -405,7 +405,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
             {skuLabel}
           </span>
         </div>
-        {categoryLine ? <p className="text-xs text-slate-600">{categoryLine}</p> : null}
+        {categoryLine ? <p className="text-sm text-slate-600">{categoryLine}</p> : null}
       </div>
     </article>
   );
@@ -571,7 +571,7 @@ function PdfContentLayer({
                   <div
                     key={block.id}
                     className={`break-inside-avoid [page-break-inside:avoid] ${
-                      blockIndex === 0 ? "" : "mt-2.5"
+                      blockIndex === 0 ? "" : "mt-3"
                     }`}
                   >
                     <PdfProductRow row={block.row} />
