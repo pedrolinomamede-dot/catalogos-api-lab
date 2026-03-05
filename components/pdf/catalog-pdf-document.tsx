@@ -451,7 +451,7 @@ function PdfCatalogIntro({
 
   return (
     <header
-      className="relative mx-auto mb-4 w-[166mm] overflow-hidden rounded-3xl border border-white/55 bg-white/35 px-2.5 py-2"
+      className="relative mx-auto mb-4 w-[154mm] overflow-hidden rounded-3xl border border-white/55 bg-white/35 px-2 py-1.5"
       style={{ boxShadow: "0 16px 36px rgba(20, 28, 47, 0.2)" }}
     >
       <div className="pointer-events-none absolute inset-0">
@@ -460,18 +460,18 @@ function PdfCatalogIntro({
       </div>
 
       <div
-        className="relative mx-auto flex items-center justify-between gap-4 rounded-2xl border border-rose-100/70 bg-white/90 px-3 py-2.5"
+        className="relative mx-auto flex items-center justify-between gap-3 rounded-2xl border border-rose-100/70 bg-white/90 px-2.5 py-1.5"
         style={{ boxShadow: "0 8px 22px rgba(20, 28, 47, 0.15)" }}
       >
         {leftLogoSrc ? (
           <div
-            className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
+            className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
             style={{ boxShadow: "0 5px 14px rgba(20, 28, 47, 0.12)" }}
           >
             <img src={leftLogoSrc} alt="Logo esquerda" className="h-full w-full object-cover" />
           </div>
         ) : (
-          <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
+          <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
             {leftInitials}
           </div>
         )}
@@ -480,20 +480,20 @@ function PdfCatalogIntro({
           <p className={`${sans.className} text-[44px] font-bold uppercase leading-none tracking-[0.04em] text-slate-900`}>
             {catalog.name}
           </p>
-          <p className={`${display.className} mt-1 text-[16px] font-semibold leading-none text-rose-600/85`}>
+          <p className={`${display.className} mt-1 text-[14px] font-semibold leading-none text-rose-600/85`}>
             {yearLabel}
           </p>
         </div>
 
         {rightLogoSrc ? (
           <div
-            className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
+            className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
             style={{ boxShadow: "0 5px 14px rgba(20, 28, 47, 0.12)" }}
           >
             <img src={rightLogoSrc} alt="Logo direita" className="h-full w-full object-cover" />
           </div>
         ) : (
-          <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
+          <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
             {rightInitials}
           </div>
         )}
@@ -559,10 +559,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
   const primaryImage = resolveImageSrc(product.primaryImageUrl);
   const fallbackImage = resolveImageSrc(product.fallbackImageUrl);
   const imageSrc = primaryImage ?? fallbackImage;
-  const categoryName = normalizeLabel(product.categoryName);
-  const subcategoryName = normalizeLabel(product.subcategoryName);
   const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";
-  const categoryLine = subcategoryName ? `${categoryName} - ${subcategoryName}` : categoryName;
 
   return (
     <article
@@ -579,7 +576,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
             src={imageSrc}
             alt={product.name}
             loading="eager"
-            className="h-full w-full object-contain mix-blend-multiply opacity-[0.96]"
+            className="h-full w-full object-contain"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center rounded-md text-xs text-slate-500">
@@ -588,11 +585,13 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         )}
       </div>
 
-      <div className="space-y-3 p-4">
-        <div className="space-y-1">
-          <p className="line-clamp-2 text-base font-semibold text-slate-900">{product.name}</p>
+      <div className="p-4">
+        <div className="flex min-h-[5.2rem] flex-col">
+          <p className="line-clamp-2 min-h-[3.8rem] text-base font-semibold leading-tight text-slate-900">
+            {product.name}
+          </p>
           <span
-            className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
+            className="mt-1 inline-flex w-fit items-center rounded-md px-3 py-1 text-[18px] font-bold leading-none"
             style={{
               backgroundColor: "hsl(223 62% 28%)",
               color: "white",
@@ -602,7 +601,6 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
             {skuLabel}
           </span>
         </div>
-        {categoryLine ? <p className="text-sm text-slate-700">{categoryLine}</p> : null}
       </div>
     </article>
   );
