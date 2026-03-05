@@ -69,8 +69,8 @@ const BLOCK_HEIGHT_MM = {
   brandHeader: 37,
   catalogHeader: 17,
   catalogHeaderWithDescription: 22,
-  categoryLead: 81,
-  categoryRow: 74,
+  categoryLead: 90,
+  categoryRow: 84,
   catalogEmpty: 26,
 };
 
@@ -376,7 +376,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         boxShadow: "0 14px 28px rgba(113, 57, 86, 0.12)",
       }}
     >
-      <div className="relative h-44 w-full p-2" style={{ backgroundColor: "hsl(335 40% 99%)" }}>
+      <div className="relative h-56 w-full p-1" style={{ backgroundColor: "hsl(335 40% 99%)" }}>
         {imageSrc ? (
           <img
             src={imageSrc}
