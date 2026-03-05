@@ -18,10 +18,23 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { uploadImages } from "@/lib/api/admin";
 import { getErrorMessage } from "@/lib/api/error";
 import { queryKeys } from "@/lib/api/query-keys";
-import { addBaseProductImageV2, listBaseProducts } from "@/lib/api/v2/base-products";
+import {
+  addBaseProductImageV2,
+  deleteBaseProductImageV2,
+  listBaseProductImagesV2,
+  listBaseProducts,
+  updateBaseProductImageV2,
+} from "@/lib/api/v2/base-products";
 import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 type BaseProductsImportImagesDialogProps = {
@@ -45,6 +58,7 @@ type BulkImageImportSummary = {
   skippedSkuNotFound: number;
   failedUpload: number;
   failedLink: number;
+  conflictMode: BulkImageConflictMode;
 };
 
 type BulkImageImportErrorItem = {
@@ -64,10 +78,21 @@ type BulkImageRow = {
   productBaseId?: string;
 };
 
+type BulkImageConflictMode = "append" | "replace";
+
 const MAX_UPLOAD_CHUNK = 10;
 const SKU_FILE_NAME_REGEX = /^\d{4}$/;
 const LINK_ENDPOINT_UNAVAILABLE_MESSAGE =
   "Endpoint de vinculo indisponivel. Reinicie o servidor e valide a versao da API.";
+const REPLACE_CONFLICT_FAILURE_MESSAGE = "Falha ao substituir imagens atuais deste SKU";
+const REPLACE_CONFLICT_PRESERVED_MESSAGE =
+  "Falha ao substituir imagens atuais deste SKU. As imagens anteriores foram preservadas.";
+const REPLACE_CONFLICT_PARTIAL_CLEANUP_MESSAGE =
+  "Substituicao concluida com ressalvas: nao foi possivel remover todas as imagens antigas.";
+const conflictModeLabel: Record<BulkImageConflictMode, string> = {
+  append: "Adicionar a galeria",
+  replace: "Substituir fotos atuais",
+};
 
 const statusLabel: Record<BulkImageRowStatus, string> = {
   pending: "Pendente",
@@ -148,7 +173,10 @@ function hasHtmlInErrorPayload(error: unknown) {
   return false;
 }
 
-function buildSummary(rows: BulkImageRow[]): BulkImageImportSummary {
+function buildSummary(
+  rows: BulkImageRow[],
+  conflictMode: BulkImageConflictMode,
+): BulkImageImportSummary {
   const countByStatus = rows.reduce<Record<BulkImageRowStatus, number>>(
     (acc, row) => {
       acc[row.status] += 1;
@@ -172,6 +200,7 @@ function buildSummary(rows: BulkImageRow[]): BulkImageImportSummary {
     skippedSkuNotFound: countByStatus.sku_not_found,
     failedUpload: countByStatus.upload_failed,
     failedLink: countByStatus.link_failed,
+    conflictMode,
   };
 }
 
@@ -196,6 +225,7 @@ export function BaseProductsImportImagesDialog({
   onOpenChange,
 }: BaseProductsImportImagesDialogProps) {
   const queryClient = useQueryClient();
+  const [conflictMode, setConflictMode] = useState<BulkImageConflictMode>("append");
   const [rows, setRows] = useState<BulkImageRow[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [summary, setSummary] = useState<BulkImageImportSummary | null>(null);
@@ -207,6 +237,7 @@ export function BaseProductsImportImagesDialog({
     setRows([]);
     setSummary(null);
     setErrors([]);
+    setConflictMode("append");
   };
 
   const handleDialogChange = (nextOpen: boolean) => {
@@ -276,72 +307,213 @@ export function BaseProductsImportImagesDialog({
 
       updateState();
 
-      const readyRows = mutableRows.filter(
+      let readyRows = mutableRows.filter(
         (row) => row.status === "ready" && row.productBaseId,
       );
-      const chunks = splitIntoChunks(readyRows, MAX_UPLOAD_CHUNK);
 
-      for (const chunk of chunks) {
-        const formData = new FormData();
-        chunk.forEach((row) => {
-          formData.append("files", row.file);
-        });
+      if (conflictMode === "replace") {
+        const rowsByProduct = readyRows.reduce<Map<string, BulkImageRow[]>>((acc, row) => {
+          const productBaseId = row.productBaseId;
+          if (!productBaseId) {
+            return acc;
+          }
 
-        let uploadedData: Array<{ imageUrl: string }> = [];
+          const bucket = acc.get(productBaseId) ?? [];
+          bucket.push(row);
+          acc.set(productBaseId, bucket);
+          return acc;
+        }, new Map<string, BulkImageRow[]>());
 
-        try {
-          const uploadResponse = (await uploadImages(formData)) as {
-            data?: Array<{ imageUrl: string }>;
-          };
-          uploadedData = uploadResponse?.data ?? [];
-        } catch (err) {
-          const message = getErrorMessage(err);
-          chunk.forEach((row) => {
-            const targetRow = rowById.get(row.id);
-            if (!targetRow) {
-              return;
-            }
-            targetRow.status = "upload_failed";
-            targetRow.statusMessage = message.description ?? message.title;
-          });
-          updateState();
-          continue;
-        }
-
-        for (let index = 0; index < chunk.length; index += 1) {
-          const row = chunk[index];
-          const targetRow = rowById.get(row.id);
-          if (!targetRow) {
+        for (const [productBaseId, rowsOfProduct] of rowsByProduct) {
+          let existingImages: Awaited<ReturnType<typeof listBaseProductImagesV2>> = [];
+          try {
+            existingImages = await listBaseProductImagesV2(productBaseId);
+          } catch (err) {
+            const message = getErrorMessage(err);
+            rowsOfProduct.forEach((row) => {
+              row.status = "link_failed";
+              row.statusMessage = `${REPLACE_CONFLICT_FAILURE_MESSAGE}. ${message.description ?? message.title}`;
+            });
+            updateState();
             continue;
           }
 
-          const imageUrl = uploadedData[index]?.imageUrl;
-          if (!imageUrl) {
-            targetRow.status = "upload_failed";
-            targetRow.statusMessage = "Resposta de upload sem URL para o arquivo";
+          const createdImages: Awaited<ReturnType<typeof addBaseProductImageV2>>[] = [];
+          let productFailureMessage: string | null = null;
+
+          const chunks = splitIntoChunks(rowsOfProduct, MAX_UPLOAD_CHUNK);
+          for (const chunk of chunks) {
+            const formData = new FormData();
+            chunk.forEach((row) => {
+              formData.append("files", row.file);
+            });
+
+            let uploadedData: Array<{ imageUrl: string }> = [];
+
+            try {
+              const uploadResponse = (await uploadImages(formData)) as {
+                data?: Array<{ imageUrl: string }>;
+              };
+              uploadedData = uploadResponse?.data ?? [];
+            } catch (err) {
+              const message = getErrorMessage(err);
+              productFailureMessage = message.description ?? message.title;
+              break;
+            }
+
+            for (let index = 0; index < chunk.length; index += 1) {
+              const row = chunk[index];
+              const imageUrl = uploadedData[index]?.imageUrl;
+              if (!imageUrl) {
+                productFailureMessage = "Resposta de upload sem URL para o arquivo";
+                break;
+              }
+
+              try {
+                const createdImage = await addBaseProductImageV2(row.productBaseId!, imageUrl);
+                createdImages.push(createdImage);
+              } catch (err) {
+                if (hasHtmlInErrorPayload(err)) {
+                  productFailureMessage = LINK_ENDPOINT_UNAVAILABLE_MESSAGE;
+                } else {
+                  const message = getErrorMessage(err);
+                  productFailureMessage = message.description ?? message.title;
+                }
+                break;
+              }
+            }
+
+            if (productFailureMessage) {
+              break;
+            }
+          }
+
+          const rollbackCreatedImages = async () => {
+            if (createdImages.length === 0) {
+              return;
+            }
+            await Promise.allSettled(
+              createdImages.map((image) => deleteBaseProductImageV2(productBaseId, image.id)),
+            );
+          };
+
+          if (productFailureMessage) {
+            await rollbackCreatedImages();
+            rowsOfProduct.forEach((row) => {
+              row.status = "link_failed";
+              row.statusMessage =
+                `${REPLACE_CONFLICT_PRESERVED_MESSAGE} ${productFailureMessage}`;
+            });
+            updateState();
+            continue;
+          }
+
+          const firstNewImageUrl = createdImages[0]?.imageUrl;
+          if (!firstNewImageUrl) {
+            rowsOfProduct.forEach((row) => {
+              row.status = "link_failed";
+              row.statusMessage = REPLACE_CONFLICT_FAILURE_MESSAGE;
+            });
+            updateState();
             continue;
           }
 
           try {
-            await addBaseProductImageV2(targetRow.productBaseId!, imageUrl);
-            targetRow.status = "linked";
-            targetRow.statusMessage = "Imagem vinculada com sucesso";
+            await updateBaseProductImageV2(productBaseId, firstNewImageUrl);
           } catch (err) {
-            targetRow.status = "link_failed";
-            if (hasHtmlInErrorPayload(err)) {
-              targetRow.statusMessage = LINK_ENDPOINT_UNAVAILABLE_MESSAGE;
-            } else {
-              const message = getErrorMessage(err);
-              targetRow.statusMessage = message.description ?? message.title;
+            await rollbackCreatedImages();
+            const message = getErrorMessage(err);
+            rowsOfProduct.forEach((row) => {
+              row.status = "link_failed";
+              row.statusMessage =
+                `${REPLACE_CONFLICT_PRESERVED_MESSAGE} ${message.description ?? message.title}`;
+            });
+            updateState();
+            continue;
+          }
+
+          let cleanupFailed = false;
+          for (const image of existingImages) {
+            try {
+              await deleteBaseProductImageV2(productBaseId, image.id);
+            } catch {
+              cleanupFailed = true;
             }
           }
-        }
 
-        updateState();
+          rowsOfProduct.forEach((row) => {
+            row.status = "linked";
+            row.statusMessage = cleanupFailed
+              ? REPLACE_CONFLICT_PARTIAL_CLEANUP_MESSAGE
+              : "Imagens substituidas com sucesso";
+          });
+          updateState();
+        }
+      } else {
+        const chunks = splitIntoChunks(readyRows, MAX_UPLOAD_CHUNK);
+
+        for (const chunk of chunks) {
+          const formData = new FormData();
+          chunk.forEach((row) => {
+            formData.append("files", row.file);
+          });
+
+          let uploadedData: Array<{ imageUrl: string }> = [];
+
+          try {
+            const uploadResponse = (await uploadImages(formData)) as {
+              data?: Array<{ imageUrl: string }>;
+            };
+            uploadedData = uploadResponse?.data ?? [];
+          } catch (err) {
+            const message = getErrorMessage(err);
+            chunk.forEach((row) => {
+              const targetRow = rowById.get(row.id);
+              if (!targetRow) {
+                return;
+              }
+              targetRow.status = "upload_failed";
+              targetRow.statusMessage = message.description ?? message.title;
+            });
+            updateState();
+            continue;
+          }
+
+          for (let index = 0; index < chunk.length; index += 1) {
+            const row = chunk[index];
+            const targetRow = rowById.get(row.id);
+            if (!targetRow) {
+              continue;
+            }
+
+            const imageUrl = uploadedData[index]?.imageUrl;
+            if (!imageUrl) {
+              targetRow.status = "upload_failed";
+              targetRow.statusMessage = "Resposta de upload sem URL para o arquivo";
+              continue;
+            }
+
+            try {
+              await addBaseProductImageV2(targetRow.productBaseId!, imageUrl);
+              targetRow.status = "linked";
+              targetRow.statusMessage = "Imagem vinculada com sucesso";
+            } catch (err) {
+              targetRow.status = "link_failed";
+              if (hasHtmlInErrorPayload(err)) {
+                targetRow.statusMessage = LINK_ENDPOINT_UNAVAILABLE_MESSAGE;
+              } else {
+                const message = getErrorMessage(err);
+                targetRow.statusMessage = message.description ?? message.title;
+              }
+            }
+          }
+
+          updateState();
+        }
       }
 
       const finalRows = mutableRows.map((row) => ({ ...row }));
-      const nextSummary = buildSummary(finalRows);
+      const nextSummary = buildSummary(finalRows, conflictMode);
       const nextErrors = toErrorItems(finalRows);
 
       setSummary(nextSummary);
@@ -380,6 +552,23 @@ export function BaseProductsImportImagesDialog({
         </DialogHeader>
 
         <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="bulk-image-conflict-mode">Quando SKU ja tiver imagens</Label>
+            <Select
+              value={conflictMode}
+              onValueChange={(value) => setConflictMode(value as BulkImageConflictMode)}
+              disabled={isImporting}
+            >
+              <SelectTrigger id="bulk-image-conflict-mode" className="max-w-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="append">{conflictModeLabel.append}</SelectItem>
+                <SelectItem value="replace">{conflictModeLabel.replace}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="bulk-base-product-images" className="cursor-pointer">
               Arquivos de imagem
@@ -437,6 +626,9 @@ export function BaseProductsImportImagesDialog({
 
           {summary ? (
             <Card className="space-y-2 p-4 text-sm text-muted-foreground">
+              <p>
+                Modo de conflito: <strong>{conflictModeLabel[summary.conflictMode]}</strong>
+              </p>
               <p>
                 Total: <strong>{summary.total}</strong>
               </p>

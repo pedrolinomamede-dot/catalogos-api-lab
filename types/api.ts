@@ -188,6 +188,16 @@ export type CreateBaseProductV2Request = {
   isActive?: boolean;
 };
 
+export type UpdateBaseProductV2Request = Partial<{
+  sku: string;
+  name: string;
+  description: string;
+  brand: string | null;
+  barcode: string | null;
+  size: string | null;
+  isActive: boolean;
+}>;
+
 export type ImportBaseProductsCsvV2Item = {
   code: string;
   name: string;

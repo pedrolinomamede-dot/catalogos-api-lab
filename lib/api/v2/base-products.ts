@@ -4,6 +4,7 @@ import type {
   CreateBaseProductV2Request,
   ImportBaseProductsCsvV2Item,
   ProductBaseImageV2,
+  UpdateBaseProductV2Request,
 } from "@/types/api";
 
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api/client";
@@ -94,6 +95,17 @@ export async function importBaseProductsCsvV2(
 
 export async function deleteBaseProduct(id: string): Promise<void> {
   await apiDelete<ApiEnvelope<unknown>>(`/api/v2/produtos-base/${id}`);
+}
+
+export async function updateBaseProductV2(
+  id: string,
+  body: UpdateBaseProductV2Request,
+): Promise<BaseProductV2> {
+  const res = await apiPatch<UpdateBaseProductV2Request, ApiEnvelope<BaseProductV2>>(
+    `/api/v2/produtos-base/${id}`,
+    body,
+  );
+  return res.data;
 }
 
 export async function updateBaseProductImageV2(id: string, imageUrl: string | null): Promise<BaseProductV2> {

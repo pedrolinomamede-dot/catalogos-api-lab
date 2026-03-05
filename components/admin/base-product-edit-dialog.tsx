@@ -24,6 +24,7 @@ import {
   useAddBaseProductImageV2,
   useBaseProductImagesV2,
   useDeleteBaseProductImageV2,
+  useUpdateBaseProductV2,
   useUpdateBaseProductImageV2,
 } from "@/lib/api/hooks";
 import { toastError, toastSuccess } from "@/lib/ui/toast";
@@ -40,8 +41,10 @@ export function BaseProductEditDialog({
   onOpenChange,
 }: BaseProductEditDialogProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [productName, setProductName] = useState(baseProduct?.name ?? "");
   const [mainImageUrl, setMainImageUrl] = useState<string | null>(baseProduct?.imageUrl ?? null);
   const [isUploading, setIsUploading] = useState(false);
+  const updateBaseProductMutation = useUpdateBaseProductV2();
   const updateImageMutation = useUpdateBaseProductImageV2();
   
   const { data: galleryImages = [], isLoading: isLoadingGallery } = useBaseProductImagesV2(
@@ -67,13 +70,19 @@ export function BaseProductEditDialog({
   }, [previewUrl]);
 
   useEffect(() => {
+    setProductName(baseProduct?.name ?? "");
     setMainImageUrl(baseProduct?.imageUrl ?? null);
     if (!open) {
       setSelectedFile(null);
     }
-  }, [baseProduct?.id, baseProduct?.imageUrl, open]);
+  }, [baseProduct?.id, baseProduct?.name, baseProduct?.imageUrl, open]);
 
-  const isSaving = isUploading || updateImageMutation.isPending || addImageMutation.isPending || deleteImageMutation.isPending;
+  const isSaving =
+    isUploading ||
+    updateBaseProductMutation.isPending ||
+    updateImageMutation.isPending ||
+    addImageMutation.isPending ||
+    deleteImageMutation.isPending;
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isSaving) {
@@ -123,6 +132,30 @@ export function BaseProductEditDialog({
       toastError(message.title, message.description);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!baseProduct) {
+      return;
+    }
+
+    const nextName = productName.trim();
+    if (nextName.length < 2) {
+      toastError("Nome invalido", "O nome precisa ter no minimo 2 caracteres.");
+      return;
+    }
+
+    try {
+      const updated = await updateBaseProductMutation.mutateAsync({
+        id: baseProduct.id,
+        data: { name: nextName },
+      });
+      setProductName(updated.name);
+      toastSuccess("Nome atualizado");
+    } catch (err) {
+      const message = getErrorMessage(err);
+      toastError(message.title, message.description);
     }
   };
 
@@ -185,15 +218,35 @@ export function BaseProductEditDialog({
         <DialogHeader>
           <DialogTitle>Editar produto</DialogTitle>
           <DialogDescription>
-            Gerencie as imagens do produto da Base Geral.
+            Gerencie o nome e as imagens do produto da Base Geral.
           </DialogDescription>
         </DialogHeader>
 
-        <form className="grid gap-4 max-h-[60vh] overflow-y-auto pr-2" onSubmit={handleSubmit}>
+        <form className="grid max-h-[60vh] gap-4 overflow-y-auto pr-2" onSubmit={handleSubmit}>
+          <div className="grid gap-2">
+            <Label htmlFor="base-product-name">Nome do produto</Label>
+            <div className="flex gap-2">
+              <Input
+                id="base-product-name"
+                value={productName}
+                disabled={isSaving}
+                onChange={(event) => setProductName(event.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSaving || productName.trim().length < 2}
+                onClick={handleSaveName}
+              >
+                Salvar nome
+              </Button>
+            </div>
+          </div>
+
           <div className="grid gap-2 text-sm">
             <Label>Produto</Label>
             <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-foreground">
-              {baseProduct?.name ?? "Produto"} — SKU {baseProduct?.sku ?? "-"}
+              {productName || baseProduct?.name || "Produto"} - SKU {baseProduct?.sku ?? "-"}
             </div>
           </div>
 
@@ -208,7 +261,7 @@ export function BaseProductEditDialog({
                 <div className="aspect-video overflow-hidden rounded-md bg-muted">
                   <img
                     src={mainImageUrl}
-                    alt={baseProduct?.name ?? "Imagem principal"}
+                    alt={productName || baseProduct?.name || "Imagem principal"}
                     className="h-full w-full object-cover"
                   />
                 </div>
@@ -319,3 +372,4 @@ export function BaseProductEditDialog({
     </Dialog>
   );
 }
+

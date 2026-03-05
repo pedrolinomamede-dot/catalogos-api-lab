@@ -13,6 +13,7 @@ import type {
   UpdateCategoryRequest,
   UpdateCategoryV2Request,
   UpdateCatalogV2Request,
+  UpdateBaseProductV2Request,
   UpdateSubcategoryV2Request,
   UpdateProductRequest,
 } from "@/types/api";
@@ -49,6 +50,7 @@ import {
   importBaseProductsCsvV2,
   listBaseProductImagesV2,
   listBaseProducts,
+  updateBaseProductV2,
   updateBaseProductImageV2,
 } from "@/lib/api/v2/base-products";
 import {
@@ -105,6 +107,7 @@ type UpdateCategoryInput = { id: string; data: UpdateCategoryRequest };
 type UpdateCategoryV2Input = { id: string; data: UpdateCategoryV2Request };
 type UpdateSubcategoryV2Input = { id: string; data: UpdateSubcategoryV2Request };
 type UpdateProductInput = { id: string; data: UpdateProductRequest };
+type UpdateBaseProductInput = { id: string; data: UpdateBaseProductV2Request };
 type UpdateBaseProductImageInput = { id: string; imageUrl: string | null };
 type DeleteProductOptions = {
   onSuccess?: () => void;
@@ -214,6 +217,17 @@ export function useBaseProducts(params?: BaseProductsParams) {
   return useQuery({
     queryKey: queryKeys.v2.baseProducts.list(paramsKey),
     queryFn: () => listBaseProducts(params),
+  });
+}
+
+export function useUpdateBaseProductV2() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateBaseProductInput) =>
+      updateBaseProductV2(input.id, input.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.baseProducts.root });
+    },
   });
 }
 
