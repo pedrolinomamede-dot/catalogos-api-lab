@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole } from "@/lib/authz";
-import { parseCatalogSnapshotGallery } from "@/lib/catalog-snapshots/snapshot-types";
+import {
+  parseCatalogSnapshotAttributes,
+  parseCatalogSnapshotGallery,
+} from "@/lib/catalog-snapshots/snapshot-types";
 import { withBrand } from "@/lib/prisma";
 import { renderPdf } from "@/lib/pdf/render-pdf";
 import type { ShareLinkPdfData, ShareLinkPdfProduct } from "@/lib/pdf/share-link-pdf";
@@ -9,6 +12,94 @@ import { isPrismaMissingColumnError } from "@/lib/prisma/errors";
 import { jsonError } from "@/lib/utils/errors";
 
 export const dynamic = "force-dynamic";
+
+const UNIT_RANK: Record<string, number> = {
+  g: 1,
+  kg: 2,
+  ml: 3,
+  l: 4,
+};
+
+function normalizeLabel(value?: string | null) {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  return normalized.length > 0 ? normalized : null;
+}
+
+function parseMeasure(value?: string | null) {
+  const raw = normalizeLabel(value);
+  if (!raw) {
+    return {
+      isMissing: true,
+      unitRank: Number.POSITIVE_INFINITY,
+      numericValue: Number.POSITIVE_INFINITY,
+      normalizedUnit: "",
+      label: "",
+    };
+  }
+
+  const compact = raw.toLowerCase().replace(/\s+/g, "");
+  const match = compact.match(/^(\d+(?:[.,]\d+)?)([a-zA-Z]+)$/);
+  if (!match) {
+    return {
+      isMissing: false,
+      unitRank: UNIT_RANK[compact] ?? 99,
+      numericValue: Number.POSITIVE_INFINITY,
+      normalizedUnit: compact,
+      label: raw,
+    };
+  }
+
+  const numericPart = Number.parseFloat(match[1].replace(",", "."));
+  const unit = match[2];
+
+  return {
+    isMissing: false,
+    unitRank: UNIT_RANK[unit] ?? 99,
+    numericValue: Number.isFinite(numericPart) ? numericPart : Number.POSITIVE_INFINITY,
+    normalizedUnit: unit,
+    label: `${match[1]}${unit}`,
+  };
+}
+
+function compareProductsForPdf(a: ShareLinkPdfProduct, b: ShareLinkPdfProduct) {
+  const categoryA = normalizeLabel(a.categoryName) ?? "Outros Produtos";
+  const categoryB = normalizeLabel(b.categoryName) ?? "Outros Produtos";
+  const categoryDiff = categoryA.localeCompare(categoryB, "pt-BR", { sensitivity: "base" });
+  if (categoryDiff !== 0) {
+    return categoryDiff;
+  }
+
+  const measureA = parseMeasure(a.sizeLabel);
+  const measureB = parseMeasure(b.sizeLabel);
+
+  if (measureA.isMissing !== measureB.isMissing) {
+    return measureA.isMissing ? 1 : -1;
+  }
+
+  if (measureA.unitRank !== measureB.unitRank) {
+    return measureA.unitRank - measureB.unitRank;
+  }
+
+  if (measureA.numericValue !== measureB.numericValue) {
+    return measureA.numericValue - measureB.numericValue;
+  }
+
+  const labelDiff = measureA.label.localeCompare(measureB.label, "pt-BR", {
+    sensitivity: "base",
+  });
+  if (labelDiff !== 0) {
+    return labelDiff;
+  }
+
+  const nameDiff = a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
+  if (nameDiff !== 0) {
+    return nameDiff;
+  }
+
+  const skuA = normalizeLabel(a.sku) ?? "";
+  const skuB = normalizeLabel(b.sku) ?? "";
+  return skuA.localeCompare(skuB, "pt-BR", { sensitivity: "base" });
+}
 
 export async function GET(
   _request: NextRequest,
@@ -55,6 +146,14 @@ export async function GET(
               name: true,
               description: true,
               pdfBackgroundImageUrl: true,
+              pdfHeaderLeftLogoUrl: true,
+              pdfHeaderRightLogoUrl: true,
+              pdfStripeBgColor: true,
+              pdfStripeLineColor: true,
+              pdfStripeTextColor: true,
+              pdfStripeFontFamily: true,
+              pdfStripeFontWeight: true,
+              pdfStripeFontSize: true,
             },
           },
         },
@@ -79,6 +178,7 @@ export async function GET(
                   subcategoryName: true,
                   primaryImageUrl: true,
                   galleryJson: true,
+                  attributesJson: true,
                 },
               },
               productBase: {
@@ -89,6 +189,7 @@ export async function GET(
                   brand: true,
                   description: true,
                   imageUrl: true,
+                  size: true,
                   category: {
                     select: {
                       name: true,
@@ -146,11 +247,14 @@ export async function GET(
                 ? fallbackByProductId.get(product.id) ?? null
                 : null;
               const snapshotGallery = parseCatalogSnapshotGallery(snapshot?.galleryJson);
+              const snapshotAttributes = parseCatalogSnapshotAttributes(snapshot?.attributesJson);
+              const sizeLabel = normalizeLabel(snapshotAttributes.size) ?? normalizeLabel(product?.size);
 
               acc.push({
                 id: product?.id ?? `${entry.catalog.id}-${snapshot?.code ?? "snapshot"}`,
                 name: snapshot?.name ?? product?.name ?? "Produto",
                 sku: snapshot?.code ?? product?.sku ?? null,
+                sizeLabel,
                 brand: snapshot?.brand ?? product?.brand ?? null,
                 description: snapshot?.description ?? product?.description ?? null,
                 categoryName:
@@ -165,12 +269,21 @@ export async function GET(
 
               return acc;
             }, []);
+          products.sort(compareProductsForPdf);
 
           return {
             id: entry.catalog.id,
             name: entry.catalog.name,
             description: entry.catalog.description,
             pdfBackgroundImageUrl: entry.catalog.pdfBackgroundImageUrl,
+            pdfHeaderLeftLogoUrl: entry.catalog.pdfHeaderLeftLogoUrl,
+            pdfHeaderRightLogoUrl: entry.catalog.pdfHeaderRightLogoUrl,
+            pdfStripeBgColor: entry.catalog.pdfStripeBgColor,
+            pdfStripeLineColor: entry.catalog.pdfStripeLineColor,
+            pdfStripeTextColor: entry.catalog.pdfStripeTextColor,
+            pdfStripeFontFamily: entry.catalog.pdfStripeFontFamily,
+            pdfStripeFontWeight: entry.catalog.pdfStripeFontWeight,
+            pdfStripeFontSize: entry.catalog.pdfStripeFontSize,
             products,
           };
         }),

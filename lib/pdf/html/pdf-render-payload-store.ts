@@ -90,6 +90,7 @@ function cloneProduct(product: ShareLinkPdfProduct): ShareLinkPdfProduct {
     id: product.id,
     name: product.name,
     sku: product.sku ?? null,
+    sizeLabel: product.sizeLabel ?? null,
     brand: product.brand ?? null,
     description: product.description ?? null,
     categoryName: product.categoryName ?? null,
@@ -105,6 +106,14 @@ function cloneCatalog(catalog: ShareLinkPdfCatalog): ShareLinkPdfCatalog {
     name: catalog.name,
     description: catalog.description ?? null,
     pdfBackgroundImageUrl: catalog.pdfBackgroundImageUrl ?? null,
+    pdfHeaderLeftLogoUrl: catalog.pdfHeaderLeftLogoUrl ?? null,
+    pdfHeaderRightLogoUrl: catalog.pdfHeaderRightLogoUrl ?? null,
+    pdfStripeBgColor: catalog.pdfStripeBgColor ?? null,
+    pdfStripeLineColor: catalog.pdfStripeLineColor ?? null,
+    pdfStripeTextColor: catalog.pdfStripeTextColor ?? null,
+    pdfStripeFontFamily: catalog.pdfStripeFontFamily ?? null,
+    pdfStripeFontWeight: catalog.pdfStripeFontWeight ?? null,
+    pdfStripeFontSize: catalog.pdfStripeFontSize ?? null,
     products: catalog.products.map(cloneProduct),
   };
 }

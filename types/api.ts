@@ -249,6 +249,14 @@ export type CatalogV2 = {
   name: string;
   description?: string | null;
   pdfBackgroundImageUrl?: string | null;
+  pdfHeaderLeftLogoUrl?: string | null;
+  pdfHeaderRightLogoUrl?: string | null;
+  pdfStripeBgColor?: string | null;
+  pdfStripeLineColor?: string | null;
+  pdfStripeTextColor?: string | null;
+  pdfStripeFontFamily?: string | null;
+  pdfStripeFontWeight?: number | null;
+  pdfStripeFontSize?: number | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -295,6 +303,14 @@ export type CatalogItemSnapshotV2 = {
 export type CreateCatalogV2Request = {
   name: string;
   description?: string | null;
+  pdfHeaderLeftLogoUrl?: string | null;
+  pdfHeaderRightLogoUrl?: string | null;
+  pdfStripeBgColor?: string | null;
+  pdfStripeLineColor?: string | null;
+  pdfStripeTextColor?: string | null;
+  pdfStripeFontFamily?: string | null;
+  pdfStripeFontWeight?: number | null;
+  pdfStripeFontSize?: number | null;
 };
 
 export type UpdateCatalogV2Request = Partial<CreateCatalogV2Request> & {

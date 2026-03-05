@@ -254,6 +254,14 @@ model CatalogV2 {
   name                  String
   description           String?
   pdfBackgroundImageUrl String?
+  pdfHeaderLeftLogoUrl  String?
+  pdfHeaderRightLogoUrl String?
+  pdfStripeBgColor      String?
+  pdfStripeLineColor    String?
+  pdfStripeTextColor    String?
+  pdfStripeFontFamily   String?
+  pdfStripeFontWeight   Int?
+  pdfStripeFontSize     Int?
   items                 CatalogItemV2[]
   shareLinks            ShareLinkCatalogV2[]
   createdAt             DateTime             @default(now())

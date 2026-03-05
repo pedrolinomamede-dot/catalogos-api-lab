@@ -28,6 +28,7 @@ export type ShareLinkPdfProduct = {
   id: string;
   name: string;
   sku?: string | null;
+  sizeLabel?: string | null;
   brand?: string | null;
   description?: string | null;
   categoryName?: string | null;
@@ -41,6 +42,14 @@ export type ShareLinkPdfCatalog = {
   name: string;
   description?: string | null;
   pdfBackgroundImageUrl?: string | null;
+  pdfHeaderLeftLogoUrl?: string | null;
+  pdfHeaderRightLogoUrl?: string | null;
+  pdfStripeBgColor?: string | null;
+  pdfStripeLineColor?: string | null;
+  pdfStripeTextColor?: string | null;
+  pdfStripeFontFamily?: string | null;
+  pdfStripeFontWeight?: number | null;
+  pdfStripeFontSize?: number | null;
   products: ShareLinkPdfProduct[];
 };
 

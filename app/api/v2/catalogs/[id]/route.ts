@@ -10,7 +10,21 @@ type UpdatePayload = {
   name?: string;
   description?: string | null;
   pdfBackgroundImageUrl?: string | null;
+  pdfHeaderLeftLogoUrl?: string | null;
+  pdfHeaderRightLogoUrl?: string | null;
+  pdfStripeBgColor?: string | null;
+  pdfStripeLineColor?: string | null;
+  pdfStripeTextColor?: string | null;
+  pdfStripeFontFamily?: string | null;
+  pdfStripeFontWeight?: number | null;
+  pdfStripeFontSize?: number | null;
 };
+
+const HEX_COLOR_REGEX = /^#[0-9a-f]{6}$/i;
+const PDF_FONT_FAMILIES = new Set(["MANROPE", "PLAYFAIR", "POPPINS"]);
+const PDF_FONT_WEIGHTS = new Set([400, 500, 600, 700]);
+const PDF_FONT_SIZE_MIN = 12;
+const PDF_FONT_SIZE_MAX = 36;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -81,6 +95,149 @@ function parsePdfBackgroundImageUrl(value: unknown) {
   return { pdfBackgroundImageUrl: normalized };
 }
 
+function parseOptionalLogoUrl(value: unknown, fieldName: string) {
+  if (value === null) {
+    return { value: null as string | null };
+  }
+
+  if (typeof value !== "string") {
+    return {
+      error: jsonError(
+        400,
+        "validation_error",
+        `${fieldName} must be a string or null`,
+      ),
+    };
+  }
+
+  const normalized = value.trim();
+  if (!normalized) {
+    return {
+      error: jsonError(
+        400,
+        "validation_error",
+        `${fieldName} must be a non-empty string or null`,
+      ),
+    };
+  }
+
+  return { value: normalized };
+}
+
+function parseOptionalHexColor(value: unknown, fieldName: string) {
+  if (value === null) {
+    return { value: null as string | null };
+  }
+
+  if (typeof value !== "string") {
+    return {
+      error: jsonError(
+        400,
+        "validation_error",
+        `${fieldName} must be a string or null`,
+      ),
+    };
+  }
+
+  const normalized = value.trim();
+  if (!HEX_COLOR_REGEX.test(normalized)) {
+    return {
+      error: jsonError(
+        400,
+        "validation_error",
+        `${fieldName} must be in hex format (#RRGGBB)`,
+      ),
+    };
+  }
+
+  return { value: normalized.toUpperCase() };
+}
+
+function parseOptionalFontFamily(value: unknown) {
+  if (value === null) {
+    return { value: null as string | null };
+  }
+
+  if (typeof value !== "string") {
+    return {
+      error: jsonError(
+        400,
+        "validation_error",
+        "pdfStripeFontFamily must be a string or null",
+      ),
+    };
+  }
+
+  const normalized = value.trim().toUpperCase();
+  if (!PDF_FONT_FAMILIES.has(normalized)) {
+    return {
+      error: jsonError(
+        400,
+        "validation_error",
+        "pdfStripeFontFamily must be one of: MANROPE, PLAYFAIR, POPPINS",
+      ),
+    };
+  }
+
+  return { value: normalized };
+}
+
+function parseOptionalFontWeight(value: unknown) {
+  if (value === null) {
+    return { value: null as number | null };
+  }
+
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    return {
+      error: jsonError(
+        400,
+        "validation_error",
+        "pdfStripeFontWeight must be an integer or null",
+      ),
+    };
+  }
+
+  if (!PDF_FONT_WEIGHTS.has(value)) {
+    return {
+      error: jsonError(
+        400,
+        "validation_error",
+        "pdfStripeFontWeight must be one of: 400, 500, 600, 700",
+      ),
+    };
+  }
+
+  return { value };
+}
+
+function parseOptionalFontSize(value: unknown) {
+  if (value === null) {
+    return { value: null as number | null };
+  }
+
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    return {
+      error: jsonError(
+        400,
+        "validation_error",
+        "pdfStripeFontSize must be an integer or null",
+      ),
+    };
+  }
+
+  if (value < PDF_FONT_SIZE_MIN || value > PDF_FONT_SIZE_MAX) {
+    return {
+      error: jsonError(
+        400,
+        "validation_error",
+        `pdfStripeFontSize must be between ${PDF_FONT_SIZE_MIN} and ${PDF_FONT_SIZE_MAX}`,
+      ),
+    };
+  }
+
+  return { value };
+}
+
 function parseUpdatePayload(body: unknown) {
   if (!isPlainObject(body)) {
     return { error: jsonError(400, "validation_error", "Invalid payload") };
@@ -118,6 +275,70 @@ function parseUpdatePayload(body: unknown) {
       return { error: parsedBackground.error };
     }
     data.pdfBackgroundImageUrl = parsedBackground.pdfBackgroundImageUrl;
+  }
+
+  if (hasOwn(body, "pdfHeaderLeftLogoUrl")) {
+    const parsed = parseOptionalLogoUrl(body.pdfHeaderLeftLogoUrl, "pdfHeaderLeftLogoUrl");
+    if (parsed.error) {
+      return { error: parsed.error };
+    }
+    data.pdfHeaderLeftLogoUrl = parsed.value;
+  }
+
+  if (hasOwn(body, "pdfHeaderRightLogoUrl")) {
+    const parsed = parseOptionalLogoUrl(body.pdfHeaderRightLogoUrl, "pdfHeaderRightLogoUrl");
+    if (parsed.error) {
+      return { error: parsed.error };
+    }
+    data.pdfHeaderRightLogoUrl = parsed.value;
+  }
+
+  if (hasOwn(body, "pdfStripeBgColor")) {
+    const parsed = parseOptionalHexColor(body.pdfStripeBgColor, "pdfStripeBgColor");
+    if (parsed.error) {
+      return { error: parsed.error };
+    }
+    data.pdfStripeBgColor = parsed.value;
+  }
+
+  if (hasOwn(body, "pdfStripeLineColor")) {
+    const parsed = parseOptionalHexColor(body.pdfStripeLineColor, "pdfStripeLineColor");
+    if (parsed.error) {
+      return { error: parsed.error };
+    }
+    data.pdfStripeLineColor = parsed.value;
+  }
+
+  if (hasOwn(body, "pdfStripeTextColor")) {
+    const parsed = parseOptionalHexColor(body.pdfStripeTextColor, "pdfStripeTextColor");
+    if (parsed.error) {
+      return { error: parsed.error };
+    }
+    data.pdfStripeTextColor = parsed.value;
+  }
+
+  if (hasOwn(body, "pdfStripeFontFamily")) {
+    const parsed = parseOptionalFontFamily(body.pdfStripeFontFamily);
+    if (parsed.error) {
+      return { error: parsed.error };
+    }
+    data.pdfStripeFontFamily = parsed.value;
+  }
+
+  if (hasOwn(body, "pdfStripeFontWeight")) {
+    const parsed = parseOptionalFontWeight(body.pdfStripeFontWeight);
+    if (parsed.error) {
+      return { error: parsed.error };
+    }
+    data.pdfStripeFontWeight = parsed.value;
+  }
+
+  if (hasOwn(body, "pdfStripeFontSize")) {
+    const parsed = parseOptionalFontSize(body.pdfStripeFontSize);
+    if (parsed.error) {
+      return { error: parsed.error };
+    }
+    data.pdfStripeFontSize = parsed.value;
   }
 
   if (Object.keys(data).length === 0) {
