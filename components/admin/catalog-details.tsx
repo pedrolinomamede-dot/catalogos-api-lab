@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import type { CatalogItemV2 } from "@/types/api";
 
 import { CatalogAddProductsDialog } from "@/components/admin/catalog-add-products-dialog";
+import { CatalogFormDialog } from "@/components/admin/catalog-form-dialog";
 import { CatalogImportCsvDialog } from "@/components/admin/catalog-import-csv-dialog";
 import { CatalogPdfBackgroundDialog } from "@/components/admin/catalog-pdf-background-dialog";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
@@ -75,6 +76,7 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isPdfBackgroundOpen, setIsPdfBackgroundOpen] = useState(false);
+  const [isPdfStyleOpen, setIsPdfStyleOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CatalogItemV2 | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
@@ -258,6 +260,9 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
             <Button variant="outline" onClick={() => setIsPdfBackgroundOpen(true)}>
               Fundo do PDF
             </Button>
+            <Button variant="outline" onClick={() => setIsPdfStyleOpen(true)}>
+              Logos e estilo PDF
+            </Button>
             <Button onClick={() => setIsAddOpen(true)}>
               Adicionar produtos
             </Button>
@@ -397,6 +402,15 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
         catalog={catalog}
         open={isPdfBackgroundOpen}
         onOpenChange={setIsPdfBackgroundOpen}
+      />
+      <CatalogFormDialog
+        mode="edit"
+        open={isPdfStyleOpen}
+        onOpenChange={setIsPdfStyleOpen}
+        initialValues={catalog}
+        onSuccess={() => {
+          void refetchCatalog();
+        }}
       />
 
       <ConfirmDialog

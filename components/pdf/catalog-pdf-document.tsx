@@ -451,7 +451,7 @@ function PdfCatalogIntro({
 
   return (
     <header
-      className="relative mb-4 overflow-hidden rounded-3xl border border-white/55 bg-white/35 px-4 py-3"
+      className="relative mb-4 mx-auto w-[174mm] overflow-hidden rounded-3xl border border-white/55 bg-white/35 px-3 py-2.5"
       style={{ boxShadow: "0 16px 36px rgba(20, 28, 47, 0.2)" }}
     >
       <div className="pointer-events-none absolute inset-0">
@@ -460,40 +460,40 @@ function PdfCatalogIntro({
       </div>
 
       <div
-        className="relative mx-auto flex max-w-[175mm] items-center justify-between gap-4 rounded-2xl border border-rose-100/70 bg-white/90 px-4 py-2.5"
+        className="relative mx-auto flex items-center justify-between gap-4 rounded-2xl border border-rose-100/70 bg-white/90 px-3 py-2.5"
         style={{ boxShadow: "0 8px 22px rgba(20, 28, 47, 0.15)" }}
       >
         {leftLogoSrc ? (
           <div
-            className="flex h-16 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
+            className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
             style={{ boxShadow: "0 5px 14px rgba(20, 28, 47, 0.12)" }}
           >
-            <img src={leftLogoSrc} alt="Logo esquerda" className="h-full w-full object-contain" />
+            <img src={leftLogoSrc} alt="Logo esquerda" className="h-full w-full object-cover" />
           </div>
         ) : (
-          <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
+          <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
             {leftInitials}
           </div>
         )}
 
         <div className="min-w-0 flex-1 text-center">
-          <p className={`${sans.className} text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700`}>
+          <p className={`${sans.className} text-[40px] font-bold uppercase leading-none tracking-[0.04em] text-slate-900`}>
             {catalog.name}
           </p>
-          <p className={`${display.className} mt-0.5 text-[44px] font-bold leading-none text-rose-600/85`}>
+          <p className={`${display.className} mt-1 text-[20px] font-semibold leading-none text-rose-600/85`}>
             {yearLabel}
           </p>
         </div>
 
         {rightLogoSrc ? (
           <div
-            className="flex h-16 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
+            className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
             style={{ boxShadow: "0 5px 14px rgba(20, 28, 47, 0.12)" }}
           >
-            <img src={rightLogoSrc} alt="Logo direita" className="h-full w-full object-contain" />
+            <img src={rightLogoSrc} alt="Logo direita" className="h-full w-full object-cover" />
           </div>
         ) : (
-          <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
+          <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
             {rightInitials}
           </div>
         )}
@@ -520,7 +520,7 @@ function PdfMeasureStripe({
 
   return (
     <div
-      className="mb-3 flex items-center gap-3 rounded-sm px-4 py-2"
+      className="mb-3 -mx-[12mm] flex items-center gap-3 rounded-none px-[12mm] py-2"
       style={{
         backgroundColor: stripeBgColor,
         boxShadow: "0 8px 14px rgba(0, 0, 0, 0.34)",
