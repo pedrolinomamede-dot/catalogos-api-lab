@@ -579,7 +579,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
             src={imageSrc}
             alt={product.name}
             loading="eager"
-            className="h-full w-full object-contain"
+            className="h-full w-full object-contain mix-blend-multiply opacity-[0.96]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center rounded-md text-xs text-slate-500">
