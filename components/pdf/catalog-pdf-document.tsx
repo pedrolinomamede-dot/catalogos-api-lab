@@ -84,7 +84,7 @@ const PAGE_CONTENT_HEIGHT_MM =
 
 const BLOCK_HEIGHT_MM = {
   catalogIntro: 48,
-  groupLead: 102,
+  groupLead: 104,
   groupRow: 88,
   catalogEmpty: 28,
 };
@@ -451,7 +451,7 @@ function PdfCatalogIntro({
 
   return (
     <header
-      className="relative mb-4 mx-auto w-[174mm] overflow-hidden rounded-3xl border border-white/55 bg-white/35 px-3 py-2.5"
+      className="relative mx-auto mb-4 w-[166mm] overflow-hidden rounded-3xl border border-white/55 bg-white/35 px-2.5 py-2"
       style={{ boxShadow: "0 16px 36px rgba(20, 28, 47, 0.2)" }}
     >
       <div className="pointer-events-none absolute inset-0">
@@ -477,10 +477,10 @@ function PdfCatalogIntro({
         )}
 
         <div className="min-w-0 flex-1 text-center">
-          <p className={`${sans.className} text-[40px] font-bold uppercase leading-none tracking-[0.04em] text-slate-900`}>
+          <p className={`${sans.className} text-[44px] font-bold uppercase leading-none tracking-[0.04em] text-slate-900`}>
             {catalog.name}
           </p>
-          <p className={`${display.className} mt-1 text-[20px] font-semibold leading-none text-rose-600/85`}>
+          <p className={`${display.className} mt-1 text-[16px] font-semibold leading-none text-rose-600/85`}>
             {yearLabel}
           </p>
         </div>
@@ -520,10 +520,10 @@ function PdfMeasureStripe({
 
   return (
     <div
-      className="mb-3 -mx-[12mm] flex items-center gap-3 rounded-none px-[12mm] py-2"
+      className="mb-4 -mx-[12mm] flex translate-y-[1mm] items-center gap-3 rounded-none px-[12mm] py-2"
       style={{
         backgroundColor: stripeBgColor,
-        boxShadow: "0 8px 14px rgba(0, 0, 0, 0.34)",
+        boxShadow: "0 14px 24px rgba(0, 0, 0, 0.42)",
       }}
     >
       <span
@@ -573,9 +573,14 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         boxShadow: "0 14px 28px rgba(20, 28, 47, 0.16)",
       }}
     >
-      <div className="relative h-56 w-full p-1">
+      <div className="relative flex h-56 w-full items-center justify-center bg-transparent">
         {imageSrc ? (
-          <img src={imageSrc} alt={product.name} loading="eager" className="h-full w-full rounded-md object-contain" />
+          <img
+            src={imageSrc}
+            alt={product.name}
+            loading="eager"
+            className="h-full w-full object-contain"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center rounded-md text-xs text-slate-500">
             Sem imagem
