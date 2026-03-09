@@ -4,6 +4,7 @@ import type {
   CreateCatalogItemV2Request,
   CreateCatalogV2Request,
   CreateShareLinkV2Request,
+  PdfExportMode,
   CreateCategoryV2Request,
   CreateSubcategoryV2Request,
   CreateCategoryRequest,
@@ -620,7 +621,13 @@ export function useCreateShareLinkV2() {
 
 export function useGenerateShareLinkPdfV2() {
   return useMutation({
-    mutationFn: (shareLinkId: string) => downloadShareLinkPdfV2(shareLinkId),
+    mutationFn: ({
+      shareLinkId,
+      mode = "final",
+    }: {
+      shareLinkId: string;
+      mode?: PdfExportMode;
+    }) => downloadShareLinkPdfV2(shareLinkId, mode),
   });
 }
 

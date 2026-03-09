@@ -102,7 +102,7 @@ function compareProductsForPdf(a: ShareLinkPdfProduct, b: ShareLinkPdfProduct) {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
@@ -110,6 +110,9 @@ export async function GET(
   if (auth instanceof NextResponse) {
     return auth;
   }
+
+  const modeParam = request.nextUrl.searchParams.get("mode")?.trim().toLowerCase();
+  const variant = modeParam === "editavel" ? "editable" : "final";
 
   let pdfData: ShareLinkPdfData | null;
   try {
@@ -313,14 +316,15 @@ export async function GET(
     return jsonError(404, "not_found", "Share link not found");
   }
 
-  const pdfBuffer = await renderPdf(pdfData);
+  const pdfBuffer = await renderPdf(pdfData, { variant });
   const pdfBody = new Uint8Array(pdfBuffer);
+  const fileName = variant === "editable" ? "catalog-editavel.pdf" : "catalog.pdf";
 
   return new NextResponse(pdfBody, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": "inline; filename=\"catalog.pdf\"",
+      "Content-Disposition": `inline; filename="${fileName}"`,
     },
   });
 }

@@ -1,12 +1,15 @@
 import { generateShareLinkHtmlPdf } from "@/lib/pdf/html/share-link-html-pdf";
+import { generateEditableShareLinkPdf } from "@/lib/pdf/editable-share-link-pdf";
 import { generateShareLinkPdf, type ShareLinkPdfData } from "@/lib/pdf/share-link-pdf";
 import type { PdfTemplateVersion } from "@/lib/pdf/themes/corporate-v1";
 
 export type PdfRenderEngine = "native" | "html";
+export type PdfRenderVariant = "final" | "editable";
 
 export type RenderPdfOptions = {
   engine?: PdfRenderEngine;
   templateVersion?: PdfTemplateVersion;
+  variant?: PdfRenderVariant;
 };
 
 function isTemplateVersion(value: string | undefined): value is PdfTemplateVersion {
@@ -47,6 +50,7 @@ export async function renderPdf(
   data: ShareLinkPdfData,
   options: RenderPdfOptions = {},
 ): Promise<Buffer> {
+  const variant = options.variant ?? "final";
   const engine = options.engine ?? resolveEngine(process.env.PDF_RENDER_ENGINE);
   const templateVersion =
     options.templateVersion ??
@@ -57,6 +61,10 @@ export async function renderPdf(
     templateVersion,
     catalogCount: data.catalogCount ?? data.catalogs.length,
   };
+
+  if (variant === "editable") {
+    return generateEditableShareLinkPdf(payload);
+  }
 
   if (engine === "html") {
     const hasCatalogSpecificBackground = payload.catalogs.some((catalog) => {

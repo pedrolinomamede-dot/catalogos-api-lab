@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { ShareLinkV2 } from "@/types/api";
+import type { PdfExportMode } from "@/types/api";
 
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -46,7 +47,7 @@ type ShareLinkRowProps = {
   shareLink: ShareLinkV2;
   isGenerating: boolean;
   onCopy: (token: string) => Promise<void>;
-  onGenerate: (shareLink: ShareLinkV2) => Promise<void>;
+  onGenerate: (shareLink: ShareLinkV2, mode: PdfExportMode) => Promise<void>;
   onRevoke: (shareLink: ShareLinkV2) => void;
   onDelete: (shareLink: ShareLinkV2) => void;
 };
@@ -110,10 +111,18 @@ function ShareLinkRow({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => onGenerate(shareLink)}
+            onClick={() => onGenerate(shareLink, "final")}
             disabled={isGenerating}
           >
-            {isGenerating ? "Gerando..." : "Gerar PDF"}
+            {isGenerating ? "Gerando..." : "PDF final"}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onGenerate(shareLink, "editavel")}
+            disabled={isGenerating}
+          >
+            {isGenerating ? "Gerando..." : "PDF editavel"}
           </Button>
           {!shareLink.isRevoked ? (
             <Button
@@ -183,19 +192,25 @@ export function ShareLinksPageClient() {
     }
   };
 
-  const handleGeneratePdf = async (shareLink: ShareLinkV2) => {
+  const handleGeneratePdf = async (shareLink: ShareLinkV2, mode: PdfExportMode) => {
     setGeneratingId(shareLink.id);
     try {
-      const blob = await generatePdfMutation.mutateAsync(shareLink.id);
+      const blob = await generatePdfMutation.mutateAsync({
+        shareLinkId: shareLink.id,
+        mode,
+      });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `share-link-${shareLink.id}.pdf`;
+      anchor.download =
+        mode === "editavel"
+          ? `share-link-${shareLink.id}-editavel.pdf`
+          : `share-link-${shareLink.id}.pdf`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
-      toastSuccess("PDF gerado");
+      toastSuccess(mode === "editavel" ? "PDF editavel gerado" : "PDF gerado");
     } catch (err) {
       const message = getErrorMessage(err);
       toastError(message.title, message.description ?? "Tente novamente.");

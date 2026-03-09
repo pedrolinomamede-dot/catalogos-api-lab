@@ -1,4 +1,4 @@
-import type { CreateShareLinkV2Request, ShareLinkV2 } from "@/types/api";
+import type { CreateShareLinkV2Request, PdfExportMode, ShareLinkV2 } from "@/types/api";
 
 import { ApiFetchError, apiDelete, apiFetch, apiGet, apiPatch, apiPost, withQuery } from "@/lib/api/client";
 
@@ -73,8 +73,12 @@ export async function getShareLinkDeleteImpactV2(
 export async function deleteShareLinkV2(id: string): Promise<void> {
   await apiDelete<ApiEnvelope<unknown>>(`/api/v2/share-links/${id}`);
 }
-export async function downloadShareLinkPdfV2(id: string): Promise<Blob> {
-  const res = await fetch(`/api/v2/share-links/${id}/pdf`, {
+export async function downloadShareLinkPdfV2(
+  id: string,
+  mode: PdfExportMode = "final",
+): Promise<Blob> {
+  const url = withQuery(`/api/v2/share-links/${id}/pdf`, { mode });
+  const res = await fetch(url, {
     method: "GET",
     headers: {
       Accept: "application/pdf",

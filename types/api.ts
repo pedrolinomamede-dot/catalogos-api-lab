@@ -351,6 +351,8 @@ export type ShareLinkV2 = {
   catalogs?: ShareLinkCatalogV2[];
 };
 
+export type PdfExportMode = "final" | "editavel";
+
 export type IntegrationProviderDescriptor = {
   provider: IntegrationProvider;
   label: string;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { CatalogItemV2 } from "@/types/api";
+import type { PdfExportMode } from "@/types/api";
 
 import { CatalogAddProductsDialog } from "@/components/admin/catalog-add-products-dialog";
 import { CatalogFormDialog } from "@/components/admin/catalog-form-dialog";
@@ -166,7 +167,7 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
     return true;
   };
 
-  const handleExportPdf = async () => {
+  const handleExportPdf = async (mode: PdfExportMode) => {
     if (!catalog || isExportingPdf) {
       return;
     }
@@ -179,16 +180,22 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
         name: shareName,
         catalogIds: [catalogId],
       });
-      const blob = await generatePdfMutation.mutateAsync(shareLink.id);
+      const blob = await generatePdfMutation.mutateAsync({
+        shareLinkId: shareLink.id,
+        mode,
+      });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `${toPdfFileName(catalog.name)}.pdf`;
+      anchor.download =
+        mode === "editavel"
+          ? `${toPdfFileName(catalog.name)}-editavel.pdf`
+          : `${toPdfFileName(catalog.name)}.pdf`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
-      toastSuccess("PDF gerado");
+      toastSuccess(mode === "editavel" ? "PDF editavel gerado" : "PDF gerado");
     } catch (err) {
       const message = getErrorMessage(err);
       toastError(message.title, message.description ?? "Tente novamente.");
@@ -240,10 +247,17 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              onClick={handleExportPdf}
+              onClick={() => handleExportPdf("final")}
               disabled={isExportingPdf}
             >
-              {isExportingPdf ? "Gerando PDF..." : "Exportar PDF"}
+              {isExportingPdf ? "Gerando PDF..." : "Exportar PDF final"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleExportPdf("editavel")}
+              disabled={isExportingPdf}
+            >
+              {isExportingPdf ? "Gerando PDF..." : "Exportar PDF editavel"}
             </Button>
             <Button
               variant="outline"
