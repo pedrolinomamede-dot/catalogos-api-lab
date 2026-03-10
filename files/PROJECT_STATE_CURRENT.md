@@ -174,12 +174,19 @@ Branch local:
 
 - `main`
 
-Remoto correto:
+Remoto correto para este projeto:
 
-- `origin -> https://github.com/pedrolinomamede-dot/catalogos-api.git`
+- `catalogos-api -> https://github.com/pedrolinomamede-dot/catalogos-api.git`
+
+Observacao importante:
+
+- neste clone local, `origin` aponta para outro repositorio
+- o tracking atual da branch `main` esta em `catalogos-api/main`
+- antes de qualquer `pull` ou `push`, validar `git remote -v`
 
 Commits recentes mais importantes:
 
+- `07e07ab` `docs: add current project state and sync final pdf layout changes`
 - `da9ad0b` `refactor(pdf): align editable export layout with final catalog`
 - `4271fb7` `feat(pdf): add editable catalog export mode for Corel and Affinity`
 - `ad129bd` `fix(pdf): opaque product images and compact header with aligned larger SKU`
@@ -190,15 +197,16 @@ Commits recentes mais importantes:
 - `fa9fe7e` `feat(pdf): add catalog header logos and stripe grouping by measure`
 - `0d173f0` `feat(integrations): scaffold multi-erp hybrid core`
 
-Status local conhecido no momento da criação deste documento:
+Status local conhecido no momento:
 
-- existe alteração local pendente em:
-  - `components/pdf/catalog-pdf-document.tsx`
+- `git status -sb` deve estar limpo quando o repositório estiver sincronizado com `catalogos-api/main`
+- no estado confirmado em `2026-03-10`, nao existe alteracao local pendente
+- a pendencia antiga em `components/pdf/catalog-pdf-document.tsx` foi resolvida e publicada
 
 Regra importante:
 
-- essa alteração local não deve ser misturada automaticamente com novos commits sem revisão.
-- antes de qualquer novo trabalho relacionado a PDF, rodar `git status -sb` e entender se esse arquivo continua pendente.
+- antes de qualquer novo trabalho, rodar `git status -sb`
+- se surgirem alteracoes locais novas, validar se pertencem ao escopo atual antes de commitar
 
 ## 6. Fluxos recentes implementados
 
@@ -311,17 +319,28 @@ Ponto atual mais provável de continuidade:
 
 Pendência crítica antes de novos commits nessa área:
 
-- revisar `components/pdf/catalog-pdf-document.tsx`, porque existe modificação local pendente fora dos últimos commits publicados do modo editável
+- comparar visualmente `PDF final` e `PDF editavel` no mesmo catalogo apos cada refinamento
+- manter o `PDF final` intocado quando o objetivo for apenas melhorar o `PDF editavel`
 
 Se o objetivo for retomar trabalho de PDF, a ordem prática recomendada é:
 
 1. `git status -sb`
-2. revisar `components/pdf/catalog-pdf-document.tsx`
-3. revisar `lib/pdf/editable-share-link-pdf.ts`
+2. revisar `lib/pdf/editable-share-link-pdf.ts`
+3. revisar `components/pdf/catalog-pdf-document.tsx`
 4. comparar `PDF final` vs `PDF editavel`
-5. só então decidir novos ajustes
+5. so entao decidir novos ajustes
 
-## 10. Critério de qualidade deste documento
+## 10. Estado confirmado em 2026-03-10
+
+Resumo objetivo do ponto atual:
+
+- producao ativa em `https://catalogofacil.solucaoviavel.com`
+- `PDF final` e `PDF editavel` ja estao disponiveis na UI
+- ultimo commit publicado relacionado ao estado operacional: `07e07ab`
+- repositorio local sincronizado e sem pendencias
+- proximo trabalho esperado: refinamento fino do `PDF editavel` para aproximar ainda mais do `PDF final`
+
+## 11. Critério de qualidade deste documento
 
 Este arquivo cumpre sua função se uma nova sessão conseguir:
 
@@ -331,4 +350,3 @@ Este arquivo cumpre sua função se uma nova sessão conseguir:
 4. saber o que ainda está só local
 5. descobrir quais arquivos abrir primeiro
 6. retomar o trabalho de PDF e integração sem depender da conversa anterior
-
