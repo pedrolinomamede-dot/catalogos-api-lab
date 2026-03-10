@@ -451,53 +451,43 @@ function PdfCatalogIntro({
 
   return (
     <header
-      className="relative mx-auto mb-4 w-[154mm] overflow-hidden rounded-3xl border border-white/55 bg-white/35 px-2 py-1.5"
-      style={{ boxShadow: "0 16px 36px rgba(20, 28, 47, 0.2)" }}
+      className="mx-auto mb-4 flex w-[160mm] items-center justify-between gap-3 rounded-2xl border border-rose-100/70 bg-white/90 px-2.5 py-1.5"
+      style={{ boxShadow: "0 8px 22px rgba(20, 28, 47, 0.15)" }}
     >
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-12 -top-10 h-32 w-32 rounded-full bg-white/35 blur-2xl" />
-        <div className="absolute right-8 top-3 h-24 w-24 rounded-full bg-sky-100/45 blur-2xl" />
-      </div>
-
-      <div
-        className="relative mx-auto flex items-center justify-between gap-3 rounded-2xl border border-rose-100/70 bg-white/90 px-2.5 py-1.5"
-        style={{ boxShadow: "0 8px 22px rgba(20, 28, 47, 0.15)" }}
-      >
-        {leftLogoSrc ? (
-          <div
-            className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
-            style={{ boxShadow: "0 5px 14px rgba(20, 28, 47, 0.12)" }}
-          >
-            <img src={leftLogoSrc} alt="Logo esquerda" className="h-full w-full object-cover" />
-          </div>
-        ) : (
-          <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
-            {leftInitials}
-          </div>
-        )}
-
-        <div className="min-w-0 flex-1 text-center">
-          <p className={`${sans.className} text-[44px] font-bold uppercase leading-none tracking-[0.04em] text-slate-900`}>
-            {catalog.name}
-          </p>
-          <p className={`${display.className} mt-1 text-[14px] font-semibold leading-none text-rose-600/85`}>
-            {yearLabel}
-          </p>
+      {leftLogoSrc ? (
+        <div
+          className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
+          style={{ boxShadow: "0 5px 14px rgba(20, 28, 47, 0.12)" }}
+        >
+          <img src={leftLogoSrc} alt="Logo esquerda" className="h-full w-full object-contain" />
         </div>
+      ) : (
+        <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
+          {leftInitials}
+        </div>
+      )}
 
-        {rightLogoSrc ? (
-          <div
-            className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
-            style={{ boxShadow: "0 5px 14px rgba(20, 28, 47, 0.12)" }}
-          >
-            <img src={rightLogoSrc} alt="Logo direita" className="h-full w-full object-cover" />
-          </div>
-        ) : (
-          <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
-            {rightInitials}
-          </div>
-        )}
+      <div className="min-w-0 flex-1 text-center">
+        <p className={`${sans.className} text-[44px] font-bold uppercase leading-none tracking-[0.04em] text-slate-900`}>
+          {catalog.name}
+        </p>
+        <p className={`${display.className} mt-1 text-[14px] font-semibold leading-none text-rose-600/85`}>
+          {yearLabel}
+        </p>
       </div>
+
+      {rightLogoSrc ? (
+        <div
+          className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
+          style={{ boxShadow: "0 5px 14px rgba(20, 28, 47, 0.12)" }}
+        >
+          <img src={rightLogoSrc} alt="Logo direita" className="h-full w-full object-contain" />
+        </div>
+      ) : (
+        <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
+          {rightInitials}
+        </div>
+      )}
     </header>
   );
 }
@@ -570,7 +560,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         boxShadow: "0 14px 28px rgba(20, 28, 47, 0.16)",
       }}
     >
-      <div className="relative flex h-56 w-full items-center justify-center bg-transparent">
+      <div className="relative flex h-56 w-full items-center justify-center bg-white">
         {imageSrc ? (
           <img
             src={imageSrc}
@@ -586,12 +576,12 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
       </div>
 
       <div className="p-4">
-        <div className="flex min-h-[5.2rem] flex-col">
-          <p className="line-clamp-2 min-h-[3.8rem] text-base font-semibold leading-tight text-slate-900">
+        <div className="flex h-[5.6rem] flex-col justify-between">
+          <p className="line-clamp-2 min-h-[3.6rem] text-base font-semibold leading-tight text-slate-900">
             {product.name}
           </p>
           <span
-            className="mt-1 inline-flex w-fit items-center rounded-md px-3 py-1 text-[18px] font-bold leading-none"
+            className="inline-flex w-fit items-center rounded-md px-3 py-1 text-[18px] font-bold leading-none"
             style={{
               backgroundColor: "hsl(223 62% 28%)",
               color: "white",
