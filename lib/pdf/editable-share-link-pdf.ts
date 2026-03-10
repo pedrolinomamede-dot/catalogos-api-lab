@@ -1,3 +1,5 @@
+import { deflateSync } from "node:zlib";
+
 import sharp from "sharp";
 
 import type {
@@ -7,19 +9,29 @@ import type {
 } from "@/lib/pdf/share-link-pdf";
 
 type PdfFont = "F1" | "F2";
-
 type PdfImageVariant = "product" | "logo" | "background";
+type PdfGraphicsStateName = "GS_CARD" | "GS_SHADOW" | "GS_PANEL";
+
+type PdfImageMaskAsset = {
+  width: number;
+  height: number;
+  data: Buffer;
+};
 
 type PdfImageAsset = {
   name: string;
   width: number;
   height: number;
   data: Buffer;
+  filter: "DCTDecode" | "FlateDecode";
+  colorSpace: "DeviceRGB";
+  smask?: PdfImageMaskAsset;
 };
 
 type PdfPage = {
   ops: string[];
   usedImages: Set<string>;
+  usedGraphicsStates: Set<PdfGraphicsStateName>;
 };
 
 type ParsedMeasure = {
@@ -39,34 +51,45 @@ type CategoryMeasureGroup = {
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
-const PAGE_MARGIN_X = 24;
-const PAGE_MARGIN_TOP = 18;
-const PAGE_MARGIN_BOTTOM = 24;
-const PAGE_MARGIN_RIGHT = 24;
-const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN_X - PAGE_MARGIN_RIGHT;
-const PRODUCT_COLUMNS = 3;
-const COLUMN_GAP = 12;
-const CARD_WIDTH = (CONTENT_WIDTH - COLUMN_GAP * (PRODUCT_COLUMNS - 1)) / PRODUCT_COLUMNS;
-const CARD_HEIGHT = 228;
-const CARD_PADDING = 10;
-const CARD_IMAGE_HEIGHT = 122;
-const ROW_GAP = 14;
-const HEADER_HEIGHT = 58;
-const STRIPE_HEIGHT = 28;
-const STRIPE_GAP_AFTER = 10;
-const STRIPE_GAP_BEFORE = 6;
-const GROUP_GAP_AFTER = 14;
-const DATE_Y = 12;
+const PAGE_MARGIN_X = 34;
+const PAGE_MARGIN_TOP = 34;
+const PAGE_MARGIN_BOTTOM = 45;
+const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN_X * 2;
 const CONTENT_BOTTOM = PAGE_HEIGHT - PAGE_MARGIN_BOTTOM;
-
-const PRODUCT_IMAGE_TARGET_WIDTH = 560;
-const PRODUCT_IMAGE_TARGET_HEIGHT = 360;
+const PRODUCTS_PER_ROW = 3;
+const COLUMN_GAP = 12;
+const CARD_WIDTH = (CONTENT_WIDTH - COLUMN_GAP * (PRODUCTS_PER_ROW - 1)) / PRODUCTS_PER_ROW;
+const CARD_HEIGHT = 206;
+const CARD_TEXT_PADDING_X = 12;
+const CARD_TEXT_PADDING_TOP = 14;
+const CARD_TEXT_PADDING_BOTTOM = 12;
+const CARD_IMAGE_HEIGHT = 118;
+const CARD_NAME_FONT_SIZE = 11.4;
+const CARD_CODE_FONT_SIZE = 18;
+const ROW_GAP = 12;
+const GROUP_GAP_AFTER = 14;
+const STRIPE_HEIGHT = 28;
+const STRIPE_GAP_BEFORE = 6;
+const STRIPE_GAP_AFTER = 10;
+const INTRO_HEIGHT = 136;
+const DATE_ROW_HEIGHT = 18;
+const PRODUCT_IMAGE_TARGET_WIDTH = 620;
+const PRODUCT_IMAGE_TARGET_HEIGHT = 430;
 const LOGO_IMAGE_TARGET_WIDTH = 320;
 const LOGO_IMAGE_TARGET_HEIGHT = 120;
 const IMAGE_FETCH_TIMEOUT_MS = 8_000;
 
 const FONT_NORMAL: PdfFont = "F1";
 const FONT_BOLD: PdfFont = "F2";
+
+const GRAPHICS_STATES: Record<
+  PdfGraphicsStateName,
+  { fillAlpha: number; strokeAlpha: number }
+> = {
+  GS_CARD: { fillAlpha: 0.6, strokeAlpha: 0.9 },
+  GS_SHADOW: { fillAlpha: 0.12, strokeAlpha: 0.12 },
+  GS_PANEL: { fillAlpha: 0.35, strokeAlpha: 0.35 },
+};
 
 const MEASURE_UNIT_RANK: Record<string, number> = {
   mg: 1,
@@ -106,10 +129,11 @@ function resolveHexColor(value: string | null | undefined, fallback: string) {
 
 function hexToColor(hex: string): [number, number, number] {
   const safeHex = hex.replace("#", "");
-  const r = Number.parseInt(safeHex.slice(0, 2), 16) / 255;
-  const g = Number.parseInt(safeHex.slice(2, 4), 16) / 255;
-  const b = Number.parseInt(safeHex.slice(4, 6), 16) / 255;
-  return [r, g, b];
+  return [
+    Number.parseInt(safeHex.slice(0, 2), 16) / 255,
+    Number.parseInt(safeHex.slice(2, 4), 16) / 255,
+    Number.parseInt(safeHex.slice(4, 6), 16) / 255,
+  ];
 }
 
 function colorFill(color: [number, number, number]) {
@@ -170,7 +194,9 @@ function wrapText(
     ) {
       lastLine = lastLine.slice(0, -1);
     }
-    lines[maxLines - 1] = lastLine !== (lines[maxLines - 1] ?? "") ? `${lastLine}...` : lastLine;
+    if (lastLine !== (lines[maxLines - 1] ?? "")) {
+      lines[maxLines - 1] = `${lastLine}...`;
+    }
   }
 
   return lines;
@@ -180,7 +206,22 @@ function createPage(): PdfPage {
   return {
     ops: [],
     usedImages: new Set<string>(),
+    usedGraphicsStates: new Set<PdfGraphicsStateName>(),
   };
+}
+
+function wrapWithGraphicsState(
+  page: PdfPage,
+  content: string,
+  graphicsState?: PdfGraphicsStateName,
+) {
+  if (!graphicsState) {
+    page.ops.push(content);
+    return;
+  }
+
+  page.usedGraphicsStates.add(graphicsState);
+  page.ops.push(`q /${graphicsState} gs\n${content}\nQ`);
 }
 
 function drawRect(
@@ -193,6 +234,7 @@ function drawRect(
     fill?: [number, number, number];
     stroke?: [number, number, number];
     lineWidth?: number;
+    graphicsState?: PdfGraphicsStateName;
   } = {},
 ) {
   const pdfY = PAGE_HEIGHT - y - height;
@@ -208,18 +250,18 @@ function drawRect(
     parts.push(`${formatNumber(options.lineWidth)} w`);
   }
 
-  let op = "S";
+  let operator = "S";
   if (options.fill && options.stroke) {
-    op = "B";
+    operator = "B";
   } else if (options.fill) {
-    op = "f";
+    operator = "f";
   }
 
   parts.push(
-    `${formatNumber(x)} ${formatNumber(pdfY)} ${formatNumber(width)} ${formatNumber(height)} re ${op}`,
+    `${formatNumber(x)} ${formatNumber(pdfY)} ${formatNumber(width)} ${formatNumber(height)} re ${operator}`,
   );
 
-  page.ops.push(parts.join("\n"));
+  wrapWithGraphicsState(page, parts.join("\n"), options.graphicsState);
 }
 
 function drawText(
@@ -251,11 +293,20 @@ function drawText(
   );
 }
 
-function drawImage(page: PdfPage, asset: PdfImageAsset, x: number, y: number, width: number, height: number) {
+function drawImage(
+  page: PdfPage,
+  asset: PdfImageAsset,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
   const pdfY = PAGE_HEIGHT - y - height;
   page.usedImages.add(asset.name);
   page.ops.push(
-    `q ${formatNumber(width)} 0 0 ${formatNumber(height)} ${formatNumber(x)} ${formatNumber(pdfY)} cm /${asset.name} Do Q`,
+    `q ${formatNumber(width)} 0 0 ${formatNumber(height)} ${formatNumber(x)} ${formatNumber(
+      pdfY,
+    )} cm /${asset.name} Do Q`,
   );
 }
 
@@ -427,6 +478,26 @@ async function fetchImageBytes(url: string) {
   }
 }
 
+function rgbaToRgbAndAlpha(buffer: Buffer) {
+  const pixels = buffer.length / 4;
+  const rgb = Buffer.allocUnsafe(pixels * 3);
+  const alpha = Buffer.allocUnsafe(pixels);
+
+  for (let pixelIndex = 0; pixelIndex < pixels; pixelIndex += 1) {
+    const rgbaIndex = pixelIndex * 4;
+    const rgbIndex = pixelIndex * 3;
+    rgb[rgbIndex] = buffer[rgbaIndex];
+    rgb[rgbIndex + 1] = buffer[rgbaIndex + 1];
+    rgb[rgbIndex + 2] = buffer[rgbaIndex + 2];
+    alpha[pixelIndex] = buffer[rgbaIndex + 3];
+  }
+
+  return {
+    rgb: deflateSync(rgb),
+    alpha: deflateSync(alpha),
+  };
+}
+
 async function loadImageAsset(
   url: string,
   name: string,
@@ -443,39 +514,65 @@ async function loadImageAsset(
   }
 
   try {
-    const pipeline = sharp(source).rotate();
+    if (variant === "product") {
+      const transformed = await sharp(source)
+        .rotate()
+        .resize(PRODUCT_IMAGE_TARGET_WIDTH, PRODUCT_IMAGE_TARGET_HEIGHT, {
+          fit: "contain",
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+      const { rgb, alpha } = rgbaToRgbAndAlpha(transformed.data);
+
+      return {
+        name,
+        width: transformed.info.width ?? PRODUCT_IMAGE_TARGET_WIDTH,
+        height: transformed.info.height ?? PRODUCT_IMAGE_TARGET_HEIGHT,
+        data: rgb,
+        filter: "FlateDecode",
+        colorSpace: "DeviceRGB",
+        smask: {
+          width: transformed.info.width ?? PRODUCT_IMAGE_TARGET_WIDTH,
+          height: transformed.info.height ?? PRODUCT_IMAGE_TARGET_HEIGHT,
+          data: alpha,
+        },
+      };
+    }
+
     const transformed =
       variant === "background"
-        ? await pipeline
+        ? await sharp(source)
+            .rotate()
             .resize(PAGE_WIDTH, PAGE_HEIGHT, {
               fit: "cover",
               position: "centre",
             })
             .jpeg({ quality: 86, mozjpeg: true, chromaSubsampling: "4:2:0" })
             .toBuffer({ resolveWithObject: true })
-        : variant === "logo"
-          ? await pipeline
-              .flatten({ background: "#ffffff" })
-              .resize(LOGO_IMAGE_TARGET_WIDTH, LOGO_IMAGE_TARGET_HEIGHT, {
-                fit: "contain",
-                background: "#ffffff",
-              })
-              .jpeg({ quality: 88, mozjpeg: true, chromaSubsampling: "4:2:0" })
-              .toBuffer({ resolveWithObject: true })
-          : await pipeline
-              .flatten({ background: "#ffffff" })
-              .resize(PRODUCT_IMAGE_TARGET_WIDTH, PRODUCT_IMAGE_TARGET_HEIGHT, {
-                fit: "contain",
-                background: "#ffffff",
-              })
-              .jpeg({ quality: 84, mozjpeg: true, chromaSubsampling: "4:2:0" })
-              .toBuffer({ resolveWithObject: true });
+        : await sharp(source)
+            .rotate()
+            .flatten({ background: "#ffffff" })
+            .resize(LOGO_IMAGE_TARGET_WIDTH, LOGO_IMAGE_TARGET_HEIGHT, {
+              fit: "contain",
+              background: "#ffffff",
+            })
+            .jpeg({ quality: 88, mozjpeg: true, chromaSubsampling: "4:2:0" })
+            .toBuffer({ resolveWithObject: true });
 
     return {
       name,
-      width: transformed.info.width ?? PAGE_WIDTH,
-      height: transformed.info.height ?? PAGE_HEIGHT,
+      width:
+        transformed.info.width ??
+        (variant === "logo" ? LOGO_IMAGE_TARGET_WIDTH : PAGE_WIDTH),
+      height:
+        transformed.info.height ??
+        (variant === "logo" ? LOGO_IMAGE_TARGET_HEIGHT : PAGE_HEIGHT),
       data: transformed.data,
+      filter: "DCTDecode",
+      colorSpace: "DeviceRGB",
     };
   } catch {
     return null;
@@ -484,13 +581,24 @@ async function loadImageAsset(
 
 function buildPdfBuffer(pages: PdfPage[], imageAssets: PdfImageAsset[]) {
   const pageCount = pages.length;
-  const imageCount = imageAssets.length;
+  const graphicsStates = Object.entries(GRAPHICS_STATES) as Array<
+    [PdfGraphicsStateName, { fillAlpha: number; strokeAlpha: number }]
+  >;
+  const imageEntries = imageAssets.flatMap((asset) =>
+    asset.smask
+      ? [
+          { key: asset.name, type: "image" as const, asset },
+          { key: `${asset.name}-smask`, type: "smask" as const, asset },
+        ]
+      : [{ key: asset.name, type: "image" as const, asset }],
+  );
 
   const pageObjectStart = 3;
   const contentObjectStart = pageObjectStart + pageCount;
   const fontObjectStart = contentObjectStart + pageCount;
-  const imageObjectStart = fontObjectStart + 2;
-  const totalObjects = imageObjectStart + imageCount - 1;
+  const graphicsStateObjectStart = fontObjectStart + 2;
+  const imageObjectStart = graphicsStateObjectStart + graphicsStates.length;
+  const totalObjects = imageObjectStart + imageEntries.length - 1;
 
   const objects: Buffer[] = new Array(totalObjects);
   const pageRefs = Array.from({ length: pageCount }, (_, index) => `${pageObjectStart + index} 0 R`).join(" ");
@@ -498,9 +606,9 @@ function buildPdfBuffer(pages: PdfPage[], imageAssets: PdfImageAsset[]) {
   objects[0] = Buffer.from("<< /Type /Catalog /Pages 2 0 R >>", "latin1");
   objects[1] = Buffer.from(`<< /Type /Pages /Kids [${pageRefs}] /Count ${pageCount} >>`, "latin1");
 
-  const imageObjectByName = new Map<string, number>();
-  imageAssets.forEach((asset, index) => {
-    imageObjectByName.set(asset.name, imageObjectStart + index);
+  const imageObjectByKey = new Map<string, number>();
+  imageEntries.forEach((entry, index) => {
+    imageObjectByKey.set(entry.key, imageObjectStart + index);
   });
 
   pages.forEach((page, index) => {
@@ -508,16 +616,26 @@ function buildPdfBuffer(pages: PdfPage[], imageAssets: PdfImageAsset[]) {
     const contentObject = contentObjectStart + index;
     const resourceEntries = [`/Font << /F1 ${fontObjectStart} 0 R /F2 ${fontObjectStart + 1} 0 R >>`];
 
+    if (page.usedGraphicsStates.size > 0) {
+      const extRefs = [...page.usedGraphicsStates]
+        .sort()
+        .map((name) => `/${name} ${graphicsStateObjectStart + graphicsStates.findIndex(([key]) => key === name)} 0 R`)
+        .join(" ");
+      resourceEntries.push(`/ExtGState << ${extRefs} >>`);
+    }
+
     if (page.usedImages.size > 0) {
       const xObjectRefs = [...page.usedImages]
         .sort((left, right) => left.localeCompare(right, "en", { numeric: true }))
-        .map((name) => `/${name} ${imageObjectByName.get(name)} 0 R`)
+        .map((name) => `/${name} ${imageObjectByKey.get(name)} 0 R`)
         .join(" ");
       resourceEntries.push(`/XObject << ${xObjectRefs} >>`);
     }
 
     objects[pageObject - 1] = Buffer.from(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << ${resourceEntries.join(" ")} >> /Contents ${contentObject} 0 R >>`,
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << ${resourceEntries.join(
+        " ",
+      )} >> /Contents ${contentObject} 0 R >>`,
       "latin1",
     );
 
@@ -538,14 +656,39 @@ function buildPdfBuffer(pages: PdfPage[], imageAssets: PdfImageAsset[]) {
     "latin1",
   );
 
-  imageAssets.forEach((asset, index) => {
-    const imageObject = imageObjectStart + index;
-    objects[imageObject - 1] = Buffer.concat([
+  graphicsStates.forEach(([name, config], index) => {
+    objects[graphicsStateObjectStart + index - 1] = Buffer.from(
+      `<< /Type /ExtGState /ca ${formatNumber(config.fillAlpha)} /CA ${formatNumber(
+        config.strokeAlpha,
+      )} >>`,
+      "latin1",
+    );
+  });
+
+  imageEntries.forEach((entry, index) => {
+    const objectId = imageObjectStart + index;
+    if (entry.type === "smask") {
+      const mask = entry.asset.smask!;
+      objects[objectId - 1] = Buffer.concat([
+        Buffer.from(
+          `<< /Type /XObject /Subtype /Image /Width ${mask.width} /Height ${mask.height} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length ${mask.data.length} >>\nstream\n`,
+          "latin1",
+        ),
+        mask.data,
+        Buffer.from("\nendstream", "latin1"),
+      ]);
+      return;
+    }
+
+    const smaskRef = entry.asset.smask
+      ? ` /SMask ${imageObjectByKey.get(`${entry.asset.name}-smask`)} 0 R`
+      : "";
+    objects[objectId - 1] = Buffer.concat([
       Buffer.from(
-        `<< /Type /XObject /Subtype /Image /Width ${asset.width} /Height ${asset.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${asset.data.length} >>\nstream\n`,
+        `<< /Type /XObject /Subtype /Image /Width ${entry.asset.width} /Height ${entry.asset.height} /ColorSpace /${entry.asset.colorSpace} /BitsPerComponent 8 /Filter /${entry.asset.filter}${smaskRef} /Length ${entry.asset.data.length} >>\nstream\n`,
         "latin1",
       ),
-      asset.data,
+      entry.asset.data,
       Buffer.from("\nendstream", "latin1"),
     ]);
   });
@@ -575,49 +718,23 @@ function buildPdfBuffer(pages: PdfPage[], imageAssets: PdfImageAsset[]) {
   return Buffer.concat(chunks);
 }
 
-function renderPageDate(page: PdfPage, generatedAt: Date) {
-  const label = new Intl.DateTimeFormat("pt-BR", {
+function formatPageDate(date: Date) {
+  return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     timeZone: "UTC",
-  }).format(generatedAt);
+  }).format(date);
+}
+
+function renderPageDate(page: PdfPage, generatedAt: Date) {
+  const label = formatPageDate(generatedAt);
   const width = estimateTextWidth(label, 9, false);
-  drawText(page, label, PAGE_WIDTH - PAGE_MARGIN_RIGHT - width, DATE_Y, {
+  drawText(page, label, PAGE_WIDTH - PAGE_MARGIN_X - width, 8, {
     font: FONT_NORMAL,
     size: 9,
     color: [0.47, 0.53, 0.64],
   });
-}
-
-async function drawBackground(
-  page: PdfPage,
-  imageCache: Map<string, Promise<PdfImageAsset | null>>,
-  imageAssets: PdfImageAsset[],
-  backgroundUrl: string | null | undefined,
-) {
-  const normalized = typeof backgroundUrl === "string" ? backgroundUrl.trim() : "";
-  if (!normalized) {
-    return;
-  }
-
-  if (!imageCache.has(`background:${normalized}`)) {
-    const imageName = `Im${imageAssets.length + imageCache.size + 1}`;
-    imageCache.set(
-      `background:${normalized}`,
-      loadImageAsset(normalized, imageName, "background").then((asset) => {
-        if (asset) {
-          imageAssets.push(asset);
-        }
-        return asset;
-      }),
-    );
-  }
-
-  const asset = await imageCache.get(`background:${normalized}`)!;
-  if (asset) {
-    drawImage(page, asset, 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
-  }
 }
 
 async function resolveSharedAsset(
@@ -648,55 +765,106 @@ async function resolveSharedAsset(
   return imageCache.get(cacheKey)!;
 }
 
-async function renderCatalogHeader(
+async function drawBackground(
+  page: PdfPage,
+  imageCache: Map<string, Promise<PdfImageAsset | null>>,
+  imageAssets: PdfImageAsset[],
+  backgroundUrl: string | null | undefined,
+) {
+  const asset = await resolveSharedAsset(imageCache, imageAssets, backgroundUrl, "background");
+  if (asset) {
+    drawImage(page, asset, 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+  }
+}
+
+async function renderCatalogIntro(
   page: PdfPage,
   data: ShareLinkPdfData,
   catalog: ShareLinkPdfCatalog,
+  generatedAt: Date,
   imageCache: Map<string, Promise<PdfImageAsset | null>>,
   imageAssets: PdfImageAsset[],
 ) {
-  const headerX = 58;
-  const headerY = PAGE_MARGIN_TOP + 16;
-  const headerWidth = PAGE_WIDTH - headerX * 2;
+  const outerWidth = 436.5;
+  const outerHeight = 56;
+  const outerX = (PAGE_WIDTH - outerWidth) / 2;
+  const outerY = PAGE_MARGIN_TOP + DATE_ROW_HEIGHT;
+  const innerInset = 6;
+  const innerX = outerX + innerInset;
+  const innerY = outerY + innerInset;
+  const innerWidth = outerWidth - innerInset * 2;
+  const innerHeight = outerHeight - innerInset * 2;
 
-  drawRect(page, headerX, headerY, headerWidth, HEADER_HEIGHT, {
+  drawRect(page, outerX, outerY, outerWidth, outerHeight, {
     fill: [1, 1, 1],
-    stroke: [0.914, 0.82, 0.851],
-    lineWidth: 0.8,
+    stroke: [0.968, 0.91, 0.925],
+    lineWidth: 0.7,
+    graphicsState: "GS_PANEL",
   });
 
-  const leftLogoCandidate = catalog.pdfHeaderLeftLogoUrl ?? data.brandLogoUrl ?? null;
-  const rightLogoCandidate = catalog.pdfHeaderRightLogoUrl ?? null;
-  const leftLogo = await resolveSharedAsset(imageCache, imageAssets, leftLogoCandidate, "logo");
-  const rightLogo = await resolveSharedAsset(imageCache, imageAssets, rightLogoCandidate, "logo");
+  drawRect(page, innerX, innerY, innerWidth, innerHeight, {
+    fill: [1, 1, 1],
+    stroke: [0.941, 0.902, 0.918],
+    lineWidth: 0.6,
+  });
+
+  const leftLogo = await resolveSharedAsset(
+    imageCache,
+    imageAssets,
+    catalog.pdfHeaderLeftLogoUrl ?? data.brandLogoUrl ?? null,
+    "logo",
+  );
+  const rightLogo = await resolveSharedAsset(
+    imageCache,
+    imageAssets,
+    catalog.pdfHeaderRightLogoUrl ?? null,
+    "logo",
+  );
 
   if (leftLogo) {
-    drawImage(page, leftLogo, headerX + 10, headerY + 9, 70, 40);
+    drawRect(page, innerX + 8, innerY + 6, 48, 32, {
+      fill: [1, 1, 1],
+      stroke: [0.949, 0.878, 0.902],
+      lineWidth: 0.5,
+    });
+    drawImage(page, leftLogo, innerX + 10, innerY + 7, 44, 30);
   }
+
   if (rightLogo) {
-    drawImage(page, rightLogo, headerX + headerWidth - 80, headerY + 9, 70, 40);
+    drawRect(page, innerX + innerWidth - 56, innerY + 6, 48, 32, {
+      fill: [1, 1, 1],
+      stroke: [0.949, 0.878, 0.902],
+      lineWidth: 0.5,
+    });
+    drawImage(page, rightLogo, innerX + innerWidth - 54, innerY + 7, 44, 30);
   }
 
   const title = sanitizePdfText(catalog.name);
   const titleWidth = estimateTextWidth(title, 22, true);
-  drawText(page, title, headerX + (headerWidth - titleWidth) / 2, headerY + 14, {
+  drawText(page, title, innerX + (innerWidth - titleWidth) / 2, innerY + 9, {
     font: FONT_BOLD,
     size: 22,
     color: [0.067, 0.098, 0.153],
   });
 
-  const yearLabel = String(data.generatedAt.getUTCFullYear());
+  const yearLabel = String(generatedAt.getUTCFullYear());
   const yearWidth = estimateTextWidth(yearLabel, 12, false);
-  drawText(page, yearLabel, headerX + (headerWidth - yearWidth) / 2, headerY + 39, {
+  drawText(page, yearLabel, innerX + (innerWidth - yearWidth) / 2, innerY + 29, {
     font: FONT_NORMAL,
     size: 12,
     color: [0.82, 0.17, 0.29],
   });
 
-  return headerY + HEADER_HEIGHT + 18;
+  return outerY + outerHeight + 16;
 }
 
-function renderMeasureStripe(page: PdfPage, catalog: ShareLinkPdfCatalog, categoryName: string, measureLabel: string, y: number) {
+function renderMeasureStripe(
+  page: PdfPage,
+  catalog: ShareLinkPdfCatalog,
+  categoryName: string,
+  measureLabel: string,
+  y: number,
+) {
   const stripeBg = hexToColor(resolveHexColor(catalog.pdfStripeBgColor, "#0B1B5E"));
   const stripeLine = hexToColor(resolveHexColor(catalog.pdfStripeLineColor, "#D81B3A"));
   const stripeText = hexToColor(resolveHexColor(catalog.pdfStripeTextColor, "#FFFFFF"));
@@ -705,17 +873,17 @@ function renderMeasureStripe(page: PdfPage, catalog: ShareLinkPdfCatalog, catego
     fill: stripeBg,
   });
 
-  drawText(page, categoryName, PAGE_MARGIN_X, y + 7, {
+  drawText(page, categoryName.toUpperCase(), PAGE_MARGIN_X, y + 7, {
     font: FONT_BOLD,
     size: 17,
     color: stripeText,
   });
 
-  drawRect(page, PAGE_MARGIN_X + 102, y + 12, 80, 4, {
+  drawRect(page, PAGE_MARGIN_X + 105, y + 12, 86, 4, {
     fill: stripeLine,
   });
 
-  drawText(page, measureLabel, PAGE_MARGIN_X + 194, y + 7, {
+  drawText(page, measureLabel, PAGE_MARGIN_X + 205, y + 7, {
     font: FONT_NORMAL,
     size: 17,
     color: stripeText,
@@ -732,57 +900,60 @@ async function renderProductCard(
   imageCache: Map<string, Promise<PdfImageAsset | null>>,
   imageAssets: PdfImageAsset[],
 ) {
-  drawRect(page, x, y, CARD_WIDTH, CARD_HEIGHT, {
-    fill: [1, 1, 1],
-    stroke: [0.914, 0.82, 0.851],
-    lineWidth: 0.7,
+  drawRect(page, x + 2, y + 6, CARD_WIDTH, CARD_HEIGHT, {
+    fill: [0.08, 0.11, 0.18],
+    graphicsState: "GS_SHADOW",
   });
 
-  const imageX = x + CARD_PADDING;
-  const imageY = y + CARD_PADDING;
-  const imageWidth = CARD_WIDTH - CARD_PADDING * 2;
-  const imageHeight = CARD_IMAGE_HEIGHT;
+  drawRect(page, x, y, CARD_WIDTH, CARD_HEIGHT, {
+    fill: [0.996, 0.984, 0.99],
+    stroke: [0.949, 0.878, 0.902],
+    lineWidth: 0.7,
+    graphicsState: "GS_CARD",
+  });
 
-  const candidate = normalizeLabel(product.primaryImageUrl) ?? normalizeLabel(product.fallbackImageUrl);
-  const imageAsset = await resolveSharedAsset(imageCache, imageAssets, candidate, "product");
+  const imageAsset = await resolveSharedAsset(
+    imageCache,
+    imageAssets,
+    normalizeLabel(product.primaryImageUrl) ?? normalizeLabel(product.fallbackImageUrl),
+    "product",
+  );
+
   if (imageAsset) {
-    drawImage(page, imageAsset, imageX, imageY, imageWidth, imageHeight);
+    drawImage(page, imageAsset, x, y, CARD_WIDTH, CARD_IMAGE_HEIGHT);
   } else {
-    drawRect(page, imageX, imageY, imageWidth, imageHeight, {
-      fill: [0.96, 0.96, 0.96],
-      stroke: [0.87, 0.87, 0.87],
-      lineWidth: 0.5,
-    });
-    drawText(page, "Sem imagem", imageX + 40, imageY + imageHeight / 2 - 6, {
+    drawText(page, "Sem imagem", x + 44, y + 48, {
       font: FONT_NORMAL,
       size: 10,
       color: [0.45, 0.45, 0.45],
     });
   }
 
-  const textX = x + CARD_PADDING;
-  let textY = imageY + imageHeight + 14;
-  const nameLines = wrapText(product.name, 10.5, imageWidth, 3, true);
+  const textX = x + CARD_TEXT_PADDING_X;
+  const textWidth = CARD_WIDTH - CARD_TEXT_PADDING_X * 2;
+  let textY = y + CARD_IMAGE_HEIGHT + CARD_TEXT_PADDING_TOP;
+
+  const nameLines = wrapText(product.name, CARD_NAME_FONT_SIZE, textWidth, 2, true);
   nameLines.forEach((line) => {
     drawText(page, line, textX, textY, {
       font: FONT_BOLD,
-      size: 10.5,
+      size: CARD_NAME_FONT_SIZE,
       color: [0.082, 0.11, 0.161],
     });
-    textY += 12;
+    textY += 13;
   });
 
-  const skuLabel = normalizeLabel(product.sku) ?? "SEM SKU";
-  const chipWidth = estimateTextWidth(skuLabel, 13.5, true) + 14;
-  const chipHeight = 20;
-  const chipY = y + CARD_HEIGHT - CARD_PADDING - chipHeight;
+  const textBlockBottom = y + CARD_HEIGHT - CARD_TEXT_PADDING_BOTTOM;
+  const chipY = textBlockBottom - 20;
+  const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";
+  const chipWidth = estimateTextWidth(skuLabel, CARD_CODE_FONT_SIZE, true) + 14;
 
-  drawRect(page, textX, chipY, chipWidth, chipHeight, {
+  drawRect(page, textX, chipY, chipWidth, 20, {
     fill: [0.086, 0.251, 0.486],
   });
-  drawText(page, skuLabel, textX + 7, chipY + 4, {
+  drawText(page, skuLabel, textX + 7, chipY + 3, {
     font: FONT_BOLD,
-    size: 13.5,
+    size: CARD_CODE_FONT_SIZE,
     color: [1, 1, 1],
   });
 }
@@ -796,13 +967,20 @@ export async function generateEditableShareLinkPdf(data: ShareLinkPdfData): Prom
     const groups = buildCategoryMeasureGroups(catalog.products);
     let page = createPage();
     pages.push(page);
-
     await drawBackground(page, imageCache, imageAssets, catalog.pdfBackgroundImageUrl);
     renderPageDate(page, data.generatedAt);
-    let cursorY = await renderCatalogHeader(page, data, catalog, imageCache, imageAssets);
+
+    let cursorY = await renderCatalogIntro(
+      page,
+      data,
+      catalog,
+      data.generatedAt,
+      imageCache,
+      imageAssets,
+    );
 
     if (groups.length === 0) {
-      drawText(page, "Nenhum produto neste catalogo.", PAGE_MARGIN_X, cursorY + 12, {
+      drawText(page, "Nenhum produto neste catalogo.", PAGE_MARGIN_X, cursorY + 16, {
         font: FONT_NORMAL,
         size: 11,
         color: [0.35, 0.38, 0.43],
@@ -811,30 +989,32 @@ export async function generateEditableShareLinkPdf(data: ShareLinkPdfData): Prom
     }
 
     for (const group of groups) {
-      const rows = chunkProducts(group.products, PRODUCT_COLUMNS);
+      const rows = chunkProducts(group.products, PRODUCTS_PER_ROW);
 
       for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
-        const isLeadRow = rowIndex === 0;
-        const blockHeight = (isLeadRow ? STRIPE_HEIGHT + STRIPE_GAP_AFTER + STRIPE_GAP_BEFORE : 0) + CARD_HEIGHT + ROW_GAP;
+        const needsStripe = rowIndex === 0;
+        const blockHeight =
+          (needsStripe ? STRIPE_GAP_BEFORE + STRIPE_HEIGHT + STRIPE_GAP_AFTER : 0) +
+          CARD_HEIGHT +
+          ROW_GAP;
 
         if (cursorY + blockHeight > CONTENT_BOTTOM) {
           page = createPage();
           pages.push(page);
           await drawBackground(page, imageCache, imageAssets, catalog.pdfBackgroundImageUrl);
           renderPageDate(page, data.generatedAt);
-          cursorY = PAGE_MARGIN_TOP + 24;
+          cursorY = PAGE_MARGIN_TOP + DATE_ROW_HEIGHT;
         }
 
-        if (isLeadRow) {
+        if (needsStripe) {
           cursorY += STRIPE_GAP_BEFORE;
           cursorY = renderMeasureStripe(page, catalog, group.categoryName, group.measureLabel, cursorY);
         }
 
         const row = rows[rowIndex];
         for (let columnIndex = 0; columnIndex < row.length; columnIndex += 1) {
-          const product = row[columnIndex];
           const x = PAGE_MARGIN_X + columnIndex * (CARD_WIDTH + COLUMN_GAP);
-          await renderProductCard(page, product, x, cursorY, imageCache, imageAssets);
+          await renderProductCard(page, row[columnIndex], x, cursorY, imageCache, imageAssets);
         }
 
         cursorY += CARD_HEIGHT + ROW_GAP;
