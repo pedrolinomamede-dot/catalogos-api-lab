@@ -30,12 +30,12 @@ type ShareLinkFormDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-const buildShareLinkUrl = (token: string) => {
+const buildShareLinkUrl = (identifier: string) => {
   if (typeof window !== "undefined") {
-    return `${window.location.origin}/s/${token}`;
+    return `${window.location.origin}/s/${identifier}`;
   }
   const fallback = process.env.NEXT_PUBLIC_APP_URL;
-  return fallback ? `${fallback}/s/${token}` : `/s/${token}`;
+  return fallback ? `${fallback}/s/${identifier}` : `/s/${identifier}`;
 };
 
 export function ShareLinkFormDialog({ open, onOpenChange }: ShareLinkFormDialogProps) {
@@ -45,6 +45,7 @@ export function ShareLinkFormDialog({ open, onOpenChange }: ShareLinkFormDialogP
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [createdToken, setCreatedToken] = useState<string | null>(null);
+  const [createdSlug, setCreatedSlug] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [isSelectingAllCatalogs, setIsSelectingAllCatalogs] = useState(false);
 
@@ -107,6 +108,7 @@ export function ShareLinkFormDialog({ open, onOpenChange }: ShareLinkFormDialogP
       setPage(1);
       setSelectedIds(new Set());
       setCreatedToken(null);
+      setCreatedSlug(null);
       setCreatedId(null);
       setIsSelectingAllCatalogs(false);
     }
@@ -164,10 +166,11 @@ export function ShareLinkFormDialog({ open, onOpenChange }: ShareLinkFormDialogP
   };
 
   const handleCopy = async () => {
-    if (!createdToken) {
+    const identifier = createdSlug ?? createdToken;
+    if (!identifier) {
       return;
     }
-    const url = buildShareLinkUrl(createdToken);
+    const url = buildShareLinkUrl(identifier);
     try {
       await copyTextToClipboard(url);
       toastSuccess("Link copiado");
@@ -195,6 +198,7 @@ export function ShareLinkFormDialog({ open, onOpenChange }: ShareLinkFormDialogP
         catalogIds,
       });
       setCreatedToken(result.token);
+      setCreatedSlug(result.slug ?? null);
       setCreatedId(result.id);
       toastSuccess("Share link criado");
     } catch (err) {
@@ -203,7 +207,8 @@ export function ShareLinkFormDialog({ open, onOpenChange }: ShareLinkFormDialogP
     }
   };
 
-  const createdUrl = createdToken ? buildShareLinkUrl(createdToken) : null;
+  const createdIdentifier = createdSlug ?? createdToken;
+  const createdUrl = createdIdentifier ? buildShareLinkUrl(createdIdentifier) : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

@@ -325,6 +325,7 @@ model ShareLinkV2 {
   id        String               @id @default(uuid()) @db.Uuid
   brandId   String               @db.Uuid
   token     String               @unique
+  slug      String?              @unique
   name      String
   isRevoked Boolean              @default(false)
   revokedAt DateTime?

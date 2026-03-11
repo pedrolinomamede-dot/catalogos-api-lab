@@ -343,6 +343,7 @@ export type ShareLinkV2 = {
   brandId: string;
   name: string;
   token: string;
+  slug?: string | null;
   isRevoked: boolean;
   revokedAt?: Date | null;
   createdAt: Date;
@@ -430,5 +431,6 @@ export type ShareLinkPublicV2 = {
   id: string;
   brandId: string;
   name: string;
+  slug?: string | null;
   catalogs: ShareLinkPublicCatalogV2[];
 };

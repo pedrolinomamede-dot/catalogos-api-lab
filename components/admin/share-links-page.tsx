@@ -35,18 +35,18 @@ import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 const PAGE_SIZE = 100;
 
-const buildShareLinkUrl = (token: string) => {
+const buildShareLinkUrl = (identifier: string) => {
   if (typeof window !== "undefined") {
-    return `${window.location.origin}/s/${token}`;
+    return `${window.location.origin}/s/${identifier}`;
   }
   const fallback = process.env.NEXT_PUBLIC_APP_URL;
-  return fallback ? `${fallback}/s/${token}` : `/s/${token}`;
+  return fallback ? `${fallback}/s/${identifier}` : `/s/${identifier}`;
 };
 
 type ShareLinkRowProps = {
   shareLink: ShareLinkV2;
   isGenerating: boolean;
-  onCopy: (token: string) => Promise<void>;
+  onCopy: (shareLink: ShareLinkV2) => Promise<void>;
   onGenerate: (shareLink: ShareLinkV2, mode: PdfExportMode) => Promise<void>;
   onRevoke: (shareLink: ShareLinkV2) => void;
   onDelete: (shareLink: ShareLinkV2) => void;
@@ -104,7 +104,7 @@ function ShareLinkRow({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onCopy(shareLink.token)}
+            onClick={() => onCopy(shareLink)}
           >
             Copiar link
           </Button>
@@ -182,8 +182,8 @@ export function ShareLinksPageClient() {
     }
   }, [page, totalPages]);
 
-  const handleCopy = async (token: string) => {
-    const url = buildShareLinkUrl(token);
+  const handleCopy = async (shareLink: ShareLinkV2) => {
+    const url = buildShareLinkUrl(shareLink.slug ?? shareLink.token);
     try {
       await copyTextToClipboard(url);
       toastSuccess("Link copiado");

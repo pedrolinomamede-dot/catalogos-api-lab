@@ -94,8 +94,9 @@ async function getBaseUrl() {
   return `${proto}://${host}`;
 }
 
-async function fetchShareLink(baseUrl: string, token: string) {
-  const response = await fetch(`${baseUrl}/api/v2/share-links/by-token/${token}`,
+async function fetchShareLink(baseUrl: string, identifier: string) {
+  const response = await fetch(
+    `${baseUrl}/api/v2/share-links/by-token/${identifier}`,
     {
       cache: "no-store",
     },
@@ -118,12 +119,12 @@ export default async function ShareLinkPage({
 }: {
   params: Promise<{ token: string }>;
 }) {
-  const { token } = await params;
+  const { token: identifier } = await params;
 
   let shareLink: ShareLinkPublicV2 | null = null;
   try {
     const baseUrl = await getBaseUrl();
-    shareLink = await fetchShareLink(baseUrl, token);
+    shareLink = await fetchShareLink(baseUrl, identifier);
   } catch {
     return (
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 py-10">

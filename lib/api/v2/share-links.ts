@@ -23,6 +23,7 @@ export type ShareLinksV2ListParams = {
 export type ShareLinkCreateResponse = {
   id: string;
   token: string;
+  slug?: string | null;
 };
 
 export async function listShareLinksV2(

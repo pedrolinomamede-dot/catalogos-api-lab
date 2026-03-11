@@ -4,6 +4,10 @@ import { NextResponse } from "next/server";
 
 import { requireRole, requireUser } from "@/lib/authz";
 import { withBrand } from "@/lib/prisma";
+import {
+  buildShareLinkSlugCandidate,
+  slugifyShareLinkName,
+} from "@/lib/share-links/slug";
 import { jsonError } from "@/lib/utils/errors";
 import { parsePagination } from "@/lib/utils/pagination";
 
@@ -118,13 +122,37 @@ function generateToken() {
   return randomBytes(TOKEN_BYTES).toString("hex");
 }
 
+async function createUniqueShareLinkSlug(
+  tx: Prisma.TransactionClient,
+  baseSlug: string,
+) {
+  for (let sequence = 1; sequence <= 200; sequence += 1) {
+    const slug = buildShareLinkSlugCandidate(baseSlug, sequence);
+    const conflict = await tx.shareLinkV2.findFirst({
+      where: {
+        OR: [{ slug }, { token: slug }],
+      },
+      select: { id: true },
+    });
+
+    if (!conflict) {
+      return slug;
+    }
+  }
+
+  throw new Error("Unable to generate a unique slug");
+}
+
 async function createShareLink(
   tx: Prisma.TransactionClient,
   brandId: string,
   name: string,
 ) {
+  const baseSlug = slugifyShareLinkName(name);
+
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const token = generateToken();
+    const slug = await createUniqueShareLinkSlug(tx, baseSlug);
 
     try {
       return await tx.shareLinkV2.create({
@@ -132,6 +160,7 @@ async function createShareLink(
           brandId,
           name,
           token,
+          slug,
         },
       });
     } catch (error) {
@@ -241,7 +270,14 @@ export async function POST(request: Request) {
       });
 
       return NextResponse.json(
-        { ok: true, data: { id: shareLink.id, token: shareLink.token } },
+        {
+          ok: true,
+          data: {
+            id: shareLink.id,
+            token: shareLink.token,
+            slug: shareLink.slug,
+          },
+        },
         { status: 201 },
       );
     });

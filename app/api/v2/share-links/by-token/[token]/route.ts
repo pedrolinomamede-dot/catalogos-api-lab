@@ -7,15 +7,17 @@ export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ token: string }> },
 ) {
-  const { token } = await context.params;
+  const { token: identifier } = await context.params;
 
-  if (!token || token.trim().length === 0) {
+  if (!identifier || identifier.trim().length === 0) {
     return jsonError(400, "validation_error", "Invalid token");
   }
 
+  const normalizedIdentifier = identifier.trim();
+
   const shareLink = await prisma.shareLinkV2.findFirst({
     where: {
-      token: token.trim(),
+      OR: [{ slug: normalizedIdentifier }, { token: normalizedIdentifier }],
       isRevoked: false,
     },
   });
@@ -47,6 +49,7 @@ export async function GET(
         id: shareLink.id,
         brandId: shareLink.brandId,
         name: shareLink.name,
+        slug: shareLink.slug,
         catalogs: catalogs.map((item) => item.catalog),
       },
     });

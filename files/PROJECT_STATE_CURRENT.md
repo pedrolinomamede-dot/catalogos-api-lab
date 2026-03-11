@@ -43,6 +43,7 @@ Fluxo funcional atual:
 - Share links:
   - `ShareLinkV2`
   - `ShareLinkCatalogV2`
+  - URL publica amigavel por `slug`, com fallback legado por `token`
 - Exportação de PDF em dois modos:
   - `final`
   - `editavel`
@@ -339,6 +340,12 @@ Resumo objetivo do ponto atual:
 - ultimo commit publicado relacionado ao estado operacional: `07e07ab`
 - repositorio local sincronizado e sem pendencias
 - proximo trabalho esperado: refinamento fino do `PDF editavel` para aproximar ainda mais do `PDF final`
+
+Atualizacao local posterior relevante:
+
+- share links passam a suportar URL amigavel por `slug`
+- links antigos baseados em `token` continuam validos
+- a UI administrativa passa a copiar e exibir preferencialmente a URL amigavel
 
 ## 11. Critério de qualidade deste documento
 

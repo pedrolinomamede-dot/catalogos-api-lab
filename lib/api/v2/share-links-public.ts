@@ -8,10 +8,10 @@ type ApiEnvelope<T> = {
 };
 
 export async function getShareLinkByTokenV2(
-  token: string,
+  identifier: string,
 ): Promise<ShareLinkPublicV2> {
   const res = await apiGet<ApiEnvelope<ShareLinkPublicV2>>(
-    `/api/v2/share-links/by-token/${token}`,
+    `/api/v2/share-links/by-token/${identifier}`,
   );
   return res.data;
 }
