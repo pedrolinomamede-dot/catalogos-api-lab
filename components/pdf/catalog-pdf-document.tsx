@@ -6,6 +6,7 @@ import type {
   ShareLinkPdfData,
   ShareLinkPdfProduct,
 } from "@/lib/pdf/share-link-pdf";
+import { buildLineCategoryMeasureGroups } from "@/lib/catalog/line-grouping";
 
 const sans = Manrope({
   subsets: ["latin"],
@@ -23,28 +24,16 @@ const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
 });
 
-type ParsedMeasure = {
-  isMissing: boolean;
-  unitRank: number;
-  numericValue: number;
-  normalizedUnit: string;
-  normalizedKey: string;
-  displayLabel: string;
-};
-
-type CategoryMeasureGroup = {
-  id: string;
-  categoryName: string;
-  measureLabel: string;
-  measureOrder: ParsedMeasure;
-  products: ShareLinkPdfProduct[];
-};
-
 type PdfPageBlock =
   | {
       id: string;
       type: "catalog-intro";
       catalog: ShareLinkPdfCatalog;
+    }
+  | {
+      id: string;
+      type: "line-header";
+      lineLabel: string;
     }
   | {
       id: string;
@@ -84,17 +73,10 @@ const PAGE_CONTENT_HEIGHT_MM =
 
 const BLOCK_HEIGHT_MM = {
   catalogIntro: 48,
+  lineHeader: 20,
   groupLead: 104,
   groupRow: 88,
   catalogEmpty: 28,
-};
-
-const MEASURE_UNIT_RANK: Record<string, number> = {
-  mg: 1,
-  g: 2,
-  kg: 3,
-  ml: 4,
-  l: 5,
 };
 
 const STRIPE_FONT_CLASS_BY_VALUE: Record<string, string> = {
@@ -123,138 +105,6 @@ function resolveImageSrc(url?: string | null) {
   }
 
   return null;
-}
-
-function formatNumericMeasure(value: number) {
-  if (!Number.isFinite(value)) {
-    return "";
-  }
-
-  const fixed = value.toFixed(3);
-  return fixed.replace(/\.?0+$/, "");
-}
-
-function parseMeasure(value?: string | null): ParsedMeasure {
-  const raw = normalizeLabel(value);
-  if (!raw) {
-    return {
-      isMissing: true,
-      unitRank: Number.POSITIVE_INFINITY,
-      numericValue: Number.POSITIVE_INFINITY,
-      normalizedUnit: "",
-      normalizedKey: "__missing__",
-      displayLabel: "Sem medida",
-    };
-  }
-
-  const compact = raw.toLowerCase().replace(/\s+/g, "");
-  const match = compact.match(/^(\d+(?:[.,]\d+)?)([a-zA-Z]+)$/);
-  if (!match) {
-    return {
-      isMissing: false,
-      unitRank: MEASURE_UNIT_RANK[compact] ?? 99,
-      numericValue: Number.POSITIVE_INFINITY,
-      normalizedUnit: compact,
-      normalizedKey: `raw:${compact}`,
-      displayLabel: raw,
-    };
-  }
-
-  const numericValue = Number.parseFloat(match[1].replace(",", "."));
-  const normalizedUnit = match[2];
-  const resolvedNumeric = Number.isFinite(numericValue)
-    ? numericValue
-    : Number.POSITIVE_INFINITY;
-  const numericLabel = formatNumericMeasure(resolvedNumeric);
-
-  return {
-    isMissing: false,
-    unitRank: MEASURE_UNIT_RANK[normalizedUnit] ?? 99,
-    numericValue: resolvedNumeric,
-    normalizedUnit,
-    normalizedKey: `num:${normalizedUnit}:${resolvedNumeric}`,
-    displayLabel: `${numericLabel}${normalizedUnit}`,
-  };
-}
-
-function compareCategoryName(a: string, b: string) {
-  const left = normalizeLabel(a) ?? "Outros Produtos";
-  const right = normalizeLabel(b) ?? "Outros Produtos";
-
-  if (left === "Outros Produtos" && right !== "Outros Produtos") {
-    return 1;
-  }
-  if (right === "Outros Produtos" && left !== "Outros Produtos") {
-    return -1;
-  }
-
-  return left.localeCompare(right, "pt-BR", { sensitivity: "base" });
-}
-
-function compareMeasureOrder(a: ParsedMeasure, b: ParsedMeasure) {
-  if (a.isMissing !== b.isMissing) {
-    return a.isMissing ? 1 : -1;
-  }
-
-  if (a.unitRank !== b.unitRank) {
-    return a.unitRank - b.unitRank;
-  }
-
-  if (a.numericValue !== b.numericValue) {
-    return a.numericValue - b.numericValue;
-  }
-
-  return a.displayLabel.localeCompare(b.displayLabel, "pt-BR", {
-    sensitivity: "base",
-  });
-}
-
-function compareProductsInGroup(a: ShareLinkPdfProduct, b: ShareLinkPdfProduct) {
-  const nameDiff = a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
-  if (nameDiff !== 0) {
-    return nameDiff;
-  }
-
-  const skuA = normalizeLabel(a.sku) ?? "";
-  const skuB = normalizeLabel(b.sku) ?? "";
-  return skuA.localeCompare(skuB, "pt-BR", { sensitivity: "base" });
-}
-
-function buildCategoryMeasureGroups(products: ShareLinkPdfProduct[]): CategoryMeasureGroup[] {
-  const grouped = new Map<string, CategoryMeasureGroup>();
-
-  products.forEach((product) => {
-    const categoryName = normalizeLabel(product.categoryName) ?? "Outros Produtos";
-    const measureOrder = parseMeasure(product.sizeLabel);
-    const groupKey = `${categoryName}::${measureOrder.normalizedKey}`;
-
-    if (!grouped.has(groupKey)) {
-      grouped.set(groupKey, {
-        id: `group-${grouped.size + 1}`,
-        categoryName,
-        measureLabel: measureOrder.displayLabel,
-        measureOrder,
-        products: [],
-      });
-    }
-
-    grouped.get(groupKey)!.products.push(product);
-  });
-
-  const groups = [...grouped.values()];
-  groups.forEach((group) => {
-    group.products.sort(compareProductsInGroup);
-  });
-
-  groups.sort((left, right) => {
-    const categoryDiff = compareCategoryName(left.categoryName, right.categoryName);
-    if (categoryDiff !== 0) {
-      return categoryDiff;
-    }
-    return compareMeasureOrder(left.measureOrder, right.measureOrder);
-  });
-
-  return groups;
 }
 
 function chunkProducts(products: ShareLinkPdfProduct[], chunkSize: number) {
@@ -367,8 +217,11 @@ function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
       BLOCK_HEIGHT_MM.catalogIntro,
     );
 
-    const groups = buildCategoryMeasureGroups(catalog.products);
-    if (groups.length === 0) {
+    const lineGroups = buildLineCategoryMeasureGroups(catalog.products);
+    const hasProducts = lineGroups.some((lineGroup) =>
+      lineGroup.groups.some((group) => group.products.length > 0),
+    );
+    if (!hasProducts) {
       pushBlock(
         {
           id: `catalog-${catalog.id}-empty`,
@@ -380,52 +233,65 @@ function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
       return;
     }
 
-    groups.forEach((group, groupIndex) => {
-      const rows = chunkProducts(group.products, PRODUCTS_PER_ROW);
+    lineGroups.forEach((lineGroup, lineIndex) => {
+      if (lineGroup.lineLabel) {
+        pushBlock(
+          {
+            id: `catalog-${catalog.id}-line-${lineIndex + 1}`,
+            type: "line-header",
+            lineLabel: lineGroup.lineLabel,
+          },
+          BLOCK_HEIGHT_MM.lineHeader,
+        );
+      }
 
-      rows.forEach((row, rowIndex) => {
-        let needsLead = rowIndex === 0;
+      lineGroup.groups.forEach((group, groupIndex) => {
+        const rows = chunkProducts(group.products, PRODUCTS_PER_ROW);
 
-        for (;;) {
-          const heightMm = needsLead
-            ? BLOCK_HEIGHT_MM.groupLead
-            : BLOCK_HEIGHT_MM.groupRow;
+        rows.forEach((row, rowIndex) => {
+          let needsLead = rowIndex === 0;
 
-          const needsBreak =
-            currentPage.blocks.length > 0 &&
-            currentPage.usedHeightMm + heightMm > PAGE_CONTENT_HEIGHT_MM;
+          for (;;) {
+            const heightMm = needsLead
+              ? BLOCK_HEIGHT_MM.groupLead
+              : BLOCK_HEIGHT_MM.groupRow;
 
-          if (needsBreak) {
-            currentPage = createPage();
-            needsLead = true;
-            continue;
+            const needsBreak =
+              currentPage.blocks.length > 0 &&
+              currentPage.usedHeightMm + heightMm > PAGE_CONTENT_HEIGHT_MM;
+
+            if (needsBreak) {
+              currentPage = createPage();
+              needsLead = true;
+              continue;
+            }
+
+            if (needsLead) {
+              pushBlock(
+                {
+                  id: `catalog-${catalog.id}-${group.id}-lead-${lineIndex}-${groupIndex}-${rowIndex}`,
+                  type: "group-lead",
+                  catalog,
+                  categoryName: group.categoryName,
+                  measureLabel: group.measureLabel,
+                  row,
+                },
+                BLOCK_HEIGHT_MM.groupLead,
+              );
+            } else {
+              pushBlock(
+                {
+                  id: `catalog-${catalog.id}-${group.id}-row-${lineIndex}-${groupIndex}-${rowIndex}`,
+                  type: "group-row",
+                  row,
+                },
+                BLOCK_HEIGHT_MM.groupRow,
+              );
+            }
+
+            break;
           }
-
-          if (needsLead) {
-            pushBlock(
-              {
-                id: `catalog-${catalog.id}-${group.id}-lead-${groupIndex}-${rowIndex}`,
-                type: "group-lead",
-                catalog,
-                categoryName: group.categoryName,
-                measureLabel: group.measureLabel,
-                row,
-              },
-              BLOCK_HEIGHT_MM.groupLead,
-            );
-          } else {
-            pushBlock(
-              {
-                id: `catalog-${catalog.id}-${group.id}-row-${groupIndex}-${rowIndex}`,
-                type: "group-row",
-                row,
-              },
-              BLOCK_HEIGHT_MM.groupRow,
-            );
-          }
-
-          break;
-        }
+        });
       });
     });
   });
@@ -545,6 +411,17 @@ function PdfMeasureStripe({
   );
 }
 
+function PdfLineHeader({ lineLabel }: { lineLabel: string }) {
+  return (
+    <div className="mb-3">
+      <p className={`${display.className} text-[24px] font-bold leading-none text-slate-900`}>
+        {lineLabel}
+      </p>
+      <div className="mt-2 h-px w-full bg-rose-200/80" />
+    </div>
+  );
+}
+
 function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
   const primaryImage = resolveImageSrc(product.primaryImageUrl);
   const fallbackImage = resolveImageSrc(product.fallbackImageUrl);
@@ -579,10 +456,17 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
       </div>
 
       <div className="p-4">
-        <div className="flex h-[5.6rem] flex-col justify-between">
-          <p className="line-clamp-2 min-h-[3.6rem] text-base font-semibold leading-tight text-slate-900">
+        <div className="flex h-[6.6rem] flex-col justify-between">
+          <div className="space-y-2">
+            <p className="line-clamp-2 min-h-[2.8rem] text-base font-semibold leading-tight text-slate-900">
             {product.name}
-          </p>
+            </p>
+            {product.description ? (
+              <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-500">
+                {product.description}
+              </p>
+            ) : null}
+          </div>
           <span
             className="inline-flex w-fit items-center rounded-md px-3 py-1 text-[18px] font-bold leading-none"
             style={{
@@ -704,6 +588,14 @@ function PdfContentLayer({
                     />
                     <PdfProductRow row={block.row} />
                   </section>
+                );
+              }
+
+              if (block.type === "line-header") {
+                return (
+                  <div key={block.id} className={blockIndex === 0 ? "" : "mt-4"}>
+                    <PdfLineHeader lineLabel={block.lineLabel} />
+                  </div>
                 );
               }
 

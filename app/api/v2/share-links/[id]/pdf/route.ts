@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole } from "@/lib/authz";
+import { compareProductsByLineCategoryMeasure, normalizeCatalogLabel } from "@/lib/catalog/line-grouping";
 import {
   parseCatalogSnapshotAttributes,
   parseCatalogSnapshotGallery,
@@ -13,92 +14,20 @@ import { jsonError } from "@/lib/utils/errors";
 
 export const dynamic = "force-dynamic";
 
-const UNIT_RANK: Record<string, number> = {
-  g: 1,
-  kg: 2,
-  ml: 3,
-  l: 4,
-};
+function composeProductDescription(
+  description?: string | null,
+  subcategoryName?: string | null,
+) {
+  const subcategory = normalizeCatalogLabel(subcategoryName);
+  const normalizedDescription = normalizeCatalogLabel(description);
 
-function normalizeLabel(value?: string | null) {
-  const normalized = typeof value === "string" ? value.trim() : "";
-  return normalized.length > 0 ? normalized : null;
-}
-
-function parseMeasure(value?: string | null) {
-  const raw = normalizeLabel(value);
-  if (!raw) {
-    return {
-      isMissing: true,
-      unitRank: Number.POSITIVE_INFINITY,
-      numericValue: Number.POSITIVE_INFINITY,
-      normalizedUnit: "",
-      label: "",
-    };
+  if (subcategory && normalizedDescription) {
+    return `Subcategoria: ${subcategory}. ${normalizedDescription}`;
   }
-
-  const compact = raw.toLowerCase().replace(/\s+/g, "");
-  const match = compact.match(/^(\d+(?:[.,]\d+)?)([a-zA-Z]+)$/);
-  if (!match) {
-    return {
-      isMissing: false,
-      unitRank: UNIT_RANK[compact] ?? 99,
-      numericValue: Number.POSITIVE_INFINITY,
-      normalizedUnit: compact,
-      label: raw,
-    };
+  if (subcategory) {
+    return `Subcategoria: ${subcategory}`;
   }
-
-  const numericPart = Number.parseFloat(match[1].replace(",", "."));
-  const unit = match[2];
-
-  return {
-    isMissing: false,
-    unitRank: UNIT_RANK[unit] ?? 99,
-    numericValue: Number.isFinite(numericPart) ? numericPart : Number.POSITIVE_INFINITY,
-    normalizedUnit: unit,
-    label: `${match[1]}${unit}`,
-  };
-}
-
-function compareProductsForPdf(a: ShareLinkPdfProduct, b: ShareLinkPdfProduct) {
-  const categoryA = normalizeLabel(a.categoryName) ?? "Outros Produtos";
-  const categoryB = normalizeLabel(b.categoryName) ?? "Outros Produtos";
-  const categoryDiff = categoryA.localeCompare(categoryB, "pt-BR", { sensitivity: "base" });
-  if (categoryDiff !== 0) {
-    return categoryDiff;
-  }
-
-  const measureA = parseMeasure(a.sizeLabel);
-  const measureB = parseMeasure(b.sizeLabel);
-
-  if (measureA.isMissing !== measureB.isMissing) {
-    return measureA.isMissing ? 1 : -1;
-  }
-
-  if (measureA.unitRank !== measureB.unitRank) {
-    return measureA.unitRank - measureB.unitRank;
-  }
-
-  if (measureA.numericValue !== measureB.numericValue) {
-    return measureA.numericValue - measureB.numericValue;
-  }
-
-  const labelDiff = measureA.label.localeCompare(measureB.label, "pt-BR", {
-    sensitivity: "base",
-  });
-  if (labelDiff !== 0) {
-    return labelDiff;
-  }
-
-  const nameDiff = a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
-  if (nameDiff !== 0) {
-    return nameDiff;
-  }
-
-  const skuA = normalizeLabel(a.sku) ?? "";
-  const skuB = normalizeLabel(b.sku) ?? "";
-  return skuA.localeCompare(skuB, "pt-BR", { sensitivity: "base" });
+  return normalizedDescription ?? null;
 }
 
 export async function GET(
@@ -189,6 +118,7 @@ export async function GET(
                   id: true,
                   name: true,
                   sku: true,
+                  line: true,
                   brand: true,
                   description: true,
                   imageUrl: true,
@@ -251,19 +181,29 @@ export async function GET(
                 : null;
               const snapshotGallery = parseCatalogSnapshotGallery(snapshot?.galleryJson);
               const snapshotAttributes = parseCatalogSnapshotAttributes(snapshot?.attributesJson);
-              const sizeLabel = normalizeLabel(snapshotAttributes.size) ?? normalizeLabel(product?.size);
+              const sizeLabel =
+                normalizeCatalogLabel(snapshotAttributes.size) ??
+                normalizeCatalogLabel(product?.size);
+              const lineLabel =
+                normalizeCatalogLabel(snapshotAttributes.line) ??
+                normalizeCatalogLabel(product?.line);
+              const subcategoryName =
+                snapshot?.subcategoryName ?? product?.subcategory?.name ?? null;
 
               acc.push({
                 id: product?.id ?? `${entry.catalog.id}-${snapshot?.code ?? "snapshot"}`,
                 name: snapshot?.name ?? product?.name ?? "Produto",
                 sku: snapshot?.code ?? product?.sku ?? null,
+                lineLabel,
                 sizeLabel,
                 brand: snapshot?.brand ?? product?.brand ?? null,
-                description: snapshot?.description ?? product?.description ?? null,
+                description: composeProductDescription(
+                  snapshot?.description ?? product?.description ?? null,
+                  subcategoryName,
+                ),
                 categoryName:
                   snapshot?.categoryName ?? product?.category?.name ?? null,
-                subcategoryName:
-                  snapshot?.subcategoryName ?? product?.subcategory?.name ?? null,
+                subcategoryName,
                 primaryImageUrl:
                   snapshot?.primaryImageUrl ?? product?.imageUrl ?? null,
                 fallbackImageUrl:
@@ -272,7 +212,7 @@ export async function GET(
 
               return acc;
             }, []);
-          products.sort(compareProductsForPdf);
+          products.sort(compareProductsByLineCategoryMeasure);
 
           return {
             id: entry.catalog.id,

@@ -42,6 +42,7 @@ export function BaseProductEditDialog({
 }: BaseProductEditDialogProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [productName, setProductName] = useState(baseProduct?.name ?? "");
+  const [productLine, setProductLine] = useState(baseProduct?.line ?? "");
   const [mainImageUrl, setMainImageUrl] = useState<string | null>(baseProduct?.imageUrl ?? null);
   const [isUploading, setIsUploading] = useState(false);
   const updateBaseProductMutation = useUpdateBaseProductV2();
@@ -71,6 +72,7 @@ export function BaseProductEditDialog({
 
   useEffect(() => {
     setProductName(baseProduct?.name ?? "");
+    setProductLine(baseProduct?.line ?? "");
     setMainImageUrl(baseProduct?.imageUrl ?? null);
     if (!open) {
       setSelectedFile(null);
@@ -135,7 +137,7 @@ export function BaseProductEditDialog({
     }
   };
 
-  const handleSaveName = async () => {
+  const handleSaveMetadata = async () => {
     if (!baseProduct) {
       return;
     }
@@ -149,10 +151,14 @@ export function BaseProductEditDialog({
     try {
       const updated = await updateBaseProductMutation.mutateAsync({
         id: baseProduct.id,
-        data: { name: nextName },
+        data: {
+          name: nextName,
+          line: productLine.trim() || null,
+        },
       });
       setProductName(updated.name);
-      toastSuccess("Nome atualizado");
+      setProductLine(updated.line ?? "");
+      toastSuccess("Produto atualizado");
     } catch (err) {
       const message = getErrorMessage(err);
       toastError(message.title, message.description);
@@ -236,11 +242,22 @@ export function BaseProductEditDialog({
                 type="button"
                 variant="outline"
                 disabled={isSaving || productName.trim().length < 2}
-                onClick={handleSaveName}
+                onClick={handleSaveMetadata}
               >
-                Salvar nome
+                Salvar dados
               </Button>
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="base-product-line">Linha (opcional)</Label>
+            <Input
+              id="base-product-line"
+              value={productLine}
+              disabled={isSaving}
+              onChange={(event) => setProductLine(event.target.value)}
+              placeholder="Ex.: Baby"
+            />
           </div>
 
           <div className="grid gap-2 text-sm">

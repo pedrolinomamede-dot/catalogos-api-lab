@@ -12,6 +12,7 @@ type CreatePayload = {
   sku: string;
   name: string;
   description?: string;
+  line?: string;
   brand?: string;
   barcode?: string;
   size?: string;
@@ -84,6 +85,7 @@ function parseCreatePayload(body: unknown) {
   }
 
   let brand: string | undefined;
+  let line: string | undefined;
   if (hasOwn(body, "brand")) {
     if (typeof body.brand !== "string") {
       return {
@@ -92,6 +94,16 @@ function parseCreatePayload(body: unknown) {
     }
     const value = body.brand.trim();
     brand = value.length > 0 ? value : undefined;
+  }
+
+  if (hasOwn(body, "line")) {
+    if (typeof body.line !== "string") {
+      return {
+        error: jsonError(400, "validation_error", "line must be a string"),
+      };
+    }
+    const value = body.line.trim();
+    line = value.length > 0 ? value : undefined;
   }
 
   let barcode: string | undefined;
@@ -131,6 +143,7 @@ function parseCreatePayload(body: unknown) {
       sku,
       name,
       description,
+      line,
       brand,
       barcode,
       size,
@@ -162,6 +175,7 @@ export async function GET(request: Request) {
       { name: { contains: q, mode: "insensitive" } },
       { sku: { contains: q, mode: "insensitive" } },
       { brand: { contains: q, mode: "insensitive" } },
+      { line: { contains: q, mode: "insensitive" } },
       { barcode: { contains: q, mode: "insensitive" } },
       { size: { contains: q, mode: "insensitive" } },
     ];
@@ -217,6 +231,7 @@ export async function POST(request: Request) {
           sku: parsed.data.sku,
           name: parsed.data.name,
           description: parsed.data.description,
+          line: parsed.data.line,
           brand: parsed.data.brand,
           barcode: parsed.data.barcode,
           size: parsed.data.size,

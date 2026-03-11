@@ -6,6 +6,11 @@ import {
   type PdfTemplateVersion,
   type PdfTheme,
 } from "@/lib/pdf/themes/corporate-v1";
+import {
+  buildLineCategoryMeasureGroups,
+  normalizeCatalogLabel,
+  type LineCategoryMeasureGroup,
+} from "@/lib/catalog/line-grouping";
 
 type PdfFont = "F1" | "F2";
 
@@ -28,6 +33,7 @@ export type ShareLinkPdfProduct = {
   id: string;
   name: string;
   sku?: string | null;
+  lineLabel?: string | null;
   sizeLabel?: string | null;
   brand?: string | null;
   description?: string | null;
@@ -110,9 +116,13 @@ function createLayout(theme: PdfTheme): RenderLayout {
 
 type ProductGroup = {
   categoryName: string;
-  subcategoryName: string | null;
-  title: string;
+  measureLabel: string;
   products: ShareLinkPdfProduct[];
+};
+
+type ProductLineGroup = {
+  lineLabel: string | null;
+  groups: ProductGroup[];
 };
 
 function formatNumber(value: number) {
@@ -335,74 +345,16 @@ function drawImage(
   );
 }
 
-function normalizeLabel(value?: string | null) {
-  const normalized = typeof value === "string" ? value.trim() : "";
-  return normalized.length > 0 ? normalized : null;
-}
-
-function groupProducts(products: ShareLinkPdfProduct[]): ProductGroup[] {
-  const categoryMap = new Map<string, Map<string, ShareLinkPdfProduct[]>>();
-
-  products.forEach((product) => {
-    const categoryName = normalizeLabel(product.categoryName) ?? "Outros Produtos";
-    const subcategoryName = normalizeLabel(product.subcategoryName);
-    const subKey = subcategoryName ?? "__none__";
-
-    if (!categoryMap.has(categoryName)) {
-      categoryMap.set(categoryName, new Map<string, ShareLinkPdfProduct[]>());
-    }
-
-    const subMap = categoryMap.get(categoryName)!;
-    if (!subMap.has(subKey)) {
-      subMap.set(subKey, []);
-    }
-
-    subMap.get(subKey)!.push(product);
-  });
-
-  const categoryOrder = [...categoryMap.keys()].sort((a, b) => {
-    if (a === "Outros Produtos") {
-      return 1;
-    }
-    if (b === "Outros Produtos") {
-      return -1;
-    }
-    return a.localeCompare(b, "pt-BR");
-  });
-
-  const groups: ProductGroup[] = [];
-
-  categoryOrder.forEach((categoryName) => {
-    const subMap = categoryMap.get(categoryName)!;
-    const subOrder = [...subMap.keys()].sort((a, b) => {
-      if (a === "__none__") {
-        return -1;
-      }
-      if (b === "__none__") {
-        return 1;
-      }
-      return a.localeCompare(b, "pt-BR");
-    });
-
-    subOrder.forEach((subKey) => {
-      const subcategoryName = subKey === "__none__" ? null : subKey;
-      const title =
-        categoryName === "Outros Produtos"
-          ? "Outros Produtos"
-          : subcategoryName
-            ? `${categoryName} - ${subcategoryName}`
-            : categoryName;
-
-      groups.push({
-        categoryName,
-        subcategoryName,
-        title,
-        products: subMap.get(subKey) ?? [],
-      });
-    });
-  });
-
-  return groups;
+function groupProducts(products: ShareLinkPdfProduct[]): ProductLineGroup[] {
+  const lineGroups = buildLineCategoryMeasureGroups(products);
+  return lineGroups.map((lineGroup: LineCategoryMeasureGroup<ShareLinkPdfProduct>) => ({
+    lineLabel: lineGroup.lineLabel,
+    groups: lineGroup.groups.map((group) => ({
+      categoryName: group.categoryName,
+      measureLabel: group.measureLabel,
+      products: group.products,
+    })),
+  }));
 }
 
 function resolveImageUrl(url?: string | null) {
@@ -778,7 +730,7 @@ async function renderProductCard(
     textY += 13;
   });
 
-  const productBrand = normalizeLabel(product.brand);
+  const productBrand = normalizeCatalogLabel(product.brand);
   const brandLabel = productBrand ? `Marca: ${productBrand}` : "Marca nao informada";
   drawText(page, brandLabel, innerX, textY + 1, {
     font: FONT_NORMAL,
@@ -791,12 +743,8 @@ async function renderProductCard(
   drawSkuChip(page, skuLabel, innerX + textWidth - skuWidth, textY - 2, theme);
   textY += 14;
 
-  const categoryLabel = normalizeLabel(product.categoryName) ?? "Sem categoria";
-  const subcategoryLabel = normalizeLabel(product.subcategoryName);
-  const hierarchyLabel = subcategoryLabel
-    ? `${categoryLabel} / ${subcategoryLabel}`
-    : categoryLabel;
-  drawText(page, hierarchyLabel, innerX, textY, {
+  const categoryLabel = normalizeCatalogLabel(product.categoryName) ?? "Sem categoria";
+  drawText(page, categoryLabel, innerX, textY, {
     font: FONT_NORMAL,
     size: theme.fonts.cardMeta,
     color: theme.colors.textSecondary,
@@ -804,7 +752,7 @@ async function renderProductCard(
   textY += 12;
 
   const descriptionLabel =
-    normalizeLabel(product.description) ?? "Sem descricao para este produto.";
+    normalizeCatalogLabel(product.description) ?? "Sem descricao para este produto.";
   const descriptionLines = wrapText(
     descriptionLabel,
     theme.fonts.cardDescription,
@@ -1043,32 +991,9 @@ export async function generateShareLinkPdf(data: ShareLinkPdfData): Promise<Buff
       continue;
     }
 
-    for (const group of groups) {
-      let groupHeaderRendered = false;
-      let rowStart = 0;
-
-      while (rowStart < group.products.length) {
-        if (!groupHeaderRendered) {
-          const minimumHeight = layout.groupHeaderHeight + layout.cardHeight + layout.rowGap;
-          if (!hasSpace(cursorY, minimumHeight, layout.contentBottom)) {
-            pages.push(page);
-            page = createPage("catalog");
-            cursorY = await renderCatalogPageFrame(
-              page,
-              data,
-              catalog,
-              true,
-              theme,
-              layout,
-              resolveBrandLogoAsset,
-            );
-          }
-
-          cursorY = renderGroupHeader(page, group.title, cursorY, theme, layout);
-          groupHeaderRendered = true;
-        }
-
-        if (!hasSpace(cursorY, layout.cardHeight + layout.rowGap, layout.contentBottom)) {
+    for (const lineGroup of groups) {
+      if (lineGroup.lineLabel) {
+        if (!hasSpace(cursorY, 28, layout.contentBottom)) {
           pages.push(page);
           page = createPage("catalog");
           cursorY = await renderCatalogPageFrame(
@@ -1080,40 +1005,104 @@ export async function generateShareLinkPdf(data: ShareLinkPdfData): Promise<Buff
             layout,
             resolveBrandLogoAsset,
           );
-          groupHeaderRendered = false;
-          continue;
         }
 
-        const leftProduct = group.products[rowStart];
-        const rightProduct = group.products[rowStart + 1];
-
-        await renderProductCard(
+        drawText(page, lineGroup.lineLabel, MARGIN_X, cursorY, {
+          font: FONT_BOLD,
+          size: 18,
+          color: theme.colors.textPrimary,
+        });
+        cursorY += 18;
+        drawLine(
           page,
-          leftProduct,
           MARGIN_X,
           cursorY,
-          resolveProductImageAsset,
-          theme,
-          layout,
+          PAGE_WIDTH - MARGIN_X,
+          cursorY,
+          theme.colors.cardBorder,
+          0.8,
         );
+        cursorY += 10;
+      }
 
-        if (rightProduct) {
+      for (const group of lineGroup.groups) {
+        let groupHeaderRendered = false;
+        let rowStart = 0;
+
+        while (rowStart < group.products.length) {
+          if (!groupHeaderRendered) {
+            const minimumHeight = layout.groupHeaderHeight + layout.cardHeight + layout.rowGap;
+            if (!hasSpace(cursorY, minimumHeight, layout.contentBottom)) {
+              pages.push(page);
+              page = createPage("catalog");
+              cursorY = await renderCatalogPageFrame(
+                page,
+                data,
+                catalog,
+                true,
+                theme,
+                layout,
+                resolveBrandLogoAsset,
+              );
+            }
+
+            cursorY = renderGroupHeader(
+              page,
+              `${group.categoryName} - ${group.measureLabel}`,
+              cursorY,
+              theme,
+              layout,
+            );
+            groupHeaderRendered = true;
+          }
+
+          if (!hasSpace(cursorY, layout.cardHeight + layout.rowGap, layout.contentBottom)) {
+            pages.push(page);
+            page = createPage("catalog");
+            cursorY = await renderCatalogPageFrame(
+              page,
+              data,
+              catalog,
+              true,
+              theme,
+              layout,
+              resolveBrandLogoAsset,
+            );
+            groupHeaderRendered = false;
+            continue;
+          }
+
+          const leftProduct = group.products[rowStart];
+          const rightProduct = group.products[rowStart + 1];
+
           await renderProductCard(
             page,
-            rightProduct,
-            MARGIN_X + layout.cardWidth + layout.columnGap,
+            leftProduct,
+            MARGIN_X,
             cursorY,
             resolveProductImageAsset,
             theme,
             layout,
           );
+
+          if (rightProduct) {
+            await renderProductCard(
+              page,
+              rightProduct,
+              MARGIN_X + layout.cardWidth + layout.columnGap,
+              cursorY,
+              resolveProductImageAsset,
+              theme,
+              layout,
+            );
+          }
+
+          cursorY += layout.cardHeight + layout.rowGap;
+          rowStart += 2;
         }
 
-        cursorY += layout.cardHeight + layout.rowGap;
-        rowStart += 2;
+        cursorY += layout.groupGapAfter;
       }
-
-      cursorY += layout.groupGapAfter;
     }
 
     pages.push(page);

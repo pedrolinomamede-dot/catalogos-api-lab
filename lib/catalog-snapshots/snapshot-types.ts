@@ -4,6 +4,7 @@ export type CatalogSnapshotGalleryItem = {
 };
 
 export type CatalogSnapshotAttributes = {
+  line?: string | null;
   size?: string | null;
 };
 
@@ -39,6 +40,7 @@ export function parseCatalogSnapshotAttributes(
 
   const record = value as Record<string, unknown>;
   return {
+    line: typeof record.line === "string" ? record.line : null,
     size: typeof record.size === "string" ? record.size : null,
   };
 }

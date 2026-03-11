@@ -170,6 +170,7 @@ model ProductBaseV2 {
   sku                     String
   name                    String
   description             String?
+  line                    String?
   barcode                 String?
   size                    String?
   brand                   String?

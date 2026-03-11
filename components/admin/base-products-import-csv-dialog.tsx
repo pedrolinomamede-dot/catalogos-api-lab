@@ -45,6 +45,7 @@ const HEADER_ALIASES = {
   code: ["codigo", "sku", "code"],
   barcode: ["codigodebarra", "barcode", "ean", "gtin"],
   size: ["tamanho", "size"],
+  line: ["linha", "line"],
   brand: ["marca", "brand"],
   name: ["nome", "name"],
   category: ["categoria", "category"],
@@ -142,6 +143,7 @@ const parseCsvBaseProducts = (fileContent: string) => {
 
   const barcodeIndex = resolveHeaderIndex(headerIndex, HEADER_ALIASES.barcode);
   const sizeIndex = resolveHeaderIndex(headerIndex, HEADER_ALIASES.size);
+  const lineIndex = resolveHeaderIndex(headerIndex, HEADER_ALIASES.line);
   const brandIndex = resolveHeaderIndex(headerIndex, HEADER_ALIASES.brand);
   const categoryIndex = resolveHeaderIndex(headerIndex, HEADER_ALIASES.category);
   const subcategoryIndex = resolveHeaderIndex(
@@ -164,11 +166,12 @@ const parseCsvBaseProducts = (fileContent: string) => {
     const name = getValue(row, nameIndex);
     const barcode = getValue(row, barcodeIndex);
     const size = getValue(row, sizeIndex);
+    const line = getValue(row, lineIndex);
     const brand = getValue(row, brandIndex);
     const category = getValue(row, categoryIndex);
     const subcategory = getValue(row, subcategoryIndex);
 
-    if (!code && !name && !barcode && !size && !brand && !category && !subcategory) {
+    if (!code && !name && !barcode && !size && !line && !brand && !category && !subcategory) {
       skipped += 1;
       return;
     }
@@ -176,6 +179,7 @@ const parseCsvBaseProducts = (fileContent: string) => {
     items.push({
       code,
       name,
+      line: line || undefined,
       barcode: barcode || undefined,
       size: size || undefined,
       brand: brand || undefined,

@@ -8,6 +8,7 @@ import type { ShareLinkPublicCatalogV2, ShareLinkPublicV2 } from "@/types/api";
 
 import { OfflineBanner } from "@/components/public/OfflineBanner";
 import { Input } from "@/components/ui/input";
+import { normalizeCatalogLabel } from "@/lib/catalog/line-grouping";
 import {
   getDefaultProductCardTone,
   resolveProductCardTone,
@@ -40,6 +41,8 @@ export type ShareLinkProduct = {
   id: string;
   name: string;
   sku?: string | null;
+  lineLabel?: string | null;
+  sizeLabel?: string | null;
   barcode?: string | null;
   description?: string | null;
   imageUrl?: string | null;
@@ -298,6 +301,21 @@ export function ShareLinkShell({
     }
     return list;
   }, [activeProducts, resolvedCategoryId, resolvedSubcategoryId, query]);
+
+  const visibleLineGroups = useMemo(() => {
+    const groups = new Map<string, { lineLabel: string | null; products: ShareLinkProduct[] }>();
+
+    visibleProducts.forEach((product) => {
+      const lineLabel = normalizeCatalogLabel(product.lineLabel);
+      const key = lineLabel ?? "__no_line__";
+      if (!groups.has(key)) {
+        groups.set(key, { lineLabel, products: [] });
+      }
+      groups.get(key)!.products.push(product);
+    });
+
+    return [...groups.values()];
+  }, [visibleProducts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -572,13 +590,25 @@ export function ShareLinkShell({
               Nenhum produto encontrado para os filtros aplicados.
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {visibleProducts.map((product) => {
+            <div className="space-y-6">
+              {visibleLineGroups.map((lineGroup) => (
+                <div key={lineGroup.lineLabel ?? "__no_line__"} className="space-y-4">
+                  {lineGroup.lineLabel ? (
+                    <div className="space-y-2">
+                      <h3
+                        className="text-2xl text-slate-900"
+                        style={{ fontFamily: "var(--font-editorial), serif" }}
+                      >
+                        {lineGroup.lineLabel}
+                      </h3>
+                      <div className="h-px w-full bg-rose-100" />
+                    </div>
+                  ) : null}
+
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {lineGroup.products.map((product) => {
                 const categoryName = product.categoryId
                   ? categoryMap.get(product.categoryId)
-                  : null;
-                const subcategoryName = product.subcategoryId
-                  ? subcategoryMap.get(product.subcategoryId)?.name
                   : null;
                 const tone =
                   cardTonesByProductId[product.id] ?? getDefaultProductCardTone();
@@ -614,8 +644,8 @@ export function ShareLinkShell({
                         </div>
                       )}
                     </div>
-                    <div className="space-y-2 p-4">
-                      <div className="space-y-1">
+                      <div className="space-y-2 p-4">
+                        <div className="space-y-1">
                         <p className="line-clamp-2 text-sm font-semibold text-slate-900">
                           {product.name}
                         </p>
@@ -629,17 +659,24 @@ export function ShareLinkShell({
                         >
                           {product.sku ?? "Sem SKU"}
                         </span>
+                        </div>
+                        {categoryName ? (
+                          <p className="text-xs text-slate-600">
+                            {categoryName}
+                          </p>
+                        ) : null}
+                        {product.description ? (
+                          <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">
+                            {product.description}
+                          </p>
+                        ) : null}
                       </div>
-                      {categoryName ? (
-                        <p className="text-xs text-slate-600">
-                          {categoryName}
-                          {subcategoryName ? ` · ${subcategoryName}` : ""}
-                        </p>
-                      ) : null}
-                    </div>
-                  </article>
-                );
-              })}
+                    </article>
+                  );
+                })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>

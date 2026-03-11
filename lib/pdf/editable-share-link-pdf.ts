@@ -1,6 +1,11 @@
 import { deflateSync } from "node:zlib";
 
 import sharp from "sharp";
+import {
+  buildLineCategoryMeasureGroups,
+  normalizeCatalogLabel,
+  type LineCategoryMeasureGroup,
+} from "@/lib/catalog/line-grouping";
 
 import type {
   ShareLinkPdfCatalog,
@@ -45,8 +50,12 @@ type ParsedMeasure = {
 type CategoryMeasureGroup = {
   categoryName: string;
   measureLabel: string;
-  measureOrder: ParsedMeasure;
   products: ShareLinkPdfProduct[];
+};
+
+type ProductLineGroup = {
+  lineLabel: string | null;
+  groups: CategoryMeasureGroup[];
 };
 
 const PAGE_WIDTH = 595;
@@ -68,6 +77,7 @@ const CARD_NAME_FONT_SIZE = 11.4;
 const CARD_CODE_FONT_SIZE = 18;
 const ROW_GAP = 12;
 const GROUP_GAP_AFTER = 14;
+const LINE_HEADER_HEIGHT = 24;
 const STRIPE_HEIGHT = 28;
 const STRIPE_GAP_BEFORE = 6;
 const STRIPE_GAP_AFTER = 10;
@@ -400,37 +410,16 @@ function compareProducts(left: ShareLinkPdfProduct, right: ShareLinkPdfProduct) 
   return leftSku.localeCompare(rightSku, "pt-BR", { sensitivity: "base" });
 }
 
-function buildCategoryMeasureGroups(products: ShareLinkPdfProduct[]): CategoryMeasureGroup[] {
-  const grouped = new Map<string, CategoryMeasureGroup>();
-
-  products.forEach((product) => {
-    const categoryName = normalizeLabel(product.categoryName) ?? "Outros Produtos";
-    const measureOrder = parseMeasure(product.sizeLabel);
-    const groupKey = `${categoryName}::${measureOrder.normalizedKey}`;
-
-    if (!grouped.has(groupKey)) {
-      grouped.set(groupKey, {
-        categoryName,
-        measureLabel: measureOrder.displayLabel,
-        measureOrder,
-        products: [],
-      });
-    }
-
-    grouped.get(groupKey)!.products.push(product);
-  });
-
-  const groups = [...grouped.values()];
-  groups.forEach((group) => group.products.sort(compareProducts));
-  groups.sort((left, right) => {
-    const categoryDiff = compareCategoryName(left.categoryName, right.categoryName);
-    if (categoryDiff !== 0) {
-      return categoryDiff;
-    }
-    return compareMeasureOrder(left.measureOrder, right.measureOrder);
-  });
-
-  return groups;
+function buildCategoryMeasureGroups(products: ShareLinkPdfProduct[]): ProductLineGroup[] {
+  const lineGroups = buildLineCategoryMeasureGroups(products);
+  return lineGroups.map((lineGroup: LineCategoryMeasureGroup<ShareLinkPdfProduct>) => ({
+    lineLabel: lineGroup.lineLabel,
+    groups: lineGroup.groups.map((group) => ({
+      categoryName: group.categoryName,
+      measureLabel: group.measureLabel,
+      products: group.products,
+    })),
+  }));
 }
 
 function resolveImageUrl(url?: string | null) {
@@ -895,6 +884,18 @@ function renderMeasureStripe(
   return y + STRIPE_HEIGHT + STRIPE_GAP_AFTER;
 }
 
+function renderLineHeader(page: PdfPage, lineLabel: string, y: number) {
+  drawText(page, lineLabel, PAGE_MARGIN_X, y + 2, {
+    font: FONT_BOLD,
+    size: 17,
+    color: [0.082, 0.11, 0.161],
+  });
+  drawRect(page, PAGE_MARGIN_X, y + 20, CONTENT_WIDTH, 1, {
+    fill: [0.949, 0.878, 0.902],
+  });
+  return y + LINE_HEADER_HEIGHT;
+}
+
 async function renderProductCard(
   page: PdfPage,
   product: ShareLinkPdfProduct,
@@ -953,6 +954,19 @@ async function renderProductCard(
     textY += 13;
   });
 
+  const descriptionLabel = normalizeCatalogLabel(product.description);
+  if (descriptionLabel) {
+    const descriptionLines = wrapText(descriptionLabel, 9.2, textWidth, 2, false);
+    descriptionLines.forEach((line) => {
+      drawText(page, line, textX, textY - 1, {
+        font: FONT_NORMAL,
+        size: 9.2,
+        color: [0.4, 0.43, 0.48],
+      });
+      textY += 10;
+    });
+  }
+
   const textBlockBottom = y + CARD_HEIGHT - CARD_TEXT_PADDING_BOTTOM;
   const chipY = textBlockBottom - 20;
   const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";
@@ -989,7 +1003,11 @@ export async function generateEditableShareLinkPdf(data: ShareLinkPdfData): Prom
       imageAssets,
     );
 
-    if (groups.length === 0) {
+    const hasProducts = groups.some((lineGroup) =>
+      lineGroup.groups.some((group) => group.products.length > 0),
+    );
+
+    if (!hasProducts) {
       drawText(page, "Nenhum produto neste catalogo.", PAGE_MARGIN_X, cursorY + 16, {
         font: FONT_NORMAL,
         size: 11,
@@ -998,17 +1016,9 @@ export async function generateEditableShareLinkPdf(data: ShareLinkPdfData): Prom
       continue;
     }
 
-    for (const group of groups) {
-      const rows = chunkProducts(group.products, PRODUCTS_PER_ROW);
-
-      for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
-        const needsStripe = rowIndex === 0;
-        const blockHeight =
-          (needsStripe ? STRIPE_GAP_BEFORE + STRIPE_HEIGHT + STRIPE_GAP_AFTER : 0) +
-          CARD_HEIGHT +
-          ROW_GAP;
-
-        if (cursorY + blockHeight > CONTENT_BOTTOM) {
+    for (const lineGroup of groups) {
+      if (lineGroup.lineLabel) {
+        if (cursorY + LINE_HEADER_HEIGHT > CONTENT_BOTTOM) {
           page = createPage();
           pages.push(page);
           await drawBackground(page, imageCache, imageAssets, catalog.pdfBackgroundImageUrl);
@@ -1016,21 +1026,49 @@ export async function generateEditableShareLinkPdf(data: ShareLinkPdfData): Prom
           cursorY = PAGE_MARGIN_TOP + DATE_ROW_HEIGHT;
         }
 
-        if (needsStripe) {
-          cursorY += STRIPE_GAP_BEFORE;
-          cursorY = renderMeasureStripe(page, catalog, group.categoryName, group.measureLabel, cursorY);
-        }
-
-        const row = rows[rowIndex];
-        for (let columnIndex = 0; columnIndex < row.length; columnIndex += 1) {
-          const x = PAGE_MARGIN_X + columnIndex * (CARD_WIDTH + COLUMN_GAP);
-          await renderProductCard(page, row[columnIndex], x, cursorY, imageCache, imageAssets);
-        }
-
-        cursorY += CARD_HEIGHT + ROW_GAP;
+        cursorY = renderLineHeader(page, lineGroup.lineLabel, cursorY);
       }
 
-      cursorY += GROUP_GAP_AFTER;
+      for (const group of lineGroup.groups) {
+        const rows = chunkProducts(group.products, PRODUCTS_PER_ROW);
+
+        for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+          const needsStripe = rowIndex === 0;
+          const blockHeight =
+            (needsStripe ? STRIPE_GAP_BEFORE + STRIPE_HEIGHT + STRIPE_GAP_AFTER : 0) +
+            CARD_HEIGHT +
+            ROW_GAP;
+
+          if (cursorY + blockHeight > CONTENT_BOTTOM) {
+            page = createPage();
+            pages.push(page);
+            await drawBackground(page, imageCache, imageAssets, catalog.pdfBackgroundImageUrl);
+            renderPageDate(page, data.generatedAt);
+            cursorY = PAGE_MARGIN_TOP + DATE_ROW_HEIGHT;
+          }
+
+          if (needsStripe) {
+            cursorY += STRIPE_GAP_BEFORE;
+            cursorY = renderMeasureStripe(
+              page,
+              catalog,
+              group.categoryName,
+              group.measureLabel,
+              cursorY,
+            );
+          }
+
+          const row = rows[rowIndex];
+          for (let columnIndex = 0; columnIndex < row.length; columnIndex += 1) {
+            const x = PAGE_MARGIN_X + columnIndex * (CARD_WIDTH + COLUMN_GAP);
+            await renderProductCard(page, row[columnIndex], x, cursorY, imageCache, imageAssets);
+          }
+
+          cursorY += CARD_HEIGHT + ROW_GAP;
+        }
+
+        cursorY += GROUP_GAP_AFTER;
+      }
     }
   }
 

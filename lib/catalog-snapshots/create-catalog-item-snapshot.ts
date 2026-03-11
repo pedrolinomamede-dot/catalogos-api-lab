@@ -30,6 +30,7 @@ export async function buildCatalogItemSnapshotPayload(
       sku: true,
       name: true,
       description: true,
+      line: true,
       barcode: true,
       brand: true,
       size: true,
@@ -70,6 +71,7 @@ export async function buildCatalogItemSnapshotPayload(
     sortOrder: image.sortOrder,
   }));
   const attributesJson: CatalogSnapshotAttributes = {
+    line: product.line ?? null,
     size: product.size ?? null,
   };
 

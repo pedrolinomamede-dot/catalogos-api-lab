@@ -11,7 +11,9 @@ import {
   type PublicSubcategoryInfo,
   type ShareLinkProduct,
 } from "@/components/public/share-link-shell";
+import { compareProductsByLineCategoryMeasure, normalizeCatalogLabel } from "@/lib/catalog/line-grouping";
 import { parseCatalogSnapshotGallery } from "@/lib/catalog-snapshots/snapshot-types";
+import { parseCatalogSnapshotAttributes } from "@/lib/catalog-snapshots/snapshot-types";
 import { withBrand } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +27,7 @@ type CatalogItemResponse = {
     description?: string | null;
     primaryImageUrl?: string | null;
     galleryJson?: unknown;
+    attributesJson?: unknown;
     categoryId?: string | null;
     subcategoryId?: string | null;
   } | null;
@@ -32,6 +35,7 @@ type CatalogItemResponse = {
     id: string;
     name: string;
     sku?: string | null;
+    line?: string | null;
     description?: string | null;
     imageUrl?: string | null;
     categoryId?: string | null;
@@ -114,6 +118,23 @@ async function fetchShareLink(baseUrl: string, identifier: string) {
   return payload.data;
 }
 
+function composeProductDescription(
+  description?: string | null,
+  subcategoryName?: string | null,
+) {
+  const subcategory = normalizeCatalogLabel(subcategoryName);
+  const normalizedDescription = normalizeCatalogLabel(description);
+
+  if (subcategory && normalizedDescription) {
+    return `Subcategoria: ${subcategory}. ${normalizedDescription}`;
+  }
+  if (subcategory) {
+    return `Subcategoria: ${subcategory}`;
+  }
+
+  return normalizedDescription ?? null;
+}
+
 export default async function ShareLinkPage({
   params,
 }: {
@@ -189,6 +210,7 @@ export default async function ShareLinkPage({
                     description: true,
                     primaryImageUrl: true,
                     galleryJson: true,
+                    attributesJson: true,
                     categoryId: true,
                     subcategoryId: true,
                   },
@@ -198,6 +220,7 @@ export default async function ShareLinkPage({
                     id: true,
                     name: true,
                     sku: true,
+                    line: true,
                     description: true,
                     imageUrl: true,
                     categoryId: true,
@@ -246,6 +269,7 @@ export default async function ShareLinkPage({
   });
   catalogItems.forEach((item: CatalogItemResponse) => {
     const snapshotGallery = parseCatalogSnapshotGallery(item.snapshot?.galleryJson);
+    const snapshotAttributes = parseCatalogSnapshotAttributes(item.snapshot?.attributesJson);
     const primaryImageUrl =
       item.snapshot?.primaryImageUrl ?? item.productBase?.imageUrl ?? null;
     const galleryImageUrls =
@@ -257,11 +281,26 @@ export default async function ShareLinkPage({
           );
 
     const list = productsByCatalog[item.catalogId] ?? [];
+    const subcategoryName =
+      item.snapshot?.subcategoryId
+        ? subcategories.find((entry) => entry.id === item.snapshot?.subcategoryId)?.name ?? null
+        : item.productBase?.subcategoryId
+          ? subcategories.find((entry) => entry.id === item.productBase?.subcategoryId)?.name ?? null
+          : null;
     list.push({
       id: item.productBaseId,
       name: item.snapshot?.name ?? item.productBase?.name ?? "Produto",
       sku: item.snapshot?.code ?? item.productBase?.sku ?? null,
-      description: item.snapshot?.description ?? item.productBase?.description ?? null,
+      lineLabel:
+        normalizeCatalogLabel(snapshotAttributes.line) ??
+        normalizeCatalogLabel(item.productBase?.line) ??
+        null,
+      sizeLabel:
+        normalizeCatalogLabel(snapshotAttributes.size) ?? null,
+      description: composeProductDescription(
+        item.snapshot?.description ?? item.productBase?.description ?? null,
+        subcategoryName,
+      ),
       imageUrl: primaryImageUrl,
       galleryImageUrls,
       categoryId: item.snapshot?.categoryId ?? item.productBase?.categoryId ?? null,
@@ -270,6 +309,10 @@ export default async function ShareLinkPage({
       catalogId: item.catalogId,
     });
     productsByCatalog[item.catalogId] = list;
+  });
+
+  Object.keys(productsByCatalog).forEach((catalogId) => {
+    productsByCatalog[catalogId].sort(compareProductsByLineCategoryMeasure);
   });
 
   return (

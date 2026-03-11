@@ -156,6 +156,7 @@ export type BaseProductV2 = {
   sku: string;
   name: string;
   description?: string | null;
+  line?: string | null;
   imageUrl?: string | null;
   isActive: boolean;
   categoryId?: string | null;
@@ -182,6 +183,7 @@ export type CreateBaseProductV2Request = {
   sku: string;
   name: string;
   description?: string;
+  line?: string;
   brand?: string;
   barcode?: string;
   size?: string;
@@ -192,6 +194,7 @@ export type UpdateBaseProductV2Request = Partial<{
   sku: string;
   name: string;
   description: string;
+  line: string | null;
   brand: string | null;
   barcode: string | null;
   size: string | null;
@@ -201,6 +204,7 @@ export type UpdateBaseProductV2Request = Partial<{
 export type ImportBaseProductsCsvV2Item = {
   code: string;
   name: string;
+  line?: string;
   barcode?: string;
   size?: string;
   brand?: string;

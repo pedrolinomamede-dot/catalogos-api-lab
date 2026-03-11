@@ -11,6 +11,7 @@ type ParsedBulkItem = {
   code: string;
   normalizedCode?: string;
   name: string;
+  line?: string;
   barcode?: string;
   size?: string;
   brand?: string;
@@ -186,6 +187,19 @@ function parseItem(raw: unknown, index: number) {
     };
   }
 
+  const lineResult = readOptionalString(raw, "line");
+  if (lineResult.error) {
+    return {
+      error: {
+        index: outputIndex,
+        code,
+        name,
+        errorCode: "invalid_line",
+        message: lineResult.error,
+      } satisfies ImportErrorItem,
+    };
+  }
+
   const brandResult = readOptionalString(raw, "brand");
   if (brandResult.error) {
     return {
@@ -231,6 +245,7 @@ function parseItem(raw: unknown, index: number) {
       outputIndex,
       code,
       name,
+      line: lineResult.value,
       barcode: barcodeResult.value,
       size: sizeResult.value,
       brand: brandResult.value,
@@ -575,6 +590,7 @@ export async function POST(request: Request) {
             brandId: auth.brandId,
             sku: row.normalizedCode,
             name: row.name,
+            line: row.line,
             brand: row.brand,
             barcode: row.barcode,
             size: row.size,

@@ -300,6 +300,9 @@ Entrou recentemente:
   - `replace`
 - replace seguro por lote
 - edição do nome do produto na Base Geral
+- suporte ao campo fixo `linha` no produto base
+- importação CSV da Base Geral passa a aceitar a coluna `linha`
+- snapshots do catálogo passam a carregar `linha` em `attributesJson`
 
 Arquivos relacionados:
 
@@ -358,6 +361,16 @@ Interpretação correta:
 
 - separar claramente problema de deploy, problema da app, problema do `PDF final` e problema do `PDF editavel`
 - antes de concluir erro de código, investigar browser e engine HTML
+
+### 6.5 Agrupamento por linha
+
+Direção atual:
+
+- `linha` é um campo fixo da Base Geral
+- quando produtos possuem a mesma `linha`, catálogo público e PDFs agrupam esses produtos sob um cabeçalho de linha
+- dentro da mesma linha, o catálogo continua organizado por categoria e medida
+- `subcategoria` continua estruturalmente vinculada ao produto
+- quando houver `subcategoria`, essa informação passa a compor a descrição exibida do produto
 
 ## 7. Modo de operação do agente
 

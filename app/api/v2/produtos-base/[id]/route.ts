@@ -11,6 +11,7 @@ type UpdatePayload = {
   sku?: string;
   name?: string;
   description?: string;
+  line?: string | null;
   brand?: string | null;
   barcode?: string | null;
   size?: string | null;
@@ -93,6 +94,19 @@ function parseUpdatePayload(body: unknown) {
     } else {
       return {
         error: jsonError(400, "validation_error", "brand must be a string"),
+      };
+    }
+  }
+
+  if (hasOwn(body, "line")) {
+    if (body.line === null) {
+      data.line = null;
+    } else if (typeof body.line === "string") {
+      const value = body.line.trim();
+      data.line = value.length > 0 ? value : null;
+    } else {
+      return {
+        error: jsonError(400, "validation_error", "line must be a string"),
       };
     }
   }
