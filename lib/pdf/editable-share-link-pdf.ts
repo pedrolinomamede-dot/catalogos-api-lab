@@ -6,7 +6,7 @@ import {
   normalizeCatalogLabel,
   type LineCategoryMeasureGroup,
 } from "@/lib/catalog/line-grouping";
-import { resolveProductImageScale } from "@/lib/catalog/image-size-band";
+import { resolveProductImageLayout } from "@/lib/catalog/image-layout";
 
 import type {
   ShareLinkPdfCatalog,
@@ -930,13 +930,14 @@ async function renderProductCard(
     normalizeLabel(product.primaryImageUrl) ?? normalizeLabel(product.fallbackImageUrl),
     "product",
   );
-  const imageScale = resolveProductImageScale(product.sizeLabel);
+  const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
 
   if (imageAsset) {
-    const scaledWidth = CARD_WIDTH * imageScale;
-    const scaledHeight = CARD_IMAGE_HEIGHT * imageScale;
-    const imageX = x + (CARD_WIDTH - scaledWidth) / 2;
-    const imageY = y + (CARD_IMAGE_HEIGHT - scaledHeight) / 2;
+    const scaledWidth = CARD_WIDTH * imageLayout.scale;
+    const scaledHeight = CARD_IMAGE_HEIGHT * imageLayout.scale;
+    const imageX = x + (CARD_WIDTH - scaledWidth) / 2 + (CARD_WIDTH * imageLayout.offsetX) / 100;
+    const imageY =
+      y + (CARD_IMAGE_HEIGHT - scaledHeight) / 2 + (CARD_IMAGE_HEIGHT * imageLayout.offsetY) / 100;
     drawImage(page, imageAsset, imageX, imageY, scaledWidth, scaledHeight);
   } else {
     drawText(page, "Sem imagem", x + 44, y + 48, {

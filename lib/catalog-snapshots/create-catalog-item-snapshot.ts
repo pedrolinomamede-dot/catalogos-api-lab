@@ -4,6 +4,7 @@ import type {
   CatalogSnapshotAttributes,
   CatalogSnapshotGalleryItem,
 } from "@/lib/catalog-snapshots/snapshot-types";
+import { normalizeProductImageLayout } from "@/lib/catalog/image-layout";
 
 type Tx = Prisma.TransactionClient | PrismaClient;
 
@@ -34,6 +35,7 @@ export async function buildCatalogItemSnapshotPayload(
       barcode: true,
       brand: true,
       size: true,
+      imageLayoutJson: true,
       imageUrl: true,
       price: true,
       sourceType: true,
@@ -73,6 +75,7 @@ export async function buildCatalogItemSnapshotPayload(
   const attributesJson: CatalogSnapshotAttributes = {
     line: product.line ?? null,
     size: product.size ?? null,
+    imageLayout: normalizeProductImageLayout(product.imageLayoutJson as never),
   };
 
   return {

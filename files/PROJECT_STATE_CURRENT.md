@@ -271,6 +271,8 @@ Entrou recentemente:
 - `PDF editavel`
 - refinamentos do header, tarja e cards
 - aproximação visual do `editavel` ao `final`
+- escala visual automática da imagem por faixa de medida
+- suporte a ajuste manual global de zoom/posição da imagem do produto
 
 UI atual relacionada:
 
@@ -303,6 +305,9 @@ Entrou recentemente:
 - suporte ao campo fixo `linha` no produto base
 - importação CSV da Base Geral passa a aceitar a coluna `linha`
 - snapshots do catálogo passam a carregar `linha` em `attributesJson`
+- `ProductBaseV2` passa a suportar metadados globais de layout da imagem (`imageLayoutJson`)
+- editor do produto da Base Geral passa a permitir ajuste manual de zoom e posição da imagem principal
+- upload de imagem passa a aplicar `trim` automático para reduzir bordas vazias em novas imagens
 
 Arquivos relacionados:
 
@@ -371,6 +376,19 @@ Direção atual:
 - dentro da mesma linha, o catálogo continua organizado por categoria e medida
 - `subcategoria` continua estruturalmente vinculada ao produto
 - quando houver `subcategoria`, essa informação passa a compor a descrição exibida do produto
+
+### 6.6 Otimização de imagem no catálogo
+
+Direção atual:
+
+- o sistema aplica escala visual automática por faixa de medida no catálogo público e nos PDFs
+- a diferença entre faixas é sutil e prioriza melhor ocupação do quadro da imagem
+- o sistema preserva a lógica de não cortar a imagem por padrão
+- quando necessário, o usuário pode ajustar globalmente por produto:
+  - zoom
+  - posição horizontal
+  - posição vertical
+- o ajuste manual vale para catálogo público e PDFs
 
 ## 7. Modo de operação do agente
 

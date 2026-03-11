@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 
-import type { BaseProductV2, ProductBaseImageV2 } from "@/types/api";
+import type { BaseProductV2, ProductBaseImageV2, ProductImageLayout } from "@/types/api";
 
 import {
   Dialog,
@@ -40,6 +40,12 @@ export function BaseProductEditDialog({
   baseProduct,
   onOpenChange,
 }: BaseProductEditDialogProps) {
+  const [imageLayout, setImageLayout] = useState<ProductImageLayout>({
+    zoom: 1,
+    offsetX: 0,
+    offsetY: 0,
+    trimApplied: false,
+  });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [productName, setProductName] = useState(baseProduct?.name ?? "");
   const [productLine, setProductLine] = useState(baseProduct?.line ?? "");
@@ -74,6 +80,12 @@ export function BaseProductEditDialog({
     setProductName(baseProduct?.name ?? "");
     setProductLine(baseProduct?.line ?? "");
     setMainImageUrl(baseProduct?.imageUrl ?? null);
+    setImageLayout({
+      zoom: baseProduct?.imageLayoutJson?.zoom ?? 1,
+      offsetX: baseProduct?.imageLayoutJson?.offsetX ?? 0,
+      offsetY: baseProduct?.imageLayoutJson?.offsetY ?? 0,
+      trimApplied: baseProduct?.imageLayoutJson?.trimApplied ?? false,
+    });
     if (!open) {
       setSelectedFile(null);
     }
@@ -154,10 +166,17 @@ export function BaseProductEditDialog({
         data: {
           name: nextName,
           line: productLine.trim() || null,
+          imageLayoutJson: imageLayout,
         },
       });
       setProductName(updated.name);
       setProductLine(updated.line ?? "");
+      setImageLayout({
+        zoom: updated.imageLayoutJson?.zoom ?? 1,
+        offsetX: updated.imageLayoutJson?.offsetX ?? 0,
+        offsetY: updated.imageLayoutJson?.offsetY ?? 0,
+        trimApplied: updated.imageLayoutJson?.trimApplied ?? false,
+      });
       toastSuccess("Produto atualizado");
     } catch (err) {
       const message = getErrorMessage(err);
@@ -258,6 +277,113 @@ export function BaseProductEditDialog({
               onChange={(event) => setProductLine(event.target.value)}
               placeholder="Ex.: Baby"
             />
+          </div>
+
+          <div className="grid gap-3">
+            <Label>Ajuste da foto no catálogo</Label>
+            <Card className="space-y-4 p-4">
+              <div className="mx-auto h-40 w-40 overflow-hidden rounded-2xl border border-input bg-muted/30">
+                {mainImageUrl ? (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <div
+                      className="relative h-full w-full"
+                      style={{
+                        transform: `translate(${imageLayout.offsetX ?? 0}%, ${imageLayout.offsetY ?? 0}%) scale(${imageLayout.zoom ?? 1})`,
+                        transformOrigin: "center",
+                      }}
+                    >
+                      <img
+                        src={mainImageUrl}
+                        alt={productName || baseProduct?.name || "Preview da imagem"}
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                    Defina uma imagem principal
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-3">
+                <div className="grid gap-1">
+                  <Label htmlFor="base-product-image-zoom">Zoom</Label>
+                  <Input
+                    id="base-product-image-zoom"
+                    type="range"
+                    min={0.75}
+                    max={1.45}
+                    step={0.01}
+                    value={imageLayout.zoom ?? 1}
+                    disabled={isSaving || !mainImageUrl}
+                    onChange={(event) =>
+                      setImageLayout((current) => ({
+                        ...current,
+                        zoom: Number.parseFloat(event.target.value),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-1">
+                  <Label htmlFor="base-product-image-offset-x">Posição horizontal</Label>
+                  <Input
+                    id="base-product-image-offset-x"
+                    type="range"
+                    min={-30}
+                    max={30}
+                    step={1}
+                    value={imageLayout.offsetX ?? 0}
+                    disabled={isSaving || !mainImageUrl}
+                    onChange={(event) =>
+                      setImageLayout((current) => ({
+                        ...current,
+                        offsetX: Number.parseInt(event.target.value, 10),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-1">
+                  <Label htmlFor="base-product-image-offset-y">Posição vertical</Label>
+                  <Input
+                    id="base-product-image-offset-y"
+                    type="range"
+                    min={-30}
+                    max={30}
+                    step={1}
+                    value={imageLayout.offsetY ?? 0}
+                    disabled={isSaving || !mainImageUrl}
+                    onChange={(event) =>
+                      setImageLayout((current) => ({
+                        ...current,
+                        offsetY: Number.parseInt(event.target.value, 10),
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSaving || !mainImageUrl}
+                  onClick={() =>
+                    setImageLayout({
+                      zoom: 1,
+                      offsetX: 0,
+                      offsetY: 0,
+                      trimApplied: imageLayout.trimApplied ?? false,
+                    })
+                  }
+                >
+                  Resetar ajuste
+                </Button>
+              </div>
+            </Card>
           </div>
 
           <div className="grid gap-2 text-sm">

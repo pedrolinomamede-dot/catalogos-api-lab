@@ -6,7 +6,7 @@ import type {
   ShareLinkPdfData,
   ShareLinkPdfProduct,
 } from "@/lib/pdf/share-link-pdf";
-import { resolveProductImageScale } from "@/lib/catalog/image-size-band";
+import { resolveProductImageLayout } from "@/lib/catalog/image-layout";
 import { buildLineCategoryMeasureGroups } from "@/lib/catalog/line-grouping";
 
 const sans = Manrope({
@@ -428,7 +428,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
   const fallbackImage = resolveImageSrc(product.fallbackImageUrl);
   const imageSrc = primaryImage ?? fallbackImage;
   const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";
-  const imageScale = resolveProductImageScale(product.sizeLabel);
+  const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
 
   return (
     <article
@@ -447,8 +447,8 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
           <div
             className="relative flex h-full w-full items-center justify-center"
             style={{
-              width: `${imageScale * 100}%`,
-              height: `${imageScale * 100}%`,
+              transform: `translate(${imageLayout.offsetX}%, ${imageLayout.offsetY}%) scale(${imageLayout.scale})`,
+              transformOrigin: "center",
             }}
           >
             <img

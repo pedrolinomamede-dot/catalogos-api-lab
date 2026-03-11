@@ -92,6 +92,7 @@ function cloneProduct(product: ShareLinkPdfProduct): ShareLinkPdfProduct {
     sku: product.sku ?? null,
     lineLabel: product.lineLabel ?? null,
     sizeLabel: product.sizeLabel ?? null,
+    imageLayout: product.imageLayout ?? null,
     brand: product.brand ?? null,
     description: product.description ?? null,
     categoryName: product.categoryName ?? null,

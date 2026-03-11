@@ -4,11 +4,11 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 
-import type { ShareLinkPublicCatalogV2, ShareLinkPublicV2 } from "@/types/api";
+import type { ProductImageLayout, ShareLinkPublicCatalogV2, ShareLinkPublicV2 } from "@/types/api";
 
 import { OfflineBanner } from "@/components/public/OfflineBanner";
 import { Input } from "@/components/ui/input";
-import { resolveProductImageScale } from "@/lib/catalog/image-size-band";
+import { resolveProductImageLayout } from "@/lib/catalog/image-layout";
 import { normalizeCatalogLabel } from "@/lib/catalog/line-grouping";
 import {
   getDefaultProductCardTone,
@@ -44,6 +44,7 @@ export type ShareLinkProduct = {
   sku?: string | null;
   lineLabel?: string | null;
   sizeLabel?: string | null;
+  imageLayout?: ProductImageLayout | null;
   barcode?: string | null;
   description?: string | null;
   imageUrl?: string | null;
@@ -613,6 +614,10 @@ export function ShareLinkShell({
                   : null;
                 const tone =
                   cardTonesByProductId[product.id] ?? getDefaultProductCardTone();
+                const imageLayout = resolveProductImageLayout(
+                  product.sizeLabel,
+                  product.imageLayout,
+                );
 
                 return (
                   <article
@@ -631,16 +636,15 @@ export function ShareLinkShell({
                       onClick={() => openProductLightbox(product)}
                     >
                       {(() => {
-                        const imageScale = resolveProductImageScale(product.sizeLabel);
                         return product.imageUrl ? (
                           <div
                             className="absolute inset-0 flex items-center justify-center p-2"
                           >
                             <div
-                              className="relative"
+                              className="relative h-full w-full"
                               style={{
-                                width: `${imageScale * 100}%`,
-                                height: `${imageScale * 100}%`,
+                                transform: `translate(${imageLayout.offsetX}%, ${imageLayout.offsetY}%) scale(${imageLayout.scale})`,
+                                transformOrigin: "center",
                               }}
                             >
                               <Image

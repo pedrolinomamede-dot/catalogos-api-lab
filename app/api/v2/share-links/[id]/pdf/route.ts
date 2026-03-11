@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole } from "@/lib/authz";
+import type { ProductImageLayout } from "@/types/api";
 import { compareProductsByLineCategoryMeasure, normalizeCatalogLabel } from "@/lib/catalog/line-grouping";
 import {
   parseCatalogSnapshotAttributes,
@@ -119,6 +120,7 @@ export async function GET(
                   name: true,
                   sku: true,
                   line: true,
+                  imageLayoutJson: true,
                   brand: true,
                   description: true,
                   imageUrl: true,
@@ -190,12 +192,18 @@ export async function GET(
               const subcategoryName =
                 snapshot?.subcategoryName ?? product?.subcategory?.name ?? null;
 
+              const imageLayout =
+                (snapshotAttributes.imageLayout as ProductImageLayout | null | undefined) ??
+                (product?.imageLayoutJson as ProductImageLayout | null | undefined) ??
+                null;
+
               acc.push({
                 id: product?.id ?? `${entry.catalog.id}-${snapshot?.code ?? "snapshot"}`,
                 name: snapshot?.name ?? product?.name ?? "Produto",
                 sku: snapshot?.code ?? product?.sku ?? null,
                 lineLabel,
                 sizeLabel,
+                imageLayout,
                 brand: snapshot?.brand ?? product?.brand ?? null,
                 description: composeProductDescription(
                   snapshot?.description ?? product?.description ?? null,

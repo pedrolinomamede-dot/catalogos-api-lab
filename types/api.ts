@@ -150,6 +150,13 @@ export type ProductBaseImageV2 = {
   createdAt: Date;
 };
 
+export type ProductImageLayout = {
+  zoom?: number | null;
+  offsetX?: number | null;
+  offsetY?: number | null;
+  trimApplied?: boolean | null;
+};
+
 export type BaseProductV2 = {
   id: string;
   brandId: string;
@@ -164,6 +171,7 @@ export type BaseProductV2 = {
   brand?: string | null;
   barcode?: string | null;
   size?: string | null;
+  imageLayoutJson?: ProductImageLayout | null;
   sourceType: ProductSourceType;
   sourceProvider?: IntegrationProvider | null;
   integrationConnectionId?: string | null;
@@ -184,6 +192,7 @@ export type CreateBaseProductV2Request = {
   name: string;
   description?: string;
   line?: string;
+  imageLayoutJson?: ProductImageLayout | null;
   brand?: string;
   barcode?: string;
   size?: string;
@@ -195,6 +204,7 @@ export type UpdateBaseProductV2Request = Partial<{
   name: string;
   description: string;
   line: string | null;
+  imageLayoutJson: ProductImageLayout | null;
   brand: string | null;
   barcode: string | null;
   size: string | null;

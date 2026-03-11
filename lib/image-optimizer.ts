@@ -6,12 +6,17 @@ export type OptimizedImageResult = {
 };
 
 export async function optimizeImage(buffer: Buffer): Promise<OptimizedImageResult> {
-  const optimized = await sharp(buffer)
+  const trimmed = await sharp(buffer)
+    .trim()
+    .toBuffer()
+    .catch(() => buffer);
+
+  const optimized = await sharp(trimmed)
     .resize(1000, 1000, { fit: "inside" })
     .webp({ quality: 80 })
     .toBuffer();
 
-  const thumbnail = await sharp(buffer)
+  const thumbnail = await sharp(trimmed)
     .resize(300, 300, { fit: "cover" })
     .webp({ quality: 70 })
     .toBuffer();

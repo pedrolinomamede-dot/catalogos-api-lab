@@ -11,7 +11,7 @@ import {
   normalizeCatalogLabel,
   type LineCategoryMeasureGroup,
 } from "@/lib/catalog/line-grouping";
-import { resolveProductImageScale } from "@/lib/catalog/image-size-band";
+import { resolveProductImageLayout } from "@/lib/catalog/image-layout";
 
 type PdfFont = "F1" | "F2";
 
@@ -36,6 +36,7 @@ export type ShareLinkPdfProduct = {
   sku?: string | null;
   lineLabel?: string | null;
   sizeLabel?: string | null;
+  imageLayout?: import("@/types/api").ProductImageLayout | null;
   brand?: string | null;
   description?: string | null;
   categoryName?: string | null;
@@ -701,13 +702,17 @@ async function renderProductCard(
   });
 
   const asset = await resolveImageAsset(product);
-  const imageScale = resolveProductImageScale(product.sizeLabel);
+  const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
 
   if (asset) {
-    const scaledWidth = imageWidth * imageScale;
-    const scaledHeight = layout.cardImageHeight * imageScale;
-    const imageDrawX = innerX + (imageWidth - scaledWidth) / 2;
-    const imageDrawY = imageY + (layout.cardImageHeight - scaledHeight) / 2;
+    const scaledWidth = imageWidth * imageLayout.scale;
+    const scaledHeight = layout.cardImageHeight * imageLayout.scale;
+    const imageDrawX =
+      innerX + (imageWidth - scaledWidth) / 2 + (imageWidth * imageLayout.offsetX) / 100;
+    const imageDrawY =
+      imageY +
+      (layout.cardImageHeight - scaledHeight) / 2 +
+      (layout.cardImageHeight * imageLayout.offsetY) / 100;
     drawImage(page, asset, imageDrawX, imageDrawY, scaledWidth, scaledHeight);
   } else {
     drawCenteredText(

@@ -74,12 +74,12 @@ export function resolveProductImageScale(sizeLabel?: string | null) {
 
   switch (band) {
     case "small":
-      return 0.6;
+      return 0.82;
     case "medium":
-      return 0.8;
+      return 0.9;
     case "large":
-      return 1;
+      return 0.98;
     default:
-      return 0.8;
+      return 0.9;
   }
 }

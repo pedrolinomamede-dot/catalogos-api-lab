@@ -36,6 +36,7 @@ type CatalogItemResponse = {
     name: string;
     sku?: string | null;
     line?: string | null;
+    imageLayoutJson?: unknown;
     description?: string | null;
     imageUrl?: string | null;
     categoryId?: string | null;
@@ -221,6 +222,7 @@ export default async function ShareLinkPage({
                     name: true,
                     sku: true,
                     line: true,
+                    imageLayoutJson: true,
                     description: true,
                     imageUrl: true,
                     categoryId: true,
@@ -297,6 +299,8 @@ export default async function ShareLinkPage({
         null,
       sizeLabel:
         normalizeCatalogLabel(snapshotAttributes.size) ?? null,
+      imageLayout:
+        snapshotAttributes.imageLayout ?? item.productBase?.imageLayoutJson ?? null,
       description: composeProductDescription(
         item.snapshot?.description ?? item.productBase?.description ?? null,
         subcategoryName,

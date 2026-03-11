@@ -8,6 +8,7 @@ describe("catalog snapshot attributes", () => {
         size: "100ml",
       }),
     ).toEqual({
+      imageLayout: null,
       line: "Baby",
       size: "100ml",
     });
@@ -20,6 +21,7 @@ describe("catalog snapshot attributes", () => {
         size: false,
       }),
     ).toEqual({
+      imageLayout: null,
       line: null,
       size: null,
     });

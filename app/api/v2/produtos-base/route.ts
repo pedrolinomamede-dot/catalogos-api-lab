@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { requireRole, requireUser } from "@/lib/authz";
+import { normalizeProductImageLayout } from "@/lib/catalog/image-layout";
 import { withBrand } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
 import { parsePagination } from "@/lib/utils/pagination";
@@ -13,6 +14,7 @@ type CreatePayload = {
   name: string;
   description?: string;
   line?: string;
+  imageLayoutJson?: Prisma.InputJsonValue | null;
   brand?: string;
   barcode?: string;
   size?: string;
@@ -86,6 +88,7 @@ function parseCreatePayload(body: unknown) {
 
   let brand: string | undefined;
   let line: string | undefined;
+  let imageLayoutJson: Prisma.InputJsonValue | null | undefined;
   if (hasOwn(body, "brand")) {
     if (typeof body.brand !== "string") {
       return {
@@ -104,6 +107,18 @@ function parseCreatePayload(body: unknown) {
     }
     const value = body.line.trim();
     line = value.length > 0 ? value : undefined;
+  }
+
+  if (hasOwn(body, "imageLayoutJson")) {
+    if (body.imageLayoutJson === null) {
+      imageLayoutJson = null;
+    } else if (typeof body.imageLayoutJson === "object" && body.imageLayoutJson !== null) {
+      imageLayoutJson = normalizeProductImageLayout(body.imageLayoutJson as never);
+    } else {
+      return {
+        error: jsonError(400, "validation_error", "imageLayoutJson must be an object"),
+      };
+    }
   }
 
   let barcode: string | undefined;
@@ -144,6 +159,7 @@ function parseCreatePayload(body: unknown) {
       name,
       description,
       line,
+      imageLayoutJson,
       brand,
       barcode,
       size,
@@ -232,12 +248,13 @@ export async function POST(request: Request) {
           name: parsed.data.name,
           description: parsed.data.description,
           line: parsed.data.line,
+          imageLayoutJson: parsed.data.imageLayoutJson,
           brand: parsed.data.brand,
           barcode: parsed.data.barcode,
           size: parsed.data.size,
           isActive: parsed.data.isActive,
           sourceType: "MANUAL",
-        },
+        } as Prisma.ProductBaseV2UncheckedCreateInput,
       });
 
       return NextResponse.json({ ok: true, data: baseProduct }, { status: 201 });

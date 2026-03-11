@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole, requireUser } from "@/lib/authz";
+import { normalizeProductImageLayout } from "@/lib/catalog/image-layout";
 import { withBrand } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
 
@@ -12,6 +13,7 @@ type UpdatePayload = {
   name?: string;
   description?: string;
   line?: string | null;
+  imageLayoutJson?: Prisma.InputJsonValue | null;
   brand?: string | null;
   barcode?: string | null;
   size?: string | null;
@@ -107,6 +109,18 @@ function parseUpdatePayload(body: unknown) {
     } else {
       return {
         error: jsonError(400, "validation_error", "line must be a string"),
+      };
+    }
+  }
+
+  if (hasOwn(body, "imageLayoutJson")) {
+    if (body.imageLayoutJson === null) {
+      data.imageLayoutJson = null;
+    } else if (typeof body.imageLayoutJson === "object" && body.imageLayoutJson !== null) {
+      data.imageLayoutJson = normalizeProductImageLayout(body.imageLayoutJson as never);
+    } else {
+      return {
+        error: jsonError(400, "validation_error", "imageLayoutJson must be an object"),
       };
     }
   }
@@ -210,7 +224,7 @@ export async function PATCH(
           id,
           brandId: auth.brandId,
         },
-        data: parsed.data,
+        data: parsed.data as Prisma.ProductBaseV2UncheckedUpdateManyInput,
       });
 
       if (result.count === 0) {

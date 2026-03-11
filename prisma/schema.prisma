@@ -175,6 +175,7 @@ model ProductBaseV2 {
   size                    String?
   brand                   String?
   imageUrl                String?
+  imageLayoutJson         Json?
   isActive                Boolean                  @default(true)
   categoryId              String?                  @db.Uuid
   subcategoryId           String?                  @db.Uuid
