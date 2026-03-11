@@ -91,6 +91,9 @@ const GRAPHICS_STATES: Record<
   GS_PANEL: { fillAlpha: 0.35, strokeAlpha: 0.35 },
 };
 
+const IMAGE_PANEL_FILL: [number, number, number] = [1, 1, 1];
+const IMAGE_PANEL_STROKE: [number, number, number] = [0.949, 0.878, 0.902];
+
 const MEASURE_UNIT_RANK: Record<string, number> = {
   mg: 1,
   g: 2,
@@ -910,6 +913,13 @@ async function renderProductCard(
     stroke: [0.949, 0.878, 0.902],
     lineWidth: 0.7,
     graphicsState: "GS_CARD",
+  });
+
+  drawRect(page, x, y, CARD_WIDTH, CARD_IMAGE_HEIGHT, {
+    fill: IMAGE_PANEL_FILL,
+    stroke: IMAGE_PANEL_STROKE,
+    lineWidth: 0.4,
+    graphicsState: "GS_PANEL",
   });
 
   const imageAsset = await resolveSharedAsset(

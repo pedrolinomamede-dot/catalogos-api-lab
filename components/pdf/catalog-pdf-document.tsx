@@ -560,7 +560,10 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         boxShadow: "0 14px 28px rgba(20, 28, 47, 0.16)",
       }}
     >
-      <div className="relative flex h-56 w-full items-center justify-center bg-white">
+      <div
+        className="relative flex h-56 w-full items-center justify-center"
+        style={{ backgroundColor: "rgba(255, 255, 255, 0.82)" }}
+      >
         {imageSrc ? (
           <img
             src={imageSrc}
