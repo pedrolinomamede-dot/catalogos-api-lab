@@ -236,6 +236,18 @@ function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
 
     lineGroups.forEach((lineGroup, lineIndex) => {
       if (lineGroup.lineLabel) {
+        const firstGroup = lineGroup.groups[0];
+        const requiredHeight =
+          BLOCK_HEIGHT_MM.lineHeader +
+          (firstGroup ? BLOCK_HEIGHT_MM.groupLead : 0);
+        const shouldBreakBeforeLine =
+          currentPage.blocks.length > 0 &&
+          currentPage.usedHeightMm + requiredHeight > PAGE_CONTENT_HEIGHT_MM;
+
+        if (shouldBreakBeforeLine) {
+          currentPage = createPage();
+        }
+
         pushBlock(
           {
             id: `catalog-${catalog.id}-line-${lineIndex + 1}`,
@@ -414,11 +426,11 @@ function PdfMeasureStripe({
 
 function PdfLineHeader({ lineLabel }: { lineLabel: string }) {
   return (
-    <div className="mb-3">
-      <p className={`${display.className} text-[24px] font-bold leading-none text-slate-900`}>
+    <div className="mb-3 text-center">
+      <p className={`${display.className} text-[26px] font-bold italic leading-none text-slate-900`}>
         {lineLabel}
       </p>
-      <div className="mt-2 h-px w-full bg-rose-200/80" />
+      <div className="mx-auto mt-2 h-px w-[72%] bg-rose-200/80" />
     </div>
   );
 }

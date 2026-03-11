@@ -10,7 +10,7 @@ describe("image layout", () => {
         trimApplied: true,
       }),
     ).toEqual({
-      zoom: 1.45,
+      zoom: 1.9,
       offsetX: 30,
       offsetY: -30,
       trimApplied: true,

@@ -313,7 +313,7 @@ export function BaseProductEditDialog({
                     id="base-product-image-zoom"
                     type="range"
                     min={0.75}
-                    max={1.45}
+                    max={1.9}
                     step={0.01}
                     value={imageLayout.zoom ?? 1}
                     disabled={isSaving || !mainImageUrl}

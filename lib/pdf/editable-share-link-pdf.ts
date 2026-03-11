@@ -886,12 +886,13 @@ function renderMeasureStripe(
 }
 
 function renderLineHeader(page: PdfPage, lineLabel: string, y: number) {
-  drawText(page, lineLabel, PAGE_MARGIN_X, y + 2, {
+  const width = estimateTextWidth(lineLabel, 20, true);
+  drawText(page, lineLabel, PAGE_WIDTH / 2 - width / 2, y + 1, {
     font: FONT_BOLD,
-    size: 17,
+    size: 20,
     color: [0.082, 0.11, 0.161],
   });
-  drawRect(page, PAGE_MARGIN_X, y + 20, CONTENT_WIDTH, 1, {
+  drawRect(page, PAGE_MARGIN_X + CONTENT_WIDTH * 0.14, y + 20, CONTENT_WIDTH * 0.72, 1, {
     fill: [0.949, 0.878, 0.902],
   });
   return y + LINE_HEADER_HEIGHT;
@@ -1025,7 +1026,14 @@ export async function generateEditableShareLinkPdf(data: ShareLinkPdfData): Prom
 
     for (const lineGroup of groups) {
       if (lineGroup.lineLabel) {
-        if (cursorY + LINE_HEADER_HEIGHT > CONTENT_BOTTOM) {
+        const firstGroup = lineGroup.groups[0];
+        const requiredHeight =
+          LINE_HEADER_HEIGHT +
+          (firstGroup
+            ? STRIPE_GAP_BEFORE + STRIPE_HEIGHT + STRIPE_GAP_AFTER + CARD_HEIGHT + ROW_GAP
+            : 0);
+
+        if (cursorY + requiredHeight > CONTENT_BOTTOM) {
           page = createPage();
           pages.push(page);
           await drawBackground(page, imageCache, imageAssets, catalog.pdfBackgroundImageUrl);
@@ -1038,9 +1046,10 @@ export async function generateEditableShareLinkPdf(data: ShareLinkPdfData): Prom
 
       for (const group of lineGroup.groups) {
         const rows = chunkProducts(group.products, PRODUCTS_PER_ROW);
+        let stripeRendered = false;
 
         for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
-          const needsStripe = rowIndex === 0;
+          const needsStripe = !stripeRendered;
           const blockHeight =
             (needsStripe ? STRIPE_GAP_BEFORE + STRIPE_HEIGHT + STRIPE_GAP_AFTER : 0) +
             CARD_HEIGHT +
@@ -1063,6 +1072,7 @@ export async function generateEditableShareLinkPdf(data: ShareLinkPdfData): Prom
               group.measureLabel,
               cursorY,
             );
+            stripeRendered = true;
           }
 
           const row = rows[rowIndex];

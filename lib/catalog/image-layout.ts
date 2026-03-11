@@ -22,7 +22,7 @@ export function normalizeProductImageLayout(
 
   const zoom =
     typeof value.zoom === "number" && Number.isFinite(value.zoom)
-      ? clamp(value.zoom, 0.75, 1.45)
+      ? clamp(value.zoom, 0.75, 1.9)
       : null;
   const offsetX =
     typeof value.offsetX === "number" && Number.isFinite(value.offsetX)
