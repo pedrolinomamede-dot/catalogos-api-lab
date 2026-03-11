@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import type { ShareLinkV2 } from "@/types/api";
 import type { PdfExportMode } from "@/types/api";
@@ -21,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getErrorMessage } from "@/lib/api/error";
+import { queryKeys } from "@/lib/api/query-keys";
 import { getShareLinkDeleteImpactV2 } from "@/lib/api/v2/share-links";
 import type { ShareLinkDeleteImpact } from "@/lib/api/v2/share-links";
 import { copyTextToClipboard } from "@/lib/browser/copy-to-clipboard";
@@ -45,7 +47,9 @@ const buildShareLinkUrl = (identifier: string) => {
 
 type ShareLinkRowProps = {
   shareLink: ShareLinkV2;
+  isSelected: boolean;
   isGenerating: boolean;
+  onToggleSelection: (shareLinkId: string) => void;
   onCopy: (shareLink: ShareLinkV2) => Promise<void>;
   onGenerate: (shareLink: ShareLinkV2, mode: PdfExportMode) => Promise<void>;
   onRevoke: (shareLink: ShareLinkV2) => void;
@@ -54,7 +58,9 @@ type ShareLinkRowProps = {
 
 function ShareLinkRow({
   shareLink,
+  isSelected,
   isGenerating,
+  onToggleSelection,
   onCopy,
   onGenerate,
   onRevoke,
@@ -75,7 +81,15 @@ function ShareLinkRow({
   }, [detail?.catalogs, shareLink.catalogCount]);
 
   return (
-    <TableRow key={shareLink.id}>
+    <TableRow key={shareLink.id} className={isSelected ? "bg-surface-soft" : undefined}>
+      <TableCell>
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggleSelection(shareLink.id)}
+          className="h-4 w-4 rounded border border-input"
+        />
+      </TableCell>
       <TableCell>
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">{shareLink.name}</p>
@@ -156,12 +170,16 @@ export function ShareLinksPageClient() {
   const [revokeTarget, setRevokeTarget] = useState<ShareLinkV2 | null>(null);
   const [isRevokeOpen, setIsRevokeOpen] = useState(false);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ShareLinkV2 | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleteImpact, setDeleteImpact] = useState<ShareLinkDeleteImpact | null>(null);
   const [isImpactOpen, setIsImpactOpen] = useState(false);
   const [isCheckingImpact, setIsCheckingImpact] = useState(false);
   const keepDeleteTargetRef = useRef(false);
+  const queryClient = useQueryClient();
 
   const revokeMutation = useRevokeShareLinkV2();
   const deleteMutation = useDeleteShareLinkV2();
@@ -175,12 +193,88 @@ export function ShareLinksPageClient() {
   const total = meta?.total ?? shareLinks.length;
   const totalPages = Math.max(1, meta?.totalPages ?? 1);
   const currentPage = Math.min(Math.max(page, 1), totalPages);
+  const selectedCount = selectedIds.size;
+  const allPageSelected =
+    shareLinks.length > 0 &&
+    shareLinks.every((shareLink) => selectedIds.has(shareLink.id));
+  const isSelectionDisabled =
+    isLoading ||
+    isDeletingBulk ||
+    deleteMutation.isPending ||
+    revokeMutation.isPending;
 
   useEffect(() => {
     if (page > totalPages) {
       setPage(totalPages);
     }
   }, [page, totalPages]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page]);
+
+  const toggleSelection = (shareLinkId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(shareLinkId)) {
+        next.delete(shareLinkId);
+      } else {
+        next.add(shareLinkId);
+      }
+      return next;
+    });
+  };
+
+  const toggleCurrentPageSelection = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        shareLinks.forEach((shareLink) => next.delete(shareLink.id));
+      } else {
+        shareLinks.forEach((shareLink) => next.add(shareLink.id));
+      }
+      return next;
+    });
+  };
+
+  const handleSelectCurrentPage = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      shareLinks.forEach((shareLink) => next.add(shareLink.id));
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async (): Promise<boolean> => {
+    if (selectedIds.size === 0) {
+      return false;
+    }
+
+    setIsDeletingBulk(true);
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(
+      ids.map((id) => deleteMutation.mutateAsync(id)),
+    );
+    const failedIds = ids.filter((_, index) => results[index].status === "rejected");
+
+    await queryClient.invalidateQueries({ queryKey: queryKeys.v2.shareLinks.root });
+
+    if (failedIds.length > 0) {
+      toastError(
+        "Falha ao excluir alguns links",
+        "Revise os share links e tente novamente.",
+      );
+      setSelectedIds(new Set(failedIds));
+      setIsDeletingBulk(false);
+      return false;
+    }
+
+    toastSuccess("Share links excluidos");
+    setSelectedIds(new Set());
+    setIsDeletingBulk(false);
+    setIsBulkDeleteOpen(false);
+    return true;
+  };
 
   const handleCopy = async (shareLink: ShareLinkV2) => {
     const url = buildShareLinkUrl(shareLink.slug ?? shareLink.token);
@@ -240,6 +334,40 @@ export function ShareLinksPageClient() {
 
   return (
     <div className="space-y-4">
+      {selectedCount > 0 ? (
+        <Card className="border-dashed">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {selectedCount} selecionado(s)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Acoes em lote disponiveis apenas para exclusao.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedIds(new Set())}
+                disabled={isDeletingBulk}
+              >
+                Limpar selecao
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsBulkDeleteOpen(true)}
+                disabled={isDeletingBulk}
+              >
+                Excluir selecionados
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       <div className="flex justify-end">
         <Button onClick={() => setIsCreateOpen(true)}>Novo share link</Button>
       </div>
@@ -252,9 +380,39 @@ export function ShareLinksPageClient() {
         />
       ) : (
         <Card className="space-y-4 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSelectCurrentPage}
+              disabled={isSelectionDisabled || shareLinks.length === 0}
+            >
+              Selecionar pagina
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedIds(new Set())}
+              disabled={isSelectionDisabled || selectedCount === 0}
+            >
+              Limpar selecao
+            </Button>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <input
+                    type="checkbox"
+                    aria-label="Selecionar pagina atual"
+                    checked={allPageSelected}
+                    onChange={toggleCurrentPageSelection}
+                    className="h-4 w-4 rounded border border-input"
+                  />
+                </TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Catalogos</TableHead>
@@ -267,7 +425,9 @@ export function ShareLinksPageClient() {
                 <ShareLinkRow
                   key={shareLink.id}
                   shareLink={shareLink}
+                  isSelected={selectedIds.has(shareLink.id)}
                   isGenerating={generatingId === shareLink.id}
+                  onToggleSelection={toggleSelection}
                   onCopy={handleCopy}
                   onGenerate={handleGeneratePdf}
                   onRevoke={(target) => {
@@ -294,6 +454,22 @@ export function ShareLinksPageClient() {
       )}
 
       <ShareLinkFormDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+
+      <ConfirmDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={(open) => {
+          if (!isDeletingBulk) {
+            setIsBulkDeleteOpen(open);
+          }
+        }}
+        title="Excluir share links"
+        description="Excluir os share links selecionados? Esta acao nao pode ser desfeita."
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        confirmVariant="destructive"
+        isLoading={isDeletingBulk}
+        onConfirm={handleBulkDelete}
+      />
 
       <ConfirmDialog
         open={isDeleteOpen}
