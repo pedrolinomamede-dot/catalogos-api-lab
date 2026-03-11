@@ -11,6 +11,7 @@ import {
   normalizeCatalogLabel,
   type LineCategoryMeasureGroup,
 } from "@/lib/catalog/line-grouping";
+import { resolveProductImageScale } from "@/lib/catalog/image-size-band";
 
 type PdfFont = "F1" | "F2";
 
@@ -700,9 +701,14 @@ async function renderProductCard(
   });
 
   const asset = await resolveImageAsset(product);
+  const imageScale = resolveProductImageScale(product.sizeLabel);
 
   if (asset) {
-    drawImage(page, asset, innerX, imageY, imageWidth, layout.cardImageHeight);
+    const scaledWidth = imageWidth * imageScale;
+    const scaledHeight = layout.cardImageHeight * imageScale;
+    const imageDrawX = innerX + (imageWidth - scaledWidth) / 2;
+    const imageDrawY = imageY + (layout.cardImageHeight - scaledHeight) / 2;
+    drawImage(page, asset, imageDrawX, imageDrawY, scaledWidth, scaledHeight);
   } else {
     drawCenteredText(
       page,

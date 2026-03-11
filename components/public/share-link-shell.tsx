@@ -8,6 +8,7 @@ import type { ShareLinkPublicCatalogV2, ShareLinkPublicV2 } from "@/types/api";
 
 import { OfflineBanner } from "@/components/public/OfflineBanner";
 import { Input } from "@/components/ui/input";
+import { resolveProductImageScale } from "@/lib/catalog/image-size-band";
 import { normalizeCatalogLabel } from "@/lib/catalog/line-grouping";
 import {
   getDefaultProductCardTone,
@@ -629,20 +630,35 @@ export function ShareLinkShell({
                       style={{ backgroundColor: tone.imagePanelBg }}
                       onClick={() => openProductLightbox(product)}
                     >
-                      {product.imageUrl ? (
-                        <Image
-                          src={product.imageUrl}
-                          alt={product.name}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                          className="rounded-md bg-white object-contain hover:opacity-90 transition-opacity"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-                          Sem imagem
-                        </div>
-                      )}
+                      {(() => {
+                        const imageScale = resolveProductImageScale(product.sizeLabel);
+                        return product.imageUrl ? (
+                          <div
+                            className="absolute inset-0 flex items-center justify-center p-2"
+                          >
+                            <div
+                              className="relative"
+                              style={{
+                                width: `${imageScale * 100}%`,
+                                height: `${imageScale * 100}%`,
+                              }}
+                            >
+                              <Image
+                                src={product.imageUrl}
+                                alt={product.name}
+                                fill
+                                sizes="(max-width: 768px) 100vw, 33vw"
+                                className="rounded-md bg-white object-contain hover:opacity-90 transition-opacity"
+                                unoptimized
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                            Sem imagem
+                          </div>
+                        );
+                      })()}
                     </div>
                       <div className="space-y-2 p-4">
                         <div className="space-y-1">

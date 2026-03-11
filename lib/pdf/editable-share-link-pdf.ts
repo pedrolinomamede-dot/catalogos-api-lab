@@ -6,6 +6,7 @@ import {
   normalizeCatalogLabel,
   type LineCategoryMeasureGroup,
 } from "@/lib/catalog/line-grouping";
+import { resolveProductImageScale } from "@/lib/catalog/image-size-band";
 
 import type {
   ShareLinkPdfCatalog,
@@ -929,9 +930,14 @@ async function renderProductCard(
     normalizeLabel(product.primaryImageUrl) ?? normalizeLabel(product.fallbackImageUrl),
     "product",
   );
+  const imageScale = resolveProductImageScale(product.sizeLabel);
 
   if (imageAsset) {
-    drawImage(page, imageAsset, x, y, CARD_WIDTH, CARD_IMAGE_HEIGHT);
+    const scaledWidth = CARD_WIDTH * imageScale;
+    const scaledHeight = CARD_IMAGE_HEIGHT * imageScale;
+    const imageX = x + (CARD_WIDTH - scaledWidth) / 2;
+    const imageY = y + (CARD_IMAGE_HEIGHT - scaledHeight) / 2;
+    drawImage(page, imageAsset, imageX, imageY, scaledWidth, scaledHeight);
   } else {
     drawText(page, "Sem imagem", x + 44, y + 48, {
       font: FONT_NORMAL,
