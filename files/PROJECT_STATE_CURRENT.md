@@ -158,6 +158,14 @@ Observações operacionais:
 - O `PDF final` depende de navegador compatível no servidor para a engine HTML.
 - O deploy atual na VPS já foi validado repetidas vezes com sucesso.
 
+Regras operacionais de deploy na VPS:
+
+- sempre entrar em `/var/www/catalogos-api` antes de validar ou atualizar o projeto
+- sempre validar `git remote -v` antes do deploy manual
+- o remoto esperado para este projeto no servidor é `https://github.com/pedrolinomamede-dot/catalogos-api.git`
+- se `origin` apontar para outro repositório, não executar `git pull origin main` automaticamente
+- não misturar este projeto com outros repositórios do mesmo ambiente
+
 Fluxo padrão de deploy:
 
 1. `git fetch origin main --prune`
@@ -168,6 +176,48 @@ Fluxo padrão de deploy:
 6. `npm run build`
 7. `pm2 restart catalogos-api --update-env`
 8. healthcheck local e público
+
+Comando completo de deploy usado neste projeto:
+
+```bash
+set -euo pipefail
+
+export PM2_HOME=/root/.pm2
+APP_DIR="/var/www/catalogos-api"
+APP_NAME="catalogos-api"
+APP_PORT="3001"
+PUBLIC_URL="https://catalogofacil.solucaoviavel.com"
+
+cd "$APP_DIR"
+
+git remote -v
+git fetch origin main --prune
+git pull --ff-only origin main
+
+npm ci --no-audit --no-fund
+npx prisma migrate deploy
+npx prisma generate
+npm run build
+
+pm2 restart "$APP_NAME" --update-env || \
+pm2 start npm --name "$APP_NAME" --cwd "$APP_DIR" -- start -- -H 0.0.0.0 -p "$APP_PORT"
+pm2 save
+
+sleep 8
+ss -ltnp | grep ":${APP_PORT}" || true
+curl -fsSI "http://127.0.0.1:${APP_PORT}/login" >/dev/null
+curl -fsSI "${PUBLIC_URL}/login" >/dev/null
+
+echo "DEPLOY_OK ${PUBLIC_URL}"
+```
+
+Checklist minimo de diagnostico se o deploy falhar:
+
+- `pm2 status`
+- `pm2 logs catalogos-api --lines 80 --nostream`
+- `ss -ltnp | grep :3001`
+- `curl -fsSI http://127.0.0.1:3001/login`
+- `curl -fsSI https://catalogofacil.solucaoviavel.com/login`
 
 ## 5. Estado atual do código
 
@@ -233,6 +283,14 @@ UI atual relacionada:
   - `PDF final`
   - `PDF editavel`
 
+Observações operacionais importantes do PDF:
+
+- `PDF final` usa renderização HTML e depende de navegador compatível no servidor.
+- `PDF final` passa por pipeline Chromium/Chrome para gerar o PDF visual final.
+- `PDF editavel` usa renderer nativo e não depende do mesmo pipeline HTML/Chromium.
+- falha no `PDF final` não implica automaticamente erro de layout ou erro de código do catálogo.
+- `PDF editavel` pode continuar funcionando mesmo quando o `PDF final` falha.
+
 ### 6.2 Base Geral
 
 Entrou recentemente:
@@ -264,6 +322,42 @@ Arquitetura:
 - conexão por `brandId`
 - sync para Base Geral local
 - catálogo usa snapshot
+
+### 6.4 Diagnóstico de PDF final
+
+Quando o `PDF final` falhar em produção, as primeiras hipóteses são:
+
+- navegador ausente no servidor
+- caminho incorreto do navegador
+- erro na engine HTML
+- falha de acesso ao render interno
+
+Variáveis e contexto relevantes:
+
+- `PDF_RENDER_BASE_URL=http://127.0.0.1:3001`
+- em alguns cenários pode ser necessário validar `PDF_HTML_BROWSER_PATH`
+
+Checklist minimo:
+
+1. confirmar se a aplicação está no ar:
+   - `pm2 status`
+   - `ss -ltnp | grep :3001`
+   - `curl -I http://127.0.0.1:3001/login`
+2. confirmar se o domínio está respondendo:
+   - `curl -I https://catalogofacil.solucaoviavel.com/login`
+3. verificar navegador disponível no servidor:
+   - `which google-chrome`
+   - `which chromium`
+   - `which chromium-browser`
+4. verificar configuração de caminho do browser, se necessário:
+   - `grep -n 'PDF_HTML_BROWSER_PATH' /var/www/catalogos-api/.env`
+5. analisar logs da app:
+   - `pm2 logs catalogos-api --lines 100 --nostream`
+
+Interpretação correta:
+
+- separar claramente problema de deploy, problema da app, problema do `PDF final` e problema do `PDF editavel`
+- antes de concluir erro de código, investigar browser e engine HTML
 
 ## 7. Modo de operação do agente
 
