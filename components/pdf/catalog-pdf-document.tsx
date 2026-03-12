@@ -260,9 +260,10 @@ function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
 
       lineGroup.groups.forEach((group, groupIndex) => {
         const rows = chunkProducts(group.products, PRODUCTS_PER_ROW);
+        let stripeRendered = false;
 
         rows.forEach((row, rowIndex) => {
-          let needsLead = rowIndex === 0;
+          let needsLead = !stripeRendered;
 
           for (;;) {
             const heightMm = needsLead
@@ -275,7 +276,6 @@ function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
 
             if (needsBreak) {
               currentPage = createPage();
-              needsLead = true;
               continue;
             }
 
@@ -291,6 +291,7 @@ function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
                 },
                 BLOCK_HEIGHT_MM.groupLead,
               );
+              stripeRendered = true;
             } else {
               pushBlock(
                 {
@@ -453,7 +454,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
     >
       <div
         className="relative flex h-56 w-full items-center justify-center"
-        style={{ backgroundColor: "rgba(255, 255, 255, 0.82)" }}
+        style={{ backgroundColor: "rgba(255, 255, 255, 0.74)" }}
       >
         {imageSrc ? (
           <div
@@ -478,13 +479,13 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
       </div>
 
       <div className="p-4">
-        <div className="flex h-[6.6rem] flex-col justify-between">
+        <div className="flex h-[8.8rem] flex-col justify-between">
           <div className="space-y-2">
-            <p className="line-clamp-2 min-h-[2.8rem] text-base font-semibold leading-tight text-slate-900">
+            <p className="text-[13px] font-semibold leading-tight text-slate-900">
             {product.name}
             </p>
             {product.description ? (
-              <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-500">
+              <p className="line-clamp-1 text-[11px] leading-relaxed text-slate-500">
                 {product.description}
               </p>
             ) : null}

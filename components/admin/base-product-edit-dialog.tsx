@@ -237,6 +237,10 @@ export function BaseProductEditDialog({
     }
   };
 
+  const zoomValue = Math.round((imageLayout.zoom ?? 1) * 100);
+  const offsetXValue = Math.round(imageLayout.offsetX ?? 0);
+  const offsetYValue = Math.round(imageLayout.offsetY ?? 0);
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -308,7 +312,7 @@ export function BaseProductEditDialog({
 
               <div className="grid gap-3">
                 <div className="grid gap-1">
-                  <Label htmlFor="base-product-image-zoom">Zoom</Label>
+                  <Label htmlFor="base-product-image-zoom">Zoom {zoomValue}</Label>
                   <Input
                     id="base-product-image-zoom"
                     type="range"
@@ -327,7 +331,9 @@ export function BaseProductEditDialog({
                 </div>
 
                 <div className="grid gap-1">
-                  <Label htmlFor="base-product-image-offset-x">Posição horizontal</Label>
+                  <Label htmlFor="base-product-image-offset-x">
+                    Posição horizontal {offsetXValue}
+                  </Label>
                   <Input
                     id="base-product-image-offset-x"
                     type="range"
@@ -346,7 +352,9 @@ export function BaseProductEditDialog({
                 </div>
 
                 <div className="grid gap-1">
-                  <Label htmlFor="base-product-image-offset-y">Posição vertical</Label>
+                  <Label htmlFor="base-product-image-offset-y">
+                    Posição vertical {offsetYValue}
+                  </Label>
                   <Input
                     id="base-product-image-offset-y"
                     type="range"

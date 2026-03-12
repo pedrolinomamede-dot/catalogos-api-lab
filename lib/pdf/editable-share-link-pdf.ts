@@ -16,7 +16,7 @@ import type {
 
 type PdfFont = "F1" | "F2";
 type PdfImageVariant = "product" | "logo" | "background";
-type PdfGraphicsStateName = "GS_CARD" | "GS_SHADOW" | "GS_PANEL";
+type PdfGraphicsStateName = "GS_CARD" | "GS_SHADOW" | "GS_PANEL" | "GS_IMAGE_PANEL";
 
 type PdfImageMaskAsset = {
   width: number;
@@ -100,6 +100,7 @@ const GRAPHICS_STATES: Record<
   GS_CARD: { fillAlpha: 0.6, strokeAlpha: 0.9 },
   GS_SHADOW: { fillAlpha: 0.12, strokeAlpha: 0.12 },
   GS_PANEL: { fillAlpha: 0.35, strokeAlpha: 0.35 },
+  GS_IMAGE_PANEL: { fillAlpha: 0.26, strokeAlpha: 0.26 },
 };
 
 const IMAGE_PANEL_FILL: [number, number, number] = [1, 1, 1];
@@ -922,7 +923,7 @@ async function renderProductCard(
     fill: IMAGE_PANEL_FILL,
     stroke: IMAGE_PANEL_STROKE,
     lineWidth: 0.4,
-    graphicsState: "GS_PANEL",
+    graphicsState: "GS_IMAGE_PANEL",
   });
 
   const imageAsset = await resolveSharedAsset(
@@ -952,26 +953,26 @@ async function renderProductCard(
   const textWidth = CARD_WIDTH - CARD_TEXT_PADDING_X * 2;
   let textY = y + CARD_IMAGE_HEIGHT + CARD_TEXT_PADDING_TOP;
 
-  const nameLines = wrapText(product.name, CARD_NAME_FONT_SIZE, textWidth, 2, true);
+  const nameLines = wrapText(product.name, 10, textWidth, 4, true);
   nameLines.forEach((line) => {
     drawText(page, line, textX, textY, {
       font: FONT_BOLD,
-      size: CARD_NAME_FONT_SIZE,
+      size: 10,
       color: [0.082, 0.11, 0.161],
     });
-    textY += 13;
+    textY += 10.5;
   });
 
   const descriptionLabel = normalizeCatalogLabel(product.description);
   if (descriptionLabel) {
-    const descriptionLines = wrapText(descriptionLabel, 9.2, textWidth, 2, false);
+    const descriptionLines = wrapText(descriptionLabel, 8.8, textWidth, 1, false);
     descriptionLines.forEach((line) => {
       drawText(page, line, textX, textY - 1, {
         font: FONT_NORMAL,
-        size: 9.2,
+        size: 8.8,
         color: [0.4, 0.43, 0.48],
       });
-      textY += 10;
+      textY += 8.5;
     });
   }
 
