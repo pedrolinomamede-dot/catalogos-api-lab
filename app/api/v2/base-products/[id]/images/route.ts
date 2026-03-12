@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole, requireUser } from "@/lib/authz";
+import { refreshProductCatalogSnapshots } from "@/lib/catalog-snapshots/refresh-product-catalog-snapshots";
 import { withBrand } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
 
@@ -219,6 +220,10 @@ export async function POST(
         await tx.productBaseV2.update({
           where: { id: productBase.id },
           data: { imageUrl: image.imageUrl },
+        });
+        await refreshProductCatalogSnapshots(tx, {
+          brandId: auth.brandId,
+          productBaseId: productBase.id,
         });
       }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole } from "@/lib/authz";
+import { refreshProductCatalogSnapshots } from "@/lib/catalog-snapshots/refresh-product-catalog-snapshots";
 import { withBrand } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
 
@@ -115,6 +116,11 @@ export async function PATCH(
         data: {
           imageUrl: nextImageUrl,
         },
+      });
+
+      await refreshProductCatalogSnapshots(tx, {
+        brandId: auth.brandId,
+        productBaseId: baseProduct.id,
       });
 
       return tx.productBaseV2.findFirst({

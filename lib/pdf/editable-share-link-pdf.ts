@@ -100,7 +100,7 @@ const GRAPHICS_STATES: Record<
   GS_CARD: { fillAlpha: 0.6, strokeAlpha: 0.9 },
   GS_SHADOW: { fillAlpha: 0.12, strokeAlpha: 0.12 },
   GS_PANEL: { fillAlpha: 0.35, strokeAlpha: 0.35 },
-  GS_IMAGE_PANEL: { fillAlpha: 0.26, strokeAlpha: 0.26 },
+  GS_IMAGE_PANEL: { fillAlpha: 0.5, strokeAlpha: 0.5 },
 };
 
 const IMAGE_PANEL_FILL: [number, number, number] = [1, 1, 1];

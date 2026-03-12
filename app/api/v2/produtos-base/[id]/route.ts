@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole, requireUser } from "@/lib/authz";
+import { refreshProductCatalogSnapshots } from "@/lib/catalog-snapshots/refresh-product-catalog-snapshots";
 import { normalizeProductImageLayout } from "@/lib/catalog/image-layout";
 import { withBrand } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
@@ -229,6 +230,13 @@ export async function PATCH(
 
       if (result.count === 0) {
         return null;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(parsed.data, "imageLayoutJson")) {
+        await refreshProductCatalogSnapshots(tx, {
+          brandId: auth.brandId,
+          productBaseId: id,
+        });
       }
 
       return tx.productBaseV2.findFirst({
