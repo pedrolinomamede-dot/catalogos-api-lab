@@ -479,17 +479,10 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
       </div>
 
       <div className="p-4">
-        <div className="flex h-[8.8rem] flex-col justify-between">
-          <div className="space-y-2">
-            <p className="text-[13px] font-semibold leading-tight text-slate-900">
+        <div className="space-y-3 pb-1">
+          <p className="line-clamp-3 min-h-[3.9rem] text-[13px] font-semibold leading-[1.15] text-slate-900">
             {product.name}
-            </p>
-            {product.description ? (
-              <p className="line-clamp-1 text-[11px] leading-relaxed text-slate-500">
-                {product.description}
-              </p>
-            ) : null}
-          </div>
+          </p>
           <span
             className="inline-flex w-fit items-center rounded-md px-3 py-1 text-[18px] font-bold leading-none"
             style={{

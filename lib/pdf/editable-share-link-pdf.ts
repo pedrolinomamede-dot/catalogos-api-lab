@@ -953,7 +953,7 @@ async function renderProductCard(
   const textWidth = CARD_WIDTH - CARD_TEXT_PADDING_X * 2;
   let textY = y + CARD_IMAGE_HEIGHT + CARD_TEXT_PADDING_TOP;
 
-  const nameLines = wrapText(product.name, 10, textWidth, 4, true);
+  const nameLines = wrapText(product.name, 10, textWidth, 3, true);
   nameLines.forEach((line) => {
     drawText(page, line, textX, textY, {
       font: FONT_BOLD,
@@ -962,22 +962,10 @@ async function renderProductCard(
     });
     textY += 10.5;
   });
-
-  const descriptionLabel = normalizeCatalogLabel(product.description);
-  if (descriptionLabel) {
-    const descriptionLines = wrapText(descriptionLabel, 8.8, textWidth, 1, false);
-    descriptionLines.forEach((line) => {
-      drawText(page, line, textX, textY - 1, {
-        font: FONT_NORMAL,
-        size: 8.8,
-        color: [0.4, 0.43, 0.48],
-      });
-      textY += 8.5;
-    });
-  }
-
-  const textBlockBottom = y + CARD_HEIGHT - CARD_TEXT_PADDING_BOTTOM;
-  const chipY = textBlockBottom - 20;
+  const chipY = Math.min(
+    textY + 2,
+    y + CARD_HEIGHT - CARD_TEXT_PADDING_BOTTOM - 20,
+  );
   const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";
   const chipWidth = estimateTextWidth(skuLabel, CARD_CODE_FONT_SIZE, true) + 14;
 
