@@ -60,7 +60,7 @@ export function parseCatalogMeasure(value?: string | null): ParsedMeasure {
       numericValue: Number.POSITIVE_INFINITY,
       normalizedUnit: "",
       normalizedKey: "__missing__",
-      displayLabel: "Sem medida",
+      displayLabel: "",
     };
   }
 

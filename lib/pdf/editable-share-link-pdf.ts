@@ -348,7 +348,7 @@ function parseMeasure(value?: string | null): ParsedMeasure {
       unitRank: Number.POSITIVE_INFINITY,
       numericValue: Number.POSITIVE_INFINITY,
       normalizedKey: "__missing__",
-      displayLabel: "Sem medida",
+      displayLabel: "",
     };
   }
 
