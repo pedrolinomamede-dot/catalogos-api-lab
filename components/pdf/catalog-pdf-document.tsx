@@ -63,7 +63,7 @@ type PdfPageModel = {
   backgroundImageUrl: string | null;
 };
 
-const PRODUCTS_PER_ROW = 3;
+const PRODUCTS_PER_ROW = 5;
 
 const PAGE_HEIGHT_MM = 373.3;
 const SAFE_TOP_MM = 8;
@@ -75,8 +75,8 @@ const PAGE_CONTENT_HEIGHT_MM =
 const BLOCK_HEIGHT_MM = {
   catalogIntro: 42,
   lineHeader: 16,
-  groupLead: 104,
-  groupRow: 88,
+  groupLead: 76,
+  groupRow: 68,
   catalogEmpty: 28,
 };
 
@@ -445,17 +445,12 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
 
   return (
     <article
-      className="break-inside-avoid overflow-hidden rounded-2xl border [page-break-inside:avoid]"
+      className="break-inside-avoid rounded-[20px] px-2 pt-2 pb-2 [page-break-inside:avoid]"
       style={{
-        backgroundColor: "hsla(335, 45%, 98%, 0.6)",
-        borderColor: "hsla(336, 35%, 88%, 0.9)",
-        boxShadow: "0 14px 28px rgba(20, 28, 47, 0.16)",
+        boxShadow: "0 14px 24px rgba(20, 28, 47, 0.14)",
       }}
     >
-      <div
-        className="relative flex h-56 w-full items-center justify-center"
-        style={{ backgroundColor: "rgba(255, 255, 255, 0.5)" }}
-      >
+      <div className="relative flex h-32 w-full items-center justify-center">
         {imageSrc ? (
           <div
             className="relative flex h-full w-full items-center justify-center"
@@ -478,13 +473,13 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         )}
       </div>
 
-      <div className="p-4">
-        <div className="space-y-3 pb-1">
-          <p className="line-clamp-3 min-h-[3.9rem] text-[13px] font-semibold leading-[1.15] text-slate-900">
+      <div className="px-1.5 pt-1.5 pb-1">
+        <div className="space-y-2">
+          <p className="line-clamp-3 min-h-[2.3rem] text-[10px] font-semibold leading-[1.12] text-slate-900">
             {product.name}
           </p>
           <span
-            className="inline-flex w-fit items-center rounded-md px-3 py-1 text-[18px] font-bold leading-none"
+            className="inline-flex w-fit items-center rounded-md px-2.5 py-1 text-[14px] font-bold leading-none"
             style={{
               backgroundColor: "hsl(223 62% 28%)",
               color: "white",
@@ -501,7 +496,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
 
 function PdfProductRow({ row }: { row: ShareLinkPdfProduct[] }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-5 gap-1.5">
       {row.map((product) => (
         <PdfProductCard key={product.id} product={product} />
       ))}

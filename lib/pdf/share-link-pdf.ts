@@ -76,6 +76,7 @@ const PAGE_HEIGHT = 1058;
 const MARGIN_X = 28;
 const MARGIN_BOTTOM = 32;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
+const PRODUCTS_PER_ROW = 5;
 const PRODUCT_IMAGE_TARGET_WIDTH = 460;
 const PRODUCT_IMAGE_TARGET_HEIGHT = 300;
 const LOGO_IMAGE_TARGET_WIDTH = 320;
@@ -100,17 +101,18 @@ type RenderLayout = {
 };
 
 function createLayout(theme: PdfTheme): RenderLayout {
-  const cardWidth = (CONTENT_WIDTH - theme.layout.columnGap) / 2;
+  const columnGap = 6;
+  const cardWidth = (CONTENT_WIDTH - columnGap * (PRODUCTS_PER_ROW - 1)) / PRODUCTS_PER_ROW;
   return {
     headerHeight: theme.layout.headerHeight,
-    columnGap: theme.layout.columnGap,
+    columnGap,
     cardWidth,
-    cardHeight: theme.layout.cardHeight,
-    cardPadding: theme.layout.cardPadding,
-    cardImageHeight: theme.layout.cardImageHeight,
-    rowGap: theme.layout.rowGap,
+    cardHeight: 132,
+    cardPadding: 5,
+    cardImageHeight: 78,
+    rowGap: 6,
     groupHeaderHeight: theme.layout.groupHeaderHeight,
-    groupGapAfter: theme.layout.groupGapAfter,
+    groupGapAfter: 6,
     footerHeight: theme.layout.footerHeight,
     contentBottom: PAGE_HEIGHT - MARGIN_BOTTOM - theme.layout.footerHeight,
   };
@@ -685,21 +687,13 @@ async function renderProductCard(
   theme: PdfTheme,
   layout: RenderLayout,
 ) {
-  drawRect(page, x, y, layout.cardWidth, layout.cardHeight, {
-    fill: theme.colors.cardBackground,
-    stroke: theme.colors.cardBorder,
-    lineWidth: 0.8,
+  drawRect(page, x + 1, y + 4, layout.cardWidth - 1, layout.cardHeight - 2, {
+    fill: [0.925, 0.941, 0.973],
   });
 
   const innerX = x + layout.cardPadding;
   const imageY = y + layout.cardPadding;
   const imageWidth = layout.cardWidth - layout.cardPadding * 2;
-
-  drawRect(page, innerX, imageY, imageWidth, layout.cardImageHeight, {
-    fill: theme.colors.mutedBackground,
-    stroke: theme.colors.cardBorder,
-    lineWidth: 0.6,
-  });
 
   const asset = await resolveImageAsset(product);
   const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
@@ -729,57 +723,20 @@ async function renderProductCard(
   }
 
   const textWidth = imageWidth;
-  let textY = imageY + layout.cardImageHeight + 10;
+  let textY = imageY + layout.cardImageHeight + 4;
 
-  const nameLines = wrapText(product.name, theme.fonts.cardName, textWidth, 2, true);
+  const nameLines = wrapText(product.name, theme.fonts.cardName, textWidth, 3, true);
   nameLines.forEach((line) => {
     drawText(page, line, innerX, textY, {
       font: FONT_BOLD,
       size: theme.fonts.cardName,
       color: theme.colors.textPrimary,
     });
-    textY += 13;
+    textY += 12;
   });
 
-  const productBrand = normalizeCatalogLabel(product.brand);
-  const brandLabel = productBrand ? `Marca: ${productBrand}` : "Marca nao informada";
-  drawText(page, brandLabel, innerX, textY + 1, {
-    font: FONT_NORMAL,
-    size: theme.fonts.cardMeta,
-    color: theme.colors.textSecondary,
-  });
-
-  const skuLabel = product.sku ? `SKU ${product.sku}` : "SKU --";
-  const skuWidth = estimateTextWidth(skuLabel, theme.fonts.cardMeta, true) + 10;
-  drawSkuChip(page, skuLabel, innerX + textWidth - skuWidth, textY - 2, theme);
-  textY += 14;
-
-  const categoryLabel = normalizeCatalogLabel(product.categoryName) ?? "Sem categoria";
-  drawText(page, categoryLabel, innerX, textY, {
-    font: FONT_NORMAL,
-    size: theme.fonts.cardMeta,
-    color: theme.colors.textSecondary,
-  });
-  textY += 12;
-
-  const descriptionLabel =
-    normalizeCatalogLabel(product.description) ?? "Sem descricao para este produto.";
-  const descriptionLines = wrapText(
-    descriptionLabel,
-    theme.fonts.cardDescription,
-    textWidth,
-    3,
-    false,
-  );
-
-  descriptionLines.forEach((line) => {
-    drawText(page, line, innerX, textY, {
-      font: FONT_NORMAL,
-      size: theme.fonts.cardDescription,
-      color: theme.colors.textSecondary,
-    });
-    textY += 11;
-  });
+  const skuLabel = product.sku ? product.sku : "--";
+  drawSkuChip(page, skuLabel, innerX, textY + 1, theme);
 }
 
 function renderFooter(
@@ -1083,24 +1040,12 @@ export async function generateShareLinkPdf(data: ShareLinkPdfData): Promise<Buff
             continue;
           }
 
-          const leftProduct = group.products[rowStart];
-          const rightProduct = group.products[rowStart + 1];
-
-          await renderProductCard(
-            page,
-            leftProduct,
-            MARGIN_X,
-            cursorY,
-            resolveProductImageAsset,
-            theme,
-            layout,
-          );
-
-          if (rightProduct) {
+          const rowProducts = group.products.slice(rowStart, rowStart + PRODUCTS_PER_ROW);
+          for (let columnIndex = 0; columnIndex < rowProducts.length; columnIndex += 1) {
             await renderProductCard(
               page,
-              rightProduct,
-              MARGIN_X + layout.cardWidth + layout.columnGap,
+              rowProducts[columnIndex],
+              MARGIN_X + columnIndex * (layout.cardWidth + layout.columnGap),
               cursorY,
               resolveProductImageAsset,
               theme,
@@ -1109,7 +1054,7 @@ export async function generateShareLinkPdf(data: ShareLinkPdfData): Promise<Buff
           }
 
           cursorY += layout.cardHeight + layout.rowGap;
-          rowStart += 2;
+          rowStart += PRODUCTS_PER_ROW;
         }
 
         cursorY += layout.groupGapAfter;

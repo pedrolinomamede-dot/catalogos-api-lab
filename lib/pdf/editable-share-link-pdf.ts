@@ -66,18 +66,18 @@ const PAGE_MARGIN_TOP = 24;
 const PAGE_MARGIN_BOTTOM = 32;
 const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN_X * 2;
 const CONTENT_BOTTOM = PAGE_HEIGHT - PAGE_MARGIN_BOTTOM;
-const PRODUCTS_PER_ROW = 3;
-const COLUMN_GAP = 8;
+const PRODUCTS_PER_ROW = 5;
+const COLUMN_GAP = 6;
 const CARD_WIDTH = (CONTENT_WIDTH - COLUMN_GAP * (PRODUCTS_PER_ROW - 1)) / PRODUCTS_PER_ROW;
-const CARD_HEIGHT = 190;
-const CARD_TEXT_PADDING_X = 12;
-const CARD_TEXT_PADDING_TOP = 10;
-const CARD_TEXT_PADDING_BOTTOM = 8;
-const CARD_IMAGE_HEIGHT = 118;
-const CARD_NAME_FONT_SIZE = 11.4;
-const CARD_CODE_FONT_SIZE = 18;
-const ROW_GAP = 8;
-const GROUP_GAP_AFTER = 8;
+const CARD_HEIGHT = 132;
+const CARD_TEXT_PADDING_X = 5;
+const CARD_TEXT_PADDING_TOP = 4;
+const CARD_TEXT_PADDING_BOTTOM = 4;
+const CARD_IMAGE_HEIGHT = 78;
+const CARD_NAME_FONT_SIZE = 8;
+const CARD_CODE_FONT_SIZE = 11;
+const ROW_GAP = 6;
+const GROUP_GAP_AFTER = 6;
 const LINE_HEADER_HEIGHT = 20;
 const STRIPE_HEIGHT = 28;
 const STRIPE_GAP_BEFORE = 4;
@@ -98,13 +98,10 @@ const GRAPHICS_STATES: Record<
   { fillAlpha: number; strokeAlpha: number }
 > = {
   GS_CARD: { fillAlpha: 0.6, strokeAlpha: 0.9 },
-  GS_SHADOW: { fillAlpha: 0.12, strokeAlpha: 0.12 },
+  GS_SHADOW: { fillAlpha: 0.08, strokeAlpha: 0.08 },
   GS_PANEL: { fillAlpha: 0.35, strokeAlpha: 0.35 },
   GS_IMAGE_PANEL: { fillAlpha: 0.5, strokeAlpha: 0.5 },
 };
-
-const IMAGE_PANEL_FILL: [number, number, number] = [1, 1, 1];
-const IMAGE_PANEL_STROKE: [number, number, number] = [0.949, 0.878, 0.902];
 
 const MEASURE_UNIT_RANK: Record<string, number> = {
   mg: 1,
@@ -907,23 +904,9 @@ async function renderProductCard(
   imageCache: Map<string, Promise<PdfImageAsset | null>>,
   imageAssets: PdfImageAsset[],
 ) {
-  drawRect(page, x + 2, y + 6, CARD_WIDTH, CARD_HEIGHT, {
+  drawRect(page, x + 1.5, y + 4, CARD_WIDTH - 1, CARD_HEIGHT - 2, {
     fill: [0.08, 0.11, 0.18],
     graphicsState: "GS_SHADOW",
-  });
-
-  drawRect(page, x, y, CARD_WIDTH, CARD_HEIGHT, {
-    fill: [0.996, 0.984, 0.99],
-    stroke: [0.949, 0.878, 0.902],
-    lineWidth: 0.7,
-    graphicsState: "GS_CARD",
-  });
-
-  drawRect(page, x, y, CARD_WIDTH, CARD_IMAGE_HEIGHT, {
-    fill: IMAGE_PANEL_FILL,
-    stroke: IMAGE_PANEL_STROKE,
-    lineWidth: 0.4,
-    graphicsState: "GS_IMAGE_PANEL",
   });
 
   const imageAsset = await resolveSharedAsset(
@@ -942,9 +925,9 @@ async function renderProductCard(
       y + (CARD_IMAGE_HEIGHT - scaledHeight) / 2 + (CARD_IMAGE_HEIGHT * imageLayout.offsetY) / 100;
     drawImage(page, imageAsset, imageX, imageY, scaledWidth, scaledHeight);
   } else {
-    drawText(page, "Sem imagem", x + 44, y + 48, {
+    drawText(page, "Sem imagem", x + 20, y + 30, {
       font: FONT_NORMAL,
-      size: 10,
+      size: 8,
       color: [0.45, 0.45, 0.45],
     });
   }
@@ -953,21 +936,21 @@ async function renderProductCard(
   const textWidth = CARD_WIDTH - CARD_TEXT_PADDING_X * 2;
   let textY = y + CARD_IMAGE_HEIGHT + CARD_TEXT_PADDING_TOP;
 
-  const nameLines = wrapText(product.name, 10, textWidth, 3, true);
+  const nameLines = wrapText(product.name, CARD_NAME_FONT_SIZE, textWidth, 3, true);
   nameLines.forEach((line) => {
     drawText(page, line, textX, textY, {
       font: FONT_BOLD,
-      size: 10,
+      size: CARD_NAME_FONT_SIZE,
       color: [0.082, 0.11, 0.161],
     });
-    textY += 10.5;
+    textY += 8.8;
   });
   const chipY = Math.min(
-    textY + 2,
-    y + CARD_HEIGHT - CARD_TEXT_PADDING_BOTTOM - 20,
+    textY + 1,
+    y + CARD_HEIGHT - CARD_TEXT_PADDING_BOTTOM - 14,
   );
   const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";
-  const chipWidth = estimateTextWidth(skuLabel, CARD_CODE_FONT_SIZE, true) + 14;
+  const chipWidth = estimateTextWidth(skuLabel, CARD_CODE_FONT_SIZE, true) + 10;
 
   drawRect(page, textX, chipY, chipWidth, 20, {
     fill: [0.086, 0.251, 0.486],
