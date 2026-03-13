@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import sharp from "sharp";
 
 import { requireRole } from "@/lib/authz";
 import type { ProductImageLayout } from "@/types/api";
@@ -14,6 +15,7 @@ import { isPrismaMissingColumnError } from "@/lib/prisma/errors";
 import { jsonError } from "@/lib/utils/errors";
 
 export const dynamic = "force-dynamic";
+const IMAGE_METADATA_TIMEOUT_MS = 6_000;
 
 function composeProductDescription(
   description?: string | null,
@@ -29,6 +31,90 @@ function composeProductDescription(
     return `Subcategoria: ${subcategory}`;
   }
   return normalizedDescription ?? null;
+}
+
+function resolveImageUrl(url?: string | null) {
+  const normalized = typeof url === "string" ? url.trim() : "";
+  if (!normalized) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  if (normalized.startsWith("/")) {
+    const base = process.env.PUBLIC_BASE_URL?.trim();
+    if (!base) {
+      return null;
+    }
+    return `${base.replace(/\/$/, "")}${normalized}`;
+  }
+
+  return null;
+}
+
+async function fetchImageBytes(url: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), IMAGE_METADATA_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      cache: "force-cache",
+    });
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = await response.arrayBuffer();
+    if (payload.byteLength === 0) {
+      return null;
+    }
+
+    return Buffer.from(payload);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function resolveImageAspectRatio(
+  url: string | null,
+  cache: Map<string, Promise<number | null>>,
+) {
+  const resolvedUrl = resolveImageUrl(url);
+  if (!resolvedUrl) {
+    return null;
+  }
+
+  let pending = cache.get(resolvedUrl);
+  if (!pending) {
+    pending = (async () => {
+      const bytes = await fetchImageBytes(resolvedUrl);
+      if (!bytes) {
+        return null;
+      }
+
+      try {
+        const trimmed = await sharp(bytes).rotate().trim().toBuffer({ resolveWithObject: true });
+        const width = trimmed.info.width ?? 0;
+        const height = trimmed.info.height ?? 0;
+        if (width > 0 && height > 0) {
+          return width / height;
+        }
+      } catch {
+        return null;
+      }
+
+      return null;
+    })();
+
+    cache.set(resolvedUrl, pending);
+  }
+
+  return pending;
 }
 
 export async function GET(
@@ -47,6 +133,7 @@ export async function GET(
   let pdfData: ShareLinkPdfData | null;
   try {
     pdfData = await withBrand(auth.brandId, async (tx) => {
+      const imageAspectRatioCache = new Map<string, Promise<number | null>>();
       const shareLink = await tx.shareLinkV2.findFirst({
         where: {
           id,
@@ -171,55 +258,68 @@ export async function GET(
             }
           });
 
-          const products = items.reduce<ShareLinkPdfProduct[]>((acc, item) => {
-              const snapshot = item.snapshot;
-              const product = item.productBase;
-              if (!snapshot && !product) {
-                return acc;
-              }
+          const productCandidates = await Promise.all(
+            items.map(async (item) => {
+                const snapshot = item.snapshot;
+                const product = item.productBase;
+                if (!snapshot && !product) {
+                  return null;
+                }
 
-              const fallbackImageUrl = product?.id
-                ? fallbackByProductId.get(product.id) ?? null
-                : null;
-              const snapshotGallery = parseCatalogSnapshotGallery(snapshot?.galleryJson);
-              const snapshotAttributes = parseCatalogSnapshotAttributes(snapshot?.attributesJson);
-              const sizeLabel =
-                normalizeCatalogLabel(snapshotAttributes.size) ??
-                normalizeCatalogLabel(product?.size);
-              const lineLabel =
-                normalizeCatalogLabel(snapshotAttributes.line) ??
-                normalizeCatalogLabel(product?.line);
-              const subcategoryName =
-                snapshot?.subcategoryName ?? product?.subcategory?.name ?? null;
+                const fallbackImageUrl = product?.id
+                  ? fallbackByProductId.get(product.id) ?? null
+                  : null;
+                const snapshotGallery = parseCatalogSnapshotGallery(snapshot?.galleryJson);
+                const snapshotAttributes = parseCatalogSnapshotAttributes(snapshot?.attributesJson);
+                const sizeLabel =
+                  normalizeCatalogLabel(snapshotAttributes.size) ??
+                  normalizeCatalogLabel(product?.size);
+                const lineLabel =
+                  normalizeCatalogLabel(snapshotAttributes.line) ??
+                  normalizeCatalogLabel(product?.line);
+                const subcategoryName =
+                  snapshot?.subcategoryName ?? product?.subcategory?.name ?? null;
 
-              const imageLayout =
-                (snapshotAttributes.imageLayout as ProductImageLayout | null | undefined) ??
-                (product?.imageLayoutJson as ProductImageLayout | null | undefined) ??
-                null;
+                const imageLayout =
+                  (snapshotAttributes.imageLayout as ProductImageLayout | null | undefined) ??
+                  (product?.imageLayoutJson as ProductImageLayout | null | undefined) ??
+                  null;
+                const primaryImageUrl =
+                  snapshot?.primaryImageUrl ?? product?.imageUrl ?? null;
+                const resolvedFallbackImageUrl =
+                  snapshotGallery[0]?.imageUrl ?? fallbackImageUrl ?? null;
+                const imageAspectRatio = await resolveImageAspectRatio(
+                  primaryImageUrl ?? resolvedFallbackImageUrl,
+                  imageAspectRatioCache,
+                );
 
-              acc.push({
-                id: product?.id ?? `${entry.catalog.id}-${snapshot?.code ?? "snapshot"}`,
-                name: snapshot?.name ?? product?.name ?? "Produto",
-                sku: snapshot?.code ?? product?.sku ?? null,
-                lineLabel,
-                sizeLabel,
-                imageLayout,
-                brand: snapshot?.brand ?? product?.brand ?? null,
-                description: composeProductDescription(
-                  snapshot?.description ?? product?.description ?? null,
+                return {
+                  id: product?.id ?? `${entry.catalog.id}-${snapshot?.code ?? "snapshot"}`,
+                  name: snapshot?.name ?? product?.name ?? "Produto",
+                  sku: snapshot?.code ?? product?.sku ?? null,
+                  imageAspectRatio,
+                  lineLabel,
+                  sizeLabel,
+                  imageLayout,
+                  brand: snapshot?.brand ?? product?.brand ?? null,
+                  description: composeProductDescription(
+                    snapshot?.description ?? product?.description ?? null,
+                    subcategoryName,
+                  ),
+                  categoryName:
+                    snapshot?.categoryName ?? product?.category?.name ?? null,
                   subcategoryName,
-                ),
-                categoryName:
-                  snapshot?.categoryName ?? product?.category?.name ?? null,
-                subcategoryName,
-                primaryImageUrl:
-                  snapshot?.primaryImageUrl ?? product?.imageUrl ?? null,
-                fallbackImageUrl:
-                  snapshotGallery[0]?.imageUrl ?? fallbackImageUrl ?? null,
-              });
-
-              return acc;
-            }, []);
+                  primaryImageUrl,
+                  fallbackImageUrl: resolvedFallbackImageUrl,
+                } satisfies ShareLinkPdfProduct;
+              }),
+          );
+          const products: ShareLinkPdfProduct[] = [];
+          for (const product of productCandidates) {
+            if (product) {
+              products.push(product);
+            }
+          }
           products.sort(compareProductsByLineCategoryMeasure);
 
           return {

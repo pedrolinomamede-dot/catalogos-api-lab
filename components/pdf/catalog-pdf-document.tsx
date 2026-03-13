@@ -8,6 +8,11 @@ import type {
 } from "@/lib/pdf/share-link-pdf";
 import { resolveProductImageLayout } from "@/lib/catalog/image-layout";
 import { buildLineCategoryMeasureGroups } from "@/lib/catalog/line-grouping";
+import {
+  chunkProductsForPdfRows,
+  type ProductRowColumns,
+  type ProductRowModel,
+} from "@/lib/pdf/product-row-layout";
 
 const sans = Manrope({
   subsets: ["latin"],
@@ -42,12 +47,12 @@ type PdfPageBlock =
       catalog: ShareLinkPdfCatalog;
       categoryName: string;
       measureLabel: string;
-      row: ShareLinkPdfProduct[];
+      row: ProductRowModel<ShareLinkPdfProduct>;
     }
   | {
       id: string;
       type: "group-row";
-      row: ShareLinkPdfProduct[];
+      row: ProductRowModel<ShareLinkPdfProduct>;
     }
   | {
       id: string;
@@ -63,8 +68,6 @@ type PdfPageModel = {
   backgroundImageUrl: string | null;
 };
 
-const PRODUCTS_PER_ROW = 5;
-
 const PAGE_HEIGHT_MM = 373.3;
 const SAFE_TOP_MM = 8;
 const SAFE_BOTTOM_MM = 14;
@@ -75,8 +78,10 @@ const PAGE_CONTENT_HEIGHT_MM =
 const BLOCK_HEIGHT_MM = {
   catalogIntro: 42,
   lineHeader: 16,
-  groupLead: 76,
-  groupRow: 68,
+  groupLeadCompact: 72,
+  groupLeadWide: 82,
+  groupRowCompact: 64,
+  groupRowWide: 74,
   catalogEmpty: 28,
 };
 
@@ -108,13 +113,15 @@ function resolveImageSrc(url?: string | null) {
   return null;
 }
 
-function chunkProducts(products: ShareLinkPdfProduct[], chunkSize: number) {
-  const chunks: ShareLinkPdfProduct[][] = [];
-  for (let index = 0; index < products.length; index += chunkSize) {
-    chunks.push(products.slice(index, index + chunkSize));
+function resolveRowBlockHeight(
+  row: ProductRowModel<ShareLinkPdfProduct>,
+  needsLead: boolean,
+) {
+  if (row.columns === 4) {
+    return needsLead ? BLOCK_HEIGHT_MM.groupLeadWide : BLOCK_HEIGHT_MM.groupRowWide;
   }
 
-  return chunks;
+  return needsLead ? BLOCK_HEIGHT_MM.groupLeadCompact : BLOCK_HEIGHT_MM.groupRowCompact;
 }
 
 function resolveHexColor(value: string | null | undefined, fallback: string) {
@@ -239,7 +246,9 @@ function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
         const firstGroup = lineGroup.groups[0];
         const requiredHeight =
           BLOCK_HEIGHT_MM.lineHeader +
-          (firstGroup ? BLOCK_HEIGHT_MM.groupLead : 0);
+          (firstGroup
+            ? resolveRowBlockHeight(chunkProductsForPdfRows(firstGroup.products)[0], true)
+            : 0);
         const shouldBreakBeforeLine =
           currentPage.blocks.length > 0 &&
           currentPage.usedHeightMm + requiredHeight > PAGE_CONTENT_HEIGHT_MM;
@@ -259,16 +268,14 @@ function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
       }
 
       lineGroup.groups.forEach((group, groupIndex) => {
-        const rows = chunkProducts(group.products, PRODUCTS_PER_ROW);
+        const rows = chunkProductsForPdfRows(group.products);
         let stripeRendered = false;
 
         rows.forEach((row, rowIndex) => {
           let needsLead = !stripeRendered;
 
           for (;;) {
-            const heightMm = needsLead
-              ? BLOCK_HEIGHT_MM.groupLead
-              : BLOCK_HEIGHT_MM.groupRow;
+            const heightMm = resolveRowBlockHeight(row, needsLead);
 
             const needsBreak =
               currentPage.blocks.length > 0 &&
@@ -289,7 +296,7 @@ function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
                   measureLabel: group.measureLabel,
                   row,
                 },
-                BLOCK_HEIGHT_MM.groupLead,
+                heightMm,
               );
               stripeRendered = true;
             } else {
@@ -299,7 +306,7 @@ function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
                   type: "group-row",
                   row,
                 },
-                BLOCK_HEIGHT_MM.groupRow,
+                heightMm,
               );
             }
 
@@ -442,7 +449,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
   const imageSrc = primaryImage ?? fallbackImage;
   const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";
   const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
-  const visualScale = Math.min(imageLayout.scale * 1.3, 2.2);
+  const visualScale = Math.min(imageLayout.scale * 1.45, 2.35);
 
   return (
     <article
@@ -451,7 +458,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         boxShadow: "0 14px 24px rgba(20, 28, 47, 0.14)",
       }}
     >
-      <div className="relative flex h-32 w-full items-center justify-center overflow-visible">
+      <div className="relative flex h-[8.8rem] w-full items-center justify-center overflow-visible">
         {imageSrc ? (
           <div
             className="relative flex h-full w-full items-center justify-center"
@@ -474,9 +481,9 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         )}
       </div>
 
-      <div className="px-1.5 pt-1 pb-1">
+      <div className="px-1.5 pt-1 pb-1.5">
         <div className="space-y-1.5">
-          <p className="line-clamp-4 min-h-[2.7rem] text-[9px] font-semibold leading-[1.04] text-slate-900">
+          <p className="line-clamp-4 min-h-[3.1rem] text-[9.5px] font-semibold leading-[1.06] text-slate-900">
             {product.name}
           </p>
           <span
@@ -495,10 +502,12 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
   );
 }
 
-function PdfProductRow({ row }: { row: ShareLinkPdfProduct[] }) {
+function PdfProductRow({ row }: { row: ProductRowModel<ShareLinkPdfProduct> }) {
+  const gridClass = row.columns === 4 ? "grid-cols-4 gap-2" : "grid-cols-5 gap-1.5";
+
   return (
-    <div className="grid grid-cols-5 gap-1.5">
-      {row.map((product) => (
+    <div className={`grid ${gridClass}`}>
+      {row.products.map((product) => (
         <PdfProductCard key={product.id} product={product} />
       ))}
     </div>

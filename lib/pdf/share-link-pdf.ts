@@ -34,6 +34,7 @@ export type ShareLinkPdfProduct = {
   id: string;
   name: string;
   sku?: string | null;
+  imageAspectRatio?: number | null;
   lineLabel?: string | null;
   sizeLabel?: string | null;
   imageLayout?: import("@/types/api").ProductImageLayout | null;
