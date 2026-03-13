@@ -107,9 +107,9 @@ function createLayout(theme: PdfTheme): RenderLayout {
     headerHeight: theme.layout.headerHeight,
     columnGap,
     cardWidth,
-    cardHeight: 156,
+    cardHeight: 132,
     cardPadding: 5,
-    cardImageHeight: 102,
+    cardImageHeight: 78,
     rowGap: 6,
     groupHeaderHeight: theme.layout.groupHeaderHeight,
     groupGapAfter: 6,
@@ -697,10 +697,11 @@ async function renderProductCard(
 
   const asset = await resolveImageAsset(product);
   const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
+  const visualScale = Math.min(imageLayout.scale * 1.3, 2.2);
 
   if (asset) {
-    const scaledWidth = imageWidth * imageLayout.scale;
-    const scaledHeight = layout.cardImageHeight * imageLayout.scale;
+    const scaledWidth = imageWidth * visualScale;
+    const scaledHeight = layout.cardImageHeight * visualScale;
     const imageDrawX =
       innerX + (imageWidth - scaledWidth) / 2 + (imageWidth * imageLayout.offsetX) / 100;
     const imageDrawY =
@@ -725,14 +726,14 @@ async function renderProductCard(
   const textWidth = imageWidth;
   let textY = imageY + layout.cardImageHeight + 4;
 
-  const nameLines = wrapText(product.name, theme.fonts.cardName, textWidth, 3, true);
+  const nameLines = wrapText(product.name, 8, textWidth, 4, true);
   nameLines.forEach((line) => {
     drawText(page, line, innerX, textY, {
       font: FONT_BOLD,
-      size: theme.fonts.cardName,
+      size: 8,
       color: theme.colors.textPrimary,
     });
-    textY += 12;
+    textY += 7.5;
   });
 
   const skuLabel = product.sku ? product.sku : "--";

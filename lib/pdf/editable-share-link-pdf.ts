@@ -69,13 +69,14 @@ const CONTENT_BOTTOM = PAGE_HEIGHT - PAGE_MARGIN_BOTTOM;
 const PRODUCTS_PER_ROW = 5;
 const COLUMN_GAP = 6;
 const CARD_WIDTH = (CONTENT_WIDTH - COLUMN_GAP * (PRODUCTS_PER_ROW - 1)) / PRODUCTS_PER_ROW;
-const CARD_HEIGHT = 156;
+const CARD_HEIGHT = 132;
 const CARD_TEXT_PADDING_X = 5;
 const CARD_TEXT_PADDING_TOP = 4;
 const CARD_TEXT_PADDING_BOTTOM = 4;
-const CARD_IMAGE_HEIGHT = 102;
+const CARD_IMAGE_HEIGHT = 78;
 const CARD_NAME_FONT_SIZE = 8;
 const CARD_CODE_FONT_SIZE = 11;
+const CARD_CODE_CHIP_HEIGHT = 16;
 const ROW_GAP = 6;
 const GROUP_GAP_AFTER = 6;
 const LINE_HEADER_HEIGHT = 20;
@@ -916,10 +917,11 @@ async function renderProductCard(
     "product",
   );
   const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
+  const visualScale = Math.min(imageLayout.scale * 1.3, 2.2);
 
   if (imageAsset) {
-    const scaledWidth = CARD_WIDTH * imageLayout.scale;
-    const scaledHeight = CARD_IMAGE_HEIGHT * imageLayout.scale;
+    const scaledWidth = CARD_WIDTH * visualScale;
+    const scaledHeight = CARD_IMAGE_HEIGHT * visualScale;
     const imageX = x + (CARD_WIDTH - scaledWidth) / 2 + (CARD_WIDTH * imageLayout.offsetX) / 100;
     const imageY =
       y + (CARD_IMAGE_HEIGHT - scaledHeight) / 2 + (CARD_IMAGE_HEIGHT * imageLayout.offsetY) / 100;
@@ -936,26 +938,26 @@ async function renderProductCard(
   const textWidth = CARD_WIDTH - CARD_TEXT_PADDING_X * 2;
   let textY = y + CARD_IMAGE_HEIGHT + CARD_TEXT_PADDING_TOP;
 
-  const nameLines = wrapText(product.name, CARD_NAME_FONT_SIZE, textWidth, 3, true);
+  const nameLines = wrapText(product.name, CARD_NAME_FONT_SIZE, textWidth, 4, true);
   nameLines.forEach((line) => {
     drawText(page, line, textX, textY, {
       font: FONT_BOLD,
       size: CARD_NAME_FONT_SIZE,
       color: [0.082, 0.11, 0.161],
     });
-    textY += 8.8;
+    textY += 7.5;
   });
   const chipY = Math.min(
-    textY + 1,
-    y + CARD_HEIGHT - CARD_TEXT_PADDING_BOTTOM - 14,
+    textY + 0.5,
+    y + CARD_HEIGHT - CARD_TEXT_PADDING_BOTTOM - CARD_CODE_CHIP_HEIGHT,
   );
   const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";
   const chipWidth = estimateTextWidth(skuLabel, CARD_CODE_FONT_SIZE, true) + 10;
 
-  drawRect(page, textX, chipY, chipWidth, 20, {
+  drawRect(page, textX, chipY, chipWidth, CARD_CODE_CHIP_HEIGHT, {
     fill: [0.086, 0.251, 0.486],
   });
-  drawText(page, skuLabel, textX + 7, chipY + 3, {
+  drawText(page, skuLabel, textX + 6, chipY + 1.5, {
     font: FONT_BOLD,
     size: CARD_CODE_FONT_SIZE,
     color: [1, 1, 1],

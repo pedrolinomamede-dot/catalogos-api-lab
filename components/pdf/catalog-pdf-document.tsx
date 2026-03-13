@@ -75,8 +75,8 @@ const PAGE_CONTENT_HEIGHT_MM =
 const BLOCK_HEIGHT_MM = {
   catalogIntro: 42,
   lineHeader: 16,
-  groupLead: 84,
-  groupRow: 76,
+  groupLead: 76,
+  groupRow: 68,
   catalogEmpty: 28,
 };
 
@@ -442,6 +442,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
   const imageSrc = primaryImage ?? fallbackImage;
   const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";
   const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
+  const visualScale = Math.min(imageLayout.scale * 1.3, 2.2);
 
   return (
     <article
@@ -450,12 +451,12 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         boxShadow: "0 14px 24px rgba(20, 28, 47, 0.14)",
       }}
     >
-      <div className="relative flex h-[10.4rem] w-full items-center justify-center">
+      <div className="relative flex h-32 w-full items-center justify-center overflow-visible">
         {imageSrc ? (
           <div
             className="relative flex h-full w-full items-center justify-center"
             style={{
-              transform: `translate(${imageLayout.offsetX}%, ${imageLayout.offsetY}%) scale(${imageLayout.scale})`,
+              transform: `translate(${imageLayout.offsetX}%, ${imageLayout.offsetY}%) scale(${visualScale})`,
               transformOrigin: "center",
             }}
           >
@@ -473,13 +474,13 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         )}
       </div>
 
-      <div className="px-1.5 pt-1.5 pb-1">
-        <div className="space-y-2">
-          <p className="line-clamp-3 min-h-[2.3rem] text-[10px] font-semibold leading-[1.12] text-slate-900">
+      <div className="px-1.5 pt-1 pb-1">
+        <div className="space-y-1.5">
+          <p className="line-clamp-4 min-h-[2.7rem] text-[9px] font-semibold leading-[1.04] text-slate-900">
             {product.name}
           </p>
           <span
-            className="inline-flex w-fit items-center rounded-md px-2.5 py-1 text-[14px] font-bold leading-none"
+            className="inline-flex w-fit items-center rounded-md px-2.5 py-1 text-[13px] font-bold leading-none"
             style={{
               backgroundColor: "hsl(223 62% 28%)",
               color: "white",
