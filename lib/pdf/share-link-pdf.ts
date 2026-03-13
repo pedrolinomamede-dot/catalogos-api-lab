@@ -72,9 +72,9 @@ export type ShareLinkPdfData = {
 };
 
 const PAGE_WIDTH = 595;
-const PAGE_HEIGHT = 842;
-const MARGIN_X = 34;
-const MARGIN_BOTTOM = 34;
+const PAGE_HEIGHT = 1058;
+const MARGIN_X = 28;
+const MARGIN_BOTTOM = 32;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
 const PRODUCT_IMAGE_TARGET_WIDTH = 460;
 const PRODUCT_IMAGE_TARGET_HEIGHT = 300;

@@ -60,7 +60,7 @@ type ProductLineGroup = {
 };
 
 const PAGE_WIDTH = 595;
-const PAGE_HEIGHT = 842;
+const PAGE_HEIGHT = 1058;
 const PAGE_MARGIN_X = 28;
 const PAGE_MARGIN_TOP = 24;
 const PAGE_MARGIN_BOTTOM = 32;

@@ -65,7 +65,7 @@ type PdfPageModel = {
 
 const PRODUCTS_PER_ROW = 3;
 
-const PAGE_HEIGHT_MM = 297;
+const PAGE_HEIGHT_MM = 373.3;
 const SAFE_TOP_MM = 8;
 const SAFE_BOTTOM_MM = 10;
 const DATE_ROW_RESERVE_MM = 4;
@@ -522,7 +522,7 @@ function PdfPageFrame({
 }) {
   return (
     <section
-      className={`relative h-[297mm] w-full overflow-hidden ${isLast ? "" : "break-after-page"}`}
+      className={`relative h-[373.3mm] w-full overflow-hidden ${isLast ? "" : "break-after-page"}`}
     >
       {backgroundImageUrl ? (
         <>
@@ -651,7 +651,7 @@ export function CatalogPdfDocument({ data }: { data: ShareLinkPdfData }) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poppins:wght@400;500;600;700&display=swap');
         @page {
-          size: A4 portrait;
+          size: 210mm 373.3mm;
           margin: 0;
         }
         html, body {

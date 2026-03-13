@@ -197,7 +197,8 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
     }
 
     const pdf = await page.pdf({
-      format: "A4",
+      width: "210mm",
+      height: "373.3mm",
       printBackground: true,
       displayHeaderFooter: true,
       headerTemplate: buildHeaderTemplate(),
