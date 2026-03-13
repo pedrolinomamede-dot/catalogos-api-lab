@@ -67,7 +67,7 @@ const PRODUCTS_PER_ROW = 3;
 
 const PAGE_HEIGHT_MM = 373.3;
 const SAFE_TOP_MM = 8;
-const SAFE_BOTTOM_MM = 10;
+const SAFE_BOTTOM_MM = 14;
 const DATE_ROW_RESERVE_MM = 4;
 const PAGE_CONTENT_HEIGHT_MM =
   PAGE_HEIGHT_MM - SAFE_TOP_MM - SAFE_BOTTOM_MM - DATE_ROW_RESERVE_MM;
@@ -75,8 +75,8 @@ const PAGE_CONTENT_HEIGHT_MM =
 const BLOCK_HEIGHT_MM = {
   catalogIntro: 42,
   lineHeader: 16,
-  groupLead: 96,
-  groupRow: 80,
+  groupLead: 104,
+  groupRow: 88,
   catalogEmpty: 28,
 };
 
