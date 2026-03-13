@@ -449,7 +449,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
   const imageSrc = primaryImage ?? fallbackImage;
   const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";
   const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
-  const visualScale = Math.min(imageLayout.scale * 1.45, 2.35);
+  const visualScale = Math.min(imageLayout.scale * 1.22, 1.42);
 
   return (
     <article
@@ -481,9 +481,9 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         )}
       </div>
 
-      <div className="px-1.5 pt-1 pb-1.5">
-        <div className="space-y-1.5">
-          <p className="line-clamp-4 min-h-[3.1rem] text-[9.5px] font-semibold leading-[1.06] text-slate-900">
+      <div className="px-1.5 pt-2.5 pb-1.5">
+        <div className="space-y-1">
+          <p className="line-clamp-4 min-h-[3.3rem] text-[9.5px] font-semibold leading-[1.05] text-slate-900">
             {product.name}
           </p>
           <span

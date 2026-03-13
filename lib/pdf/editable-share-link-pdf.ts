@@ -917,7 +917,7 @@ async function renderProductCard(
     "product",
   );
   const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
-  const visualScale = Math.min(imageLayout.scale * 1.3, 2.2);
+  const visualScale = Math.min(imageLayout.scale * 1.18, 1.38);
 
   if (imageAsset) {
     const scaledWidth = CARD_WIDTH * visualScale;
@@ -936,7 +936,7 @@ async function renderProductCard(
 
   const textX = x + CARD_TEXT_PADDING_X;
   const textWidth = CARD_WIDTH - CARD_TEXT_PADDING_X * 2;
-  let textY = y + CARD_IMAGE_HEIGHT + CARD_TEXT_PADDING_TOP;
+  let textY = y + CARD_IMAGE_HEIGHT + CARD_TEXT_PADDING_TOP + 4;
 
   const nameLines = wrapText(product.name, CARD_NAME_FONT_SIZE, textWidth, 4, true);
   nameLines.forEach((line) => {
@@ -945,10 +945,10 @@ async function renderProductCard(
       size: CARD_NAME_FONT_SIZE,
       color: [0.082, 0.11, 0.161],
     });
-    textY += 7.5;
+    textY += 7.3;
   });
   const chipY = Math.min(
-    textY + 0.5,
+    textY + 0.25,
     y + CARD_HEIGHT - CARD_TEXT_PADDING_BOTTOM - CARD_CODE_CHIP_HEIGHT,
   );
   const skuLabel = normalizeLabel(product.sku) ?? "Sem SKU";

@@ -698,7 +698,7 @@ async function renderProductCard(
 
   const asset = await resolveImageAsset(product);
   const imageLayout = resolveProductImageLayout(product.sizeLabel, product.imageLayout);
-  const visualScale = Math.min(imageLayout.scale * 1.3, 2.2);
+  const visualScale = Math.min(imageLayout.scale * 1.18, 1.38);
 
   if (asset) {
     const scaledWidth = imageWidth * visualScale;
@@ -725,7 +725,7 @@ async function renderProductCard(
   }
 
   const textWidth = imageWidth;
-  let textY = imageY + layout.cardImageHeight + 4;
+  let textY = imageY + layout.cardImageHeight + 8;
 
   const nameLines = wrapText(product.name, 8, textWidth, 4, true);
   nameLines.forEach((line) => {
@@ -734,11 +734,11 @@ async function renderProductCard(
       size: 8,
       color: theme.colors.textPrimary,
     });
-    textY += 7.5;
+    textY += 7.3;
   });
 
   const skuLabel = product.sku ? product.sku : "--";
-  drawSkuChip(page, skuLabel, innerX, textY + 1, theme);
+  drawSkuChip(page, skuLabel, innerX, textY + 0.25, theme);
 }
 
 function renderFooter(
