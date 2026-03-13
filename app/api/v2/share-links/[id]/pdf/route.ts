@@ -357,6 +357,12 @@ export async function GET(
         "Banco desatualizado: aplique as migrations pendentes.",
       );
     }
+    console.error("share-link-pdf:data-build-failed", {
+      shareLinkId: id,
+      variant,
+      brandId: auth.brandId,
+      error,
+    });
     return jsonError(500, "internal_error", "Internal Server Error");
   }
 
@@ -364,7 +370,19 @@ export async function GET(
     return jsonError(404, "not_found", "Share link not found");
   }
 
-  const pdfBuffer = await renderPdf(pdfData, { variant });
+  let pdfBuffer: Buffer;
+  try {
+    pdfBuffer = await renderPdf(pdfData, { variant });
+  } catch (error) {
+    console.error("share-link-pdf:render-failed", {
+      shareLinkId: id,
+      variant,
+      brandId: auth.brandId,
+      catalogCount: pdfData.catalogs.length,
+      error,
+    });
+    return jsonError(500, "internal_error", "Internal Server Error");
+  }
   const pdfBody = new Uint8Array(pdfBuffer);
   const fileName = variant === "editable" ? "catalog-editavel.pdf" : "catalog.pdf";
 
