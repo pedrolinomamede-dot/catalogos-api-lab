@@ -66,17 +66,17 @@ type PdfPageModel = {
 const PRODUCTS_PER_ROW = 3;
 
 const PAGE_HEIGHT_MM = 297;
-const SAFE_TOP_MM = 12;
-const SAFE_BOTTOM_MM = 16;
-const DATE_ROW_RESERVE_MM = 6;
+const SAFE_TOP_MM = 8;
+const SAFE_BOTTOM_MM = 10;
+const DATE_ROW_RESERVE_MM = 4;
 const PAGE_CONTENT_HEIGHT_MM =
   PAGE_HEIGHT_MM - SAFE_TOP_MM - SAFE_BOTTOM_MM - DATE_ROW_RESERVE_MM;
 
 const BLOCK_HEIGHT_MM = {
-  catalogIntro: 48,
-  lineHeader: 20,
-  groupLead: 104,
-  groupRow: 88,
+  catalogIntro: 42,
+  lineHeader: 16,
+  groupLead: 96,
+  groupRow: 80,
   catalogEmpty: 28,
 };
 
@@ -390,7 +390,7 @@ function PdfMeasureStripe({
 
   return (
     <div
-      className="mb-4 -mx-[12mm] flex translate-y-[1mm] items-center gap-3 rounded-none px-[12mm] py-2"
+      className="mb-3 -mx-[10mm] flex translate-y-[1mm] items-center gap-2 rounded-none px-[10mm] py-1.5"
       style={{
         backgroundColor: stripeBgColor,
         boxShadow: "0 14px 24px rgba(0, 0, 0, 0.42)",
@@ -427,7 +427,7 @@ function PdfMeasureStripe({
 
 function PdfLineHeader({ lineLabel }: { lineLabel: string }) {
   return (
-    <div className="mb-3 text-center">
+    <div className="mb-2 text-center">
       <p className={`${display.className} text-[26px] font-bold italic leading-none text-slate-900`}>
         {lineLabel}
       </p>
@@ -501,7 +501,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
 
 function PdfProductRow({ row }: { row: ShareLinkPdfProduct[] }) {
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 gap-2">
       {row.map((product) => (
         <PdfProductCard key={product.id} product={product} />
       ))}
@@ -547,8 +547,8 @@ function PdfPageFrame({
         <div className="pointer-events-none absolute inset-0 z-0 bg-white" />
       )}
 
-      <div className="relative z-10 flex h-full flex-col px-[12mm] pt-[12mm] pb-[16mm]">
-        <div className="mb-2 flex justify-end">
+      <div className="relative z-10 flex h-full flex-col px-[10mm] pt-[8mm] pb-[10mm]">
+        <div className="mb-1 flex justify-end">
           <span className="text-[11px] text-slate-500/70">{formatCompactDate(generatedAt)}</span>
         </div>
         <div className="relative z-10 flex-1">{children}</div>
@@ -579,7 +579,7 @@ function PdfContentLayer({
             {page.blocks.map((block, blockIndex) => {
               if (block.type === "catalog-intro") {
                 return (
-                  <div key={block.id} className={blockIndex === 0 ? "" : "mt-3"}>
+                  <div key={block.id} className={blockIndex === 0 ? "" : "mt-2"}>
                     <PdfCatalogIntro
                       data={data}
                       catalog={block.catalog}
@@ -594,7 +594,7 @@ function PdfContentLayer({
                   <section
                     key={block.id}
                     className={`break-inside-avoid [page-break-inside:avoid] ${
-                      blockIndex === 0 ? "" : "mt-4"
+                      blockIndex === 0 ? "" : "mt-3"
                     }`}
                   >
                     <PdfMeasureStripe
@@ -609,7 +609,7 @@ function PdfContentLayer({
 
               if (block.type === "line-header") {
                 return (
-                  <div key={block.id} className={blockIndex === 0 ? "" : "mt-4"}>
+                  <div key={block.id} className={blockIndex === 0 ? "" : "mt-3"}>
                     <PdfLineHeader lineLabel={block.lineLabel} />
                   </div>
                 );
@@ -620,7 +620,7 @@ function PdfContentLayer({
                   <div
                     key={block.id}
                     className={`break-inside-avoid [page-break-inside:avoid] ${
-                      blockIndex === 0 ? "" : "mt-3"
+                      blockIndex === 0 ? "" : "mt-2"
                     }`}
                   >
                     <PdfProductRow row={block.row} />
