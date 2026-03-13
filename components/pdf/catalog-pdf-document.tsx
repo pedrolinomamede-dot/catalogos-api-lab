@@ -75,8 +75,8 @@ const PAGE_CONTENT_HEIGHT_MM =
 const BLOCK_HEIGHT_MM = {
   catalogIntro: 42,
   lineHeader: 16,
-  groupLead: 76,
-  groupRow: 68,
+  groupLead: 84,
+  groupRow: 76,
   catalogEmpty: 28,
 };
 
@@ -450,7 +450,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
         boxShadow: "0 14px 24px rgba(20, 28, 47, 0.14)",
       }}
     >
-      <div className="relative flex h-32 w-full items-center justify-center">
+      <div className="relative flex h-[10.4rem] w-full items-center justify-center">
         {imageSrc ? (
           <div
             className="relative flex h-full w-full items-center justify-center"
