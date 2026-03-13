@@ -1,17 +1,17 @@
 # PROJECT_STATE_CURRENT
 
-Documento operacional de continuidade do projeto `Catálogo Fácil`.
+Documento operacional de continuidade do projeto `Catalogo Facil`.
 
-Objetivo: permitir que uma nova sessão retome o trabalho no mesmo contexto, sem depender da memória da conversa anterior.
+Objetivo: permitir que uma nova sessao retome o trabalho no mesmo contexto, sem depender da memoria da conversa anterior.
 
 ## 1. Identidade do projeto
 
-- Produto: `Catálogo Fácil`
-- Repositório alvo: `catalogos-api`
+- Produto: `Catalogo Facil`
+- Repositorio alvo: `catalogos-api`
 - Caminho local: `E:\SSD F\sistema-catalogos-api`
-- Repositório remoto: `https://github.com/pedrolinomamede-dot/catalogos-api.git`
-- Domínio de produção: `https://catalogofacil.solucaoviavel.com`
-- Diretório de produção na VPS: `/var/www/catalogos-api`
+- Repositorio remoto: `https://github.com/pedrolinomamede-dot/catalogos-api.git`
+- Dominio de producao: `https://catalogofacil.solucaoviavel.com`
+- Diretorio de producao na VPS: `/var/www/catalogos-api`
 - Stack principal:
   - `Next.js 16`
   - `React 19`
@@ -21,38 +21,39 @@ Objetivo: permitir que uma nova sessão retome o trabalho no mesmo contexto, sem
   - `PostgreSQL`
   - `NextAuth`
   - `playwright-core`
+  - `sharp`
 
 ## 2. Objetivo e funcionamento atual
 
-O sistema é uma aplicação full-stack para operação de catálogos B2B, com Base Geral local de produtos, composição de catálogos, publicação por share link e geração de PDF.
+O sistema e uma aplicacao full-stack para operacao de catalogos B2B, com Base Geral local de produtos, composicao de catalogos, publicacao por share link e geracao de PDF.
 
 Fluxo funcional atual:
 
 - Base Geral local (`ProductBaseV2`) alimentada por:
   - cadastro manual
-  - importação CSV
-  - estrutura preparada para integração ERP
+  - importacao CSV
+  - estrutura preparada para integracao ERP
 - Categorias e subcategorias locais:
   - `CategoryV2`
   - `SubcategoryV2`
-- Catálogos montados a partir da Base Geral:
+- Catalogos montados a partir da Base Geral:
   - `CatalogV2`
-- Itens do catálogo com snapshot persistido:
+- Itens do catalogo com snapshot persistido:
   - `CatalogItemV2`
   - `CatalogItemSnapshotV2`
 - Share links:
   - `ShareLinkV2`
   - `ShareLinkCatalogV2`
-  - URL publica amigavel por `slug`, com fallback legado por `token`
-- Exportação de PDF em dois modos:
+  - URL publica amigavel por `slug`, com fallback por `token`
+- Exportacao de PDF em dois modos:
   - `final`
   - `editavel`
 
-Regras importantes já definidas:
+Regras importantes:
 
-- O sistema continua suportando `manual_csv` e scaffold de integração ERP.
-- O ERP não deve ser fonte viva do catálogo publicado.
-- PDF e share link usam snapshot do catálogo, não leitura ao vivo do ERP.
+- O sistema continua suportando `manual_csv` e scaffold de integracao ERP.
+- O ERP nao deve ser fonte viva do catalogo publicado.
+- PDF e share link usam snapshot do catalogo, nao leitura ao vivo do ERP.
 
 ## 3. Arquitetura atual
 
@@ -62,7 +63,7 @@ Fonte principal: `prisma/schema.prisma`
 
 Modelos relevantes:
 
-- Infra e autenticação:
+- Infra e autenticacao:
   - `Brand`
   - `User`
 - Legado v1:
@@ -70,7 +71,7 @@ Modelos relevantes:
   - `Product`
   - `ProductVariation`
   - `ProductImage`
-- V2 em operação:
+- V2 em operacao:
   - `ProductBaseV2`
   - `ProductBaseImageV2`
   - `CategoryV2`
@@ -80,33 +81,34 @@ Modelos relevantes:
   - `CatalogItemSnapshotV2`
   - `ShareLinkV2`
   - `ShareLinkCatalogV2`
-- Integração ERP:
+- Integracao ERP:
   - `IntegrationConnectionV2`
   - enums e estruturas de sync relacionados
 
 ### 3.2 Papel dos snapshots
 
-Os snapshots existem para congelar os dados usados na publicação:
+Os snapshots congelam os dados usados na publicacao:
 
 - nome
-- código
-- categoria/subcategoria
+- codigo
+- categoria e subcategoria
 - imagens
 - atributos
-- preço, quando houver
+- preco, quando houver
 
-Consequência:
+Consequencias:
 
-- PDF e share link não devem depender do ERP em tempo real.
-- Atualizações do produto base não alteram automaticamente o catálogo publicado sem ação explícita.
+- PDF e share link nao devem depender do ERP em tempo real.
+- Atualizacoes do produto base nao alteram automaticamente o catalogo publicado sem acao explicita.
+- Excecao atual: mudancas visuais relevantes de imagem/layout na Base Geral devem refrescar automaticamente os snapshots vinculados.
 
-### 3.3 Renderização de PDF
+### 3.3 Renderizacao de PDF
 
 Arquivo de roteamento:
 
 - `app/api/v2/share-links/[id]/pdf/route.ts`
 
-Arquivo de decisão do renderer:
+Arquivo de decisao do renderer:
 
 - `lib/pdf/render-pdf.ts`
 
@@ -126,47 +128,56 @@ Motores atuais:
 - arquivo-chave:
   - `lib/pdf/editable-share-link-pdf.ts`
 
-Motivação da separação:
+3. `Fallback nativo do PDF final`
+- usado quando o renderer HTML falha e fallback esta permitido
+- arquivo-chave:
+  - `lib/pdf/share-link-pdf.ts`
+
+Motivacao da separacao:
 
 - `final` prioriza fidelidade visual.
-- `editavel` prioriza abertura mais previsível no Corel/Affinity.
+- `editavel` prioriza abertura mais previsivel no Corel/Affinity.
 
-## 4. Estado de produção
+## 4. Estado de producao
 
-Produção atual:
+Producao atual:
 
-- URL pública: `https://catalogofacil.solucaoviavel.com`
+- URL publica: `https://catalogofacil.solucaoviavel.com`
 - PM2 app: `catalogos-api`
 - porta interna: `3001`
 - Nginx na frente
 - uploads persistentes fora da release
 
-Diretórios relevantes na VPS:
+Diretorios relevantes na VPS:
 
 - app: `/var/www/catalogos-api`
 - uploads: `/srv/catalogos-api/uploads`
 
-Variáveis críticas já usadas em produção:
+Variaveis criticas ja usadas em producao:
 
 - `NEXTAUTH_URL=https://catalogofacil.solucaoviavel.com`
 - `PUBLIC_BASE_URL=https://catalogofacil.solucaoviavel.com`
 - `PDF_RENDER_BASE_URL=http://127.0.0.1:3001`
 - `VAREJONLINE_REDIRECT_URI=https://catalogofacil.solucaoviavel.com/api/v2/integrations/callback/VAREJONLINE`
 
-Observações operacionais:
+Observacoes operacionais:
 
-- O `PDF final` depende de navegador compatível no servidor para a engine HTML.
-- O deploy atual na VPS já foi validado repetidas vezes com sucesso.
+- O `PDF final` depende de navegador compativel no servidor para a engine HTML.
+- O deploy atual na VPS ja foi validado repetidas vezes com sucesso.
+- Estado validado mais recente em producao:
+  - commit ativo confirmado: `a74b6e4`
+  - `pm2 restart catalogos-api --update-env` validado
+  - healthcheck local e publico aprovados
 
 Regras operacionais de deploy na VPS:
 
 - sempre entrar em `/var/www/catalogos-api` antes de validar ou atualizar o projeto
 - sempre validar `git remote -v` antes do deploy manual
-- o remoto esperado para este projeto no servidor é `https://github.com/pedrolinomamede-dot/catalogos-api.git`
-- se `origin` apontar para outro repositório, não executar `git pull origin main` automaticamente
-- não misturar este projeto com outros repositórios do mesmo ambiente
+- o remoto esperado no servidor e `https://github.com/pedrolinomamede-dot/catalogos-api.git`
+- se `origin` apontar para outro repositorio, nao executar `git pull origin main` automaticamente
+- nao misturar este projeto com outros repositorios do mesmo ambiente
 
-Fluxo padrão de deploy:
+Fluxo padrao de deploy:
 
 1. `git fetch origin main --prune`
 2. `git pull --ff-only origin main`
@@ -175,9 +186,9 @@ Fluxo padrão de deploy:
 5. `npx prisma generate`
 6. `npm run build`
 7. `pm2 restart catalogos-api --update-env`
-8. healthcheck local e público
+8. healthcheck local e publico
 
-Comando completo de deploy usado neste projeto:
+Comando completo usado neste projeto:
 
 ```bash
 set -euo pipefail
@@ -211,7 +222,7 @@ curl -fsSI "${PUBLIC_URL}/login" >/dev/null
 echo "DEPLOY_OK ${PUBLIC_URL}"
 ```
 
-Checklist minimo de diagnostico se o deploy falhar:
+Checklist minimo se o deploy falhar:
 
 - `pm2 status`
 - `pm2 logs catalogos-api --lines 80 --nostream`
@@ -219,7 +230,7 @@ Checklist minimo de diagnostico se o deploy falhar:
 - `curl -fsSI http://127.0.0.1:3001/login`
 - `curl -fsSI https://catalogofacil.solucaoviavel.com/login`
 
-## 5. Estado atual do código
+## 5. Estado atual do codigo
 
 Branch local:
 
@@ -237,22 +248,26 @@ Observacao importante:
 
 Commits recentes mais importantes:
 
-- `07e07ab` `docs: add current project state and sync final pdf layout changes`
-- `da9ad0b` `refactor(pdf): align editable export layout with final catalog`
-- `4271fb7` `feat(pdf): add editable catalog export mode for Corel and Affinity`
-- `ad129bd` `fix(pdf): opaque product images and compact header with aligned larger SKU`
-- `67bf39e` `fix(pdf): soften white image panel with blend and opacity`
-- `6a3d77c` `feat(pdf): compact intro header, elevate measure stripe and simplify product image layer`
-- `4070265` `feat(base-products): safe image replace import and enable name edit`
-- `e2cffc7` `refine pdf header and expose logo/style editor in catalog details`
-- `fa9fe7e` `feat(pdf): add catalog header logos and stripe grouping by measure`
-- `0d173f0` `feat(integrations): scaffold multi-erp hybrid core`
+- `a74b6e4` `fix(pdf): prevent product cards from clipping page bottom`
+- `5e056e9` `feat(pdf): switch to mobile-first page format`
+- `01e06c2` `refactor(pdf): optimize page density and card spacing`
+- `22297f3` `fix(catalog): hide missing measure labels`
+- `8946de6` `fix(catalog): refresh snapshots after image updates`
+- `885f906` `fix(pdf): compact product card text block`
+- `40dda89` `fix(pdf): polish modal controls and card text layout`
+- `35ffb84` `fix(pdf): refine line headers and zoom limits`
+- `0fcc680` `feat(catalog): add smart product image layout`
+- `a73c6af` `feat(catalog): scale product images by size band`
+- `e754f8b` `feat(catalog): group products by line`
+- `7da2710` `fix(pdf): soften product image panel opacity`
+- `0db9ab8` `feat(share-links): add bulk delete selection`
+- `1ca1d73` `docs: expand server deploy and pdf diagnostics context`
+- `cde0da1` `feat(share-links): add friendly public slugs`
 
 Status local conhecido no momento:
 
-- `git status -sb` deve estar limpo quando o repositório estiver sincronizado com `catalogos-api/main`
-- no estado confirmado em `2026-03-10`, nao existe alteracao local pendente
-- a pendencia antiga em `components/pdf/catalog-pdf-document.tsx` foi resolvida e publicada
+- `git status -sb` esta limpo
+- o repositorio local esta sincronizado com `catalogos-api/main`
 
 Regra importante:
 
@@ -265,16 +280,24 @@ Regra importante:
 
 Entrou recentemente:
 
-- logos e estilo do PDF por catálogo
+- logos e estilo do PDF por catalogo
 - agrupamento por categoria e medida
 - `PDF final`
 - `PDF editavel`
-- refinamentos do header, tarja e cards
-- aproximação visual do `editavel` ao `final`
-- escala visual automática da imagem por faixa de medida
-- suporte a ajuste manual global de zoom/posição da imagem do produto
+- refinamentos de header, tarja e cards
+- aproximacao visual do `editavel` ao `final`
+- agrupamento por `linha`
+- escala visual automatica da imagem por faixa de medida
+- suporte a ajuste manual global de zoom/posicao da imagem do produto
+- painel branco atras da imagem configurado em 50% de opacidade
+- nome do produto sem texto secundario separado no card
+- codigo imediatamente abaixo do nome no card
+- formato de pagina mobile-first
+- reducao de densidade vazia por pagina
+- correcoes para evitar clipping de cards na borda inferior
+- quando nao houver medida, o label do grupo fica em branco em vez de `Sem medida`
 
-UI atual relacionada:
+UI relacionada:
 
 - em `components/admin/catalog-details.tsx`:
   - `Exportar PDF final`
@@ -285,29 +308,31 @@ UI atual relacionada:
   - `PDF final`
   - `PDF editavel`
 
-Observações operacionais importantes do PDF:
+Observacoes operacionais importantes:
 
-- `PDF final` usa renderização HTML e depende de navegador compatível no servidor.
+- `PDF final` usa renderizacao HTML e depende de navegador compativel no servidor.
 - `PDF final` passa por pipeline Chromium/Chrome para gerar o PDF visual final.
-- `PDF editavel` usa renderer nativo e não depende do mesmo pipeline HTML/Chromium.
-- falha no `PDF final` não implica automaticamente erro de layout ou erro de código do catálogo.
+- `PDF editavel` usa renderer nativo e nao depende do mesmo pipeline HTML/Chromium.
+- falha no `PDF final` nao implica automaticamente erro de layout ou erro de codigo do catalogo.
 - `PDF editavel` pode continuar funcionando mesmo quando o `PDF final` falha.
+- o PDF atual foi otimizado para consumo em celular, com pagina vertical maior que A4.
 
 ### 6.2 Base Geral
 
 Entrou recentemente:
 
-- importação de imagens por SKU com política:
+- importacao de imagens por SKU com politica:
   - `append`
   - `replace`
 - replace seguro por lote
-- edição do nome do produto na Base Geral
+- edicao do nome do produto na Base Geral
 - suporte ao campo fixo `linha` no produto base
-- importação CSV da Base Geral passa a aceitar a coluna `linha`
-- snapshots do catálogo passam a carregar `linha` em `attributesJson`
-- `ProductBaseV2` passa a suportar metadados globais de layout da imagem (`imageLayoutJson`)
-- editor do produto da Base Geral passa a permitir ajuste manual de zoom e posição da imagem principal
-- upload de imagem passa a aplicar `trim` automático para reduzir bordas vazias em novas imagens
+- importacao CSV da Base Geral passa a aceitar a coluna `linha`
+- snapshots do catalogo passam a carregar `linha` em `attributesJson`
+- `ProductBaseV2` suporta metadados globais de layout da imagem (`imageLayoutJson`)
+- editor do produto da Base Geral permite ajuste manual de zoom e posicao da imagem principal
+- upload de imagem aplica `trim` automatico para reduzir bordas vazias em novas imagens
+- mudancas visuais relevantes de imagem/layout refrescam automaticamente os snapshots dos catalogos vinculados
 
 Arquivos relacionados:
 
@@ -316,101 +341,86 @@ Arquivos relacionados:
 - `lib/api/v2/base-products.ts`
 - `lib/api/hooks.ts`
 
-### 6.3 Integração ERP
+### 6.3 Share links
 
-Direção escolhida:
+Direcao atual:
 
-- modelo híbrido
-- Base Geral local como centro da composição
-- integração preparada para múltiplos ERPs
+- share links possuem URL amigavel por `slug`, com fallback por `token`
+- links antigos continuam compativeis
+- a tela de share links suporta exclusao em massa na pagina atual
+
+### 6.4 Integracao ERP
+
+Direcao escolhida:
+
+- modelo hibrido
+- Base Geral local como centro da composicao
+- integracao preparada para multiplos ERPs
 - provider inicial previsto: `Varejonline`
 
 Arquitetura:
 
-- conexão por `brandId`
+- conexao por `brandId`
 - sync para Base Geral local
-- catálogo usa snapshot
+- catalogo usa snapshot
 
-### 6.4 Diagnóstico de PDF final
+### 6.5 Diagnostico de PDF final
 
-Quando o `PDF final` falhar em produção, as primeiras hipóteses são:
+Quando o `PDF final` falhar em producao, as primeiras hipoteses sao:
 
 - navegador ausente no servidor
 - caminho incorreto do navegador
 - erro na engine HTML
 - falha de acesso ao render interno
 
-Variáveis e contexto relevantes:
+Variaveis e contexto relevantes:
 
 - `PDF_RENDER_BASE_URL=http://127.0.0.1:3001`
-- em alguns cenários pode ser necessário validar `PDF_HTML_BROWSER_PATH`
+- em alguns cenarios pode ser necessario validar `PDF_HTML_BROWSER_PATH`
 
 Checklist minimo:
 
-1. confirmar se a aplicação está no ar:
+1. confirmar se a aplicacao esta no ar:
    - `pm2 status`
    - `ss -ltnp | grep :3001`
    - `curl -I http://127.0.0.1:3001/login`
-2. confirmar se o domínio está respondendo:
+2. confirmar se o dominio esta respondendo:
    - `curl -I https://catalogofacil.solucaoviavel.com/login`
-3. verificar navegador disponível no servidor:
+3. verificar navegador disponivel no servidor:
    - `which google-chrome`
    - `which chromium`
    - `which chromium-browser`
-4. verificar configuração de caminho do browser, se necessário:
+4. verificar configuracao do caminho do browser:
    - `grep -n 'PDF_HTML_BROWSER_PATH' /var/www/catalogos-api/.env`
 5. analisar logs da app:
    - `pm2 logs catalogos-api --lines 100 --nostream`
 
-Interpretação correta:
+Interpretacao correta:
 
-- separar claramente problema de deploy, problema da app, problema do `PDF final` e problema do `PDF editavel`
-- antes de concluir erro de código, investigar browser e engine HTML
+- separar problema de deploy, problema da app, problema do `PDF final` e problema do `PDF editavel`
+- antes de concluir erro de codigo, investigar browser e engine HTML
 
-### 6.5 Agrupamento por linha
+## 7. Modo de operacao do agente
 
-Direção atual:
+Regras praticas para continuidade:
 
-- `linha` é um campo fixo da Base Geral
-- quando produtos possuem a mesma `linha`, catálogo público e PDFs agrupam esses produtos sob um cabeçalho de linha
-- dentro da mesma linha, o catálogo continua organizado por categoria e medida
-- `subcategoria` continua estruturalmente vinculada ao produto
-- quando houver `subcategoria`, essa informação passa a compor a descrição exibida do produto
-
-### 6.6 Otimização de imagem no catálogo
-
-Direção atual:
-
-- o sistema aplica escala visual automática por faixa de medida no catálogo público e nos PDFs
-- a diferença entre faixas é sutil e prioriza melhor ocupação do quadro da imagem
-- o sistema preserva a lógica de não cortar a imagem por padrão
-- quando necessário, o usuário pode ajustar globalmente por produto:
-  - zoom
-  - posição horizontal
-  - posição vertical
-- o ajuste manual vale para catálogo público e PDFs
-
-## 7. Modo de operação do agente
-
-Regras práticas para continuidade:
-
-- atuar sempre sobre o repositório correto antes de editar
+- atuar sempre sobre o repositorio correto antes de editar
 - quando o alvo for este projeto, trabalhar em `catalogos-api`
-- não tocar `ipe-distribuidora` quando o trabalho for do catálogo
-- validar `git status -sb` antes de qualquer edição
-- se houver mudanças locais pendentes, isolar commits para não misturar contextos
-- executar build antes de commit sempre que possível
+- nao tocar `ipe-distribuidora` quando o trabalho for do catalogo
+- validar `git status -sb` antes de qualquer edicao
+- se houver mudancas locais pendentes, isolar commits para nao misturar contextos
+- executar build antes de commit sempre que possivel
 - commitar apenas o escopo da tarefa atual
 - usar deploy padronizado da VPS
 
 Comportamento esperado do agente em retomadas:
 
-- ler os arquivos de contexto obrigatórios
+- ler os arquivos de contexto obrigatorios
 - conferir o estado do git
-- identificar o que está em produção e o que está apenas local
-- nunca assumir que alteração local pendente já foi publicada
+- identificar o que esta em producao e o que esta apenas local
+- nunca assumir que alteracao local pendente ja foi publicada
 
-## 8. Arquivos obrigatórios para contextualização
+## 8. Arquivos obrigatorios para contextualizacao
 
 Leitura principal:
 
@@ -433,22 +443,27 @@ Leitura complementar:
 - `files/OUTPUTS_TRACKER.md`
 - `files/PROJECT_PROTOCOL.md`
 
-Observação:
+Observacao:
 
-- `files/PROJECT_PROTOCOL.md` é histórico de uma fase anterior de múltiplos chats e não deve ser tratado como regra operacional principal sem leitura crítica.
+- `files/PROJECT_PROTOCOL.md` e historico de fase anterior e nao deve ser tratado como regra operacional principal sem leitura critica
 
-## 9. Próximo ponto de retomada
+## 9. Proximo ponto de retomada
 
-Ponto atual mais provável de continuidade:
+Ponto atual mais provavel de continuidade:
 
-- refinar o `PDF editavel` para ficar ainda mais próximo do `PDF final`, sem perder editabilidade em Corel/Affinity
+- continuar refinando o PDF mobile-first no uso real em celular, mantendo o `PDF editavel` proximo do `PDF final`
 
-Pendência crítica antes de novos commits nessa área:
+Pendencias praticas antes de novos commits nessa area:
 
-- comparar visualmente `PDF final` e `PDF editavel` no mesmo catalogo apos cada refinamento
+- comparar visualmente `PDF final` e `PDF editavel` no mesmo catalogo
+- validar no celular:
+  - densidade por pagina
+  - ausencia de clipping
+  - legibilidade de nome e codigo
+  - aproveitamento de topo, laterais e rodape
 - manter o `PDF final` intocado quando o objetivo for apenas melhorar o `PDF editavel`
 
-Se o objetivo for retomar trabalho de PDF, a ordem prática recomendada é:
+Se o objetivo for retomar trabalho de PDF, a ordem pratica recomendada e:
 
 1. `git status -sb`
 2. revisar `lib/pdf/editable-share-link-pdf.ts`
@@ -456,29 +471,32 @@ Se o objetivo for retomar trabalho de PDF, a ordem prática recomendada é:
 4. comparar `PDF final` vs `PDF editavel`
 5. so entao decidir novos ajustes
 
-## 10. Estado confirmado em 2026-03-10
+## 10. Estado confirmado em 2026-03-13
 
 Resumo objetivo do ponto atual:
 
-- producao ativa em `https://catalogofacil.solucaoviavel.com`
-- `PDF final` e `PDF editavel` ja estao disponiveis na UI
-- ultimo commit publicado relacionado ao estado operacional: `07e07ab`
+- producao ativa e saudavel em `https://catalogofacil.solucaoviavel.com`
+- commit mais recente validado em producao: `a74b6e4`
+- `PDF final` e `PDF editavel` disponiveis na UI
 - repositorio local sincronizado e sem pendencias
-- proximo trabalho esperado: refinamento fino do `PDF editavel` para aproximar ainda mais do `PDF final`
+- features recentes em producao:
+  - URL amigavel de share links
+  - exclusao em massa de share links
+  - agrupamento por linha
+  - ajuste manual de imagem por produto
+  - refresh automatico de snapshots apos mudanca de imagem/layout
+  - painel da imagem com 50% de opacidade
+  - formato mobile-first do PDF
+  - correcao de clipping na borda inferior
+  - medida ausente sem exibir `Sem medida`
 
-Atualizacao local posterior relevante:
+## 11. Criterio de qualidade deste documento
 
-- share links passam a suportar URL amigavel por `slug`
-- links antigos baseados em `token` continuam validos
-- a UI administrativa passa a copiar e exibir preferencialmente a URL amigavel
+Este arquivo cumpre sua funcao se uma nova sessao conseguir:
 
-## 11. Critério de qualidade deste documento
-
-Este arquivo cumpre sua função se uma nova sessão conseguir:
-
-1. identificar rapidamente qual projeto é o alvo
+1. identificar rapidamente qual projeto e o alvo
 2. entender a arquitetura vigente
-3. saber o que já está em produção
-4. saber o que ainda está só local
+3. saber o que ja esta em producao
+4. saber o que ainda esta so local
 5. descobrir quais arquivos abrir primeiro
-6. retomar o trabalho de PDF e integração sem depender da conversa anterior
+6. retomar o trabalho de PDF e integracao sem depender da conversa anterior
