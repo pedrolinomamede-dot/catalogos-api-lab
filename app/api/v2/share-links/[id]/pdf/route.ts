@@ -117,6 +117,23 @@ async function resolveImageAspectRatio(
   return pending;
 }
 
+async function enrichPdfImageAspectRatios(data: ShareLinkPdfData) {
+  const cache = new Map<string, Promise<number | null>>();
+
+  await Promise.all(
+    data.catalogs.map(async (catalog) => {
+      await Promise.all(
+        catalog.products.map(async (product) => {
+          product.imageAspectRatio = await resolveImageAspectRatio(
+            product.primaryImageUrl ?? product.fallbackImageUrl ?? null,
+            cache,
+          );
+        }),
+      );
+    }),
+  );
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
@@ -133,7 +150,6 @@ export async function GET(
   let pdfData: ShareLinkPdfData | null;
   try {
     pdfData = await withBrand(auth.brandId, async (tx) => {
-      const imageAspectRatioCache = new Map<string, Promise<number | null>>();
       const shareLink = await tx.shareLinkV2.findFirst({
         where: {
           id,
@@ -258,8 +274,7 @@ export async function GET(
             }
           });
 
-          const productCandidates = await Promise.all(
-            items.map(async (item) => {
+          const productCandidates = items.map((item) => {
                 const snapshot = item.snapshot;
                 const product = item.productBase;
                 if (!snapshot && !product) {
@@ -288,16 +303,12 @@ export async function GET(
                   snapshot?.primaryImageUrl ?? product?.imageUrl ?? null;
                 const resolvedFallbackImageUrl =
                   snapshotGallery[0]?.imageUrl ?? fallbackImageUrl ?? null;
-                const imageAspectRatio = await resolveImageAspectRatio(
-                  primaryImageUrl ?? resolvedFallbackImageUrl,
-                  imageAspectRatioCache,
-                );
 
                 return {
                   id: product?.id ?? `${entry.catalog.id}-${snapshot?.code ?? "snapshot"}`,
                   name: snapshot?.name ?? product?.name ?? "Produto",
                   sku: snapshot?.code ?? product?.sku ?? null,
-                  imageAspectRatio,
+                  imageAspectRatio: null,
                   lineLabel,
                   sizeLabel,
                   imageLayout,
@@ -312,8 +323,7 @@ export async function GET(
                   primaryImageUrl,
                   fallbackImageUrl: resolvedFallbackImageUrl,
                 } satisfies ShareLinkPdfProduct;
-              }),
-          );
+              });
           const products: ShareLinkPdfProduct[] = [];
           for (const product of productCandidates) {
             if (product) {
@@ -368,6 +378,17 @@ export async function GET(
 
   if (!pdfData) {
     return jsonError(404, "not_found", "Share link not found");
+  }
+
+  try {
+    await enrichPdfImageAspectRatios(pdfData);
+  } catch (error) {
+    console.error("share-link-pdf:image-metadata-failed", {
+      shareLinkId: id,
+      variant,
+      brandId: auth.brandId,
+      error,
+    });
   }
 
   let pdfBuffer: Buffer;
