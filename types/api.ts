@@ -368,6 +368,35 @@ export type ShareLinkV2 = {
 
 export type PdfExportMode = "final" | "editavel";
 
+export type DashboardSummaryV2 = {
+  baseProducts: {
+    total: number;
+    active: number;
+    latestImportedAt?: string | Date | null;
+    latestImportedSourceType?: ProductSourceType | null;
+    latestUpdatedAt?: string | Date | null;
+  };
+  categories: {
+    categoriesTotal: number;
+    subcategoriesTotal: number;
+  };
+  integrations: {
+    totalConnections: number;
+    connected: number;
+    healthy: number;
+    providers: IntegrationProvider[];
+  };
+  catalogs: {
+    total: number;
+    itemsTotal: number;
+  };
+  shareLinks: {
+    total: number;
+    active: number;
+    revoked: number;
+  };
+};
+
 export type IntegrationProviderDescriptor = {
   provider: IntegrationProvider;
   label: string;

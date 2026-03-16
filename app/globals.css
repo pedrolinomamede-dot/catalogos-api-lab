@@ -33,6 +33,19 @@
   --ui-border: 214.3 31.8% 91.4%;
   --ui-input: 214.3 31.8% 91.4%;
   --ui-ring: 222.2 84% 4.9%;
+  --dashboard-sidebar-bg: #0f4d3b;
+  --dashboard-sidebar-border: rgba(235, 244, 233, 0.16);
+  --dashboard-sidebar-text: #f4f0e4;
+  --dashboard-sidebar-muted: rgba(234, 242, 228, 0.72);
+  --dashboard-sidebar-active-bg: rgba(255, 251, 242, 0.12);
+  --dashboard-sidebar-active-ring: rgba(247, 242, 229, 0.4);
+  --dashboard-shell-bg: #ede7dc;
+  --dashboard-panel-bg: rgba(255, 251, 244, 0.96);
+  --dashboard-panel-border: rgba(196, 182, 160, 0.32);
+  --dashboard-panel-shadow: 0 14px 28px rgba(25, 18, 10, 0.07);
+  --dashboard-title: #2f261e;
+  --dashboard-subtitle: #64584c;
+  --dashboard-accent: #2e6c58;
 }
 
 .dark {
@@ -65,6 +78,7 @@
 
 html,
 body {
+  height: 100%;
   max-width: 100vw;
   overflow-x: hidden;
 }
@@ -105,4 +119,37 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+@layer components {
+  .dashboard-shell {
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(248, 233, 209, 0.88) 0%, transparent 32%),
+      radial-gradient(circle at 88% 14%, rgba(220, 236, 227, 0.78) 0%, transparent 30%),
+      linear-gradient(180deg, #f6f1e8 0%, var(--dashboard-shell-bg) 100%);
+  }
+
+  .dashboard-panel {
+    border: 1px solid var(--dashboard-panel-border);
+    background: var(--dashboard-panel-bg);
+    box-shadow: var(--dashboard-panel-shadow);
+    backdrop-filter: blur(14px);
+  }
+
+  .dashboard-panel-soft {
+    border: 1px solid rgba(196, 182, 160, 0.2);
+    background: rgba(255, 253, 248, 0.92);
+    box-shadow: 0 10px 24px rgba(25, 18, 10, 0.045);
+  }
+
+  .dashboard-sidebar-active {
+    background:
+      linear-gradient(135deg, rgba(255, 252, 245, 0.2), rgba(255, 252, 245, 0.08));
+    border: 1px solid rgba(255, 250, 240, 0.28);
+    box-shadow:
+      0 0 0 1px var(--dashboard-sidebar-active-ring),
+      0 8px 22px rgba(5, 22, 17, 0.28),
+      inset 0 0 14px rgba(255, 251, 244, 0.14);
+  }
 }

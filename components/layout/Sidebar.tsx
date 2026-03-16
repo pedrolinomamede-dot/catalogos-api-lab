@@ -1,25 +1,80 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Boxes,
+  ChartNoAxesCombined,
+  Database,
+  FileStack,
+  FolderKanban,
+  Link2,
+  PlugZap,
+  Sparkles,
+} from "lucide-react";
 
+import { DashboardSidebarUser } from "@/components/dashboard/dashboard-sidebar-user";
 import { useUiStore } from "@/lib/stores/ui-store";
+import { cn } from "@/lib/utils";
 
 type SidebarProps = {
   isOpen: boolean;
   onClose: () => void;
 };
 
-const links = [
-  { href: "/dashboard", label: "Visão geral" },
-  { href: "/dashboard/base-products", label: "Base Geral" },
-  { href: "/dashboard/base-categories", label: "Categorias (Base Geral)" },
-  { href: "/dashboard/integrations", label: "Integrações" },
-  { href: "/dashboard/catalogs", label: "Catálogos" },
-  { href: "/dashboard/share-links", label: "Share Links" },
+type SidebarLink = {
+  href: string;
+  label: string;
+  icon: typeof ChartNoAxesCombined;
+  section?: string;
+};
+
+const links: SidebarLink[] = [
+  {
+    href: "/dashboard",
+    label: "Visão Geral",
+    icon: ChartNoAxesCombined,
+  },
+  {
+    href: "/dashboard/base-products",
+    label: "Base Geral",
+    icon: Database,
+    section: "Base Geral",
+  },
+  {
+    href: "/dashboard/base-categories",
+    label: "Categorias",
+    icon: FolderKanban,
+  },
+  {
+    href: "/dashboard/integrations",
+    label: "Integrações",
+    icon: PlugZap,
+    section: "Integrações",
+  },
+  {
+    href: "/dashboard/catalogs",
+    label: "Catálogos",
+    icon: FileStack,
+    section: "Catálogos",
+  },
+  {
+    href: "/dashboard/share-links",
+    label: "Share Links",
+    icon: Link2,
+  },
 ];
 
+function isActive(pathname: string, href: string) {
+  if (href === "/dashboard") {
+    return pathname === href;
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const pathname = usePathname();
   const mobileNavOpen = useUiStore((state) => state.mobileNavOpen);
   const sidebarOpen = useUiStore((state) => state.sidebarOpen);
   const setMobileNavOpen = useUiStore((state) => state.setMobileNavOpen);
@@ -37,46 +92,98 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     onClose();
   };
 
+  let renderedSection: string | null = null;
+
   return (
     <>
       <div
-        className={`fixed inset-0 z-30 bg-black/40 transition-opacity lg:hidden ${
+        className={`fixed inset-0 z-30 bg-[#07140f]/55 transition-opacity lg:hidden ${
           isMobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={handleClose}
         aria-hidden={!isMobileOpen}
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r border-stroke bg-surface px-4 py-6 shadow-soft transition-transform duration-200 ${
+        className={`fixed inset-y-0 left-0 z-40 w-[272px] transform border-r px-5 py-6 transition-transform duration-200 ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         } ${isDesktopOpen ? "lg:translate-x-0" : "lg:-translate-x-full"}`}
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(15,77,59,0.98) 0%, rgba(11,63,49,0.98) 100%)",
+          borderColor: "var(--dashboard-sidebar-border)",
+          boxShadow: "0 18px 48px rgba(7, 20, 15, 0.36)",
+        }}
         aria-label="Navegação principal"
       >
-        <div className="flex items-center justify-between pb-6">
-          <span className="text-sm font-semibold uppercase tracking-widest text-muted">
-            Painel
-          </span>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="rounded-md border border-stroke px-2 py-1 text-xs font-medium text-ink lg:hidden"
-            aria-label="Fechar menu"
-          >
-            Fechar
-          </button>
-        </div>
-        <nav className="flex flex-col gap-1">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
+        <div className="flex h-full flex-col">
+          <div className="flex items-start justify-between pb-8">
+            <div className="flex items-start gap-3">
+              <div className="flex h-14 w-14 items-center justify-center rounded-[20px] border border-white/10 bg-white/5 text-[#d7ebdf]">
+                <Sparkles className="h-7 w-7" />
+              </div>
+              <div className="space-y-1 pt-1">
+                <p
+                  className="text-[2rem] font-medium leading-[0.9] tracking-[-0.05em] text-[var(--dashboard-sidebar-text)]"
+                  style={{ fontFamily: "var(--font-editorial)" }}
+                >
+                  Easy
+                  <br />
+                  Catalog
+                </p>
+                <p className="text-xs uppercase tracking-[0.28em] text-[var(--dashboard-sidebar-muted)]">
+                  painel operacional
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
               onClick={handleClose}
-              className="rounded-md px-3 py-2 text-sm font-medium text-ink transition hover:bg-surface-soft"
+              className="rounded-full border border-white/12 px-3 py-1 text-xs font-medium text-[var(--dashboard-sidebar-text)] lg:hidden"
+              aria-label="Fechar menu"
             >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+              Fechar
+            </button>
+          </div>
+
+          <nav className="flex-1 space-y-3">
+            {links.map((link) => {
+              const active = isActive(pathname, link.href);
+              const Icon = link.icon;
+              const showSection = link.section && link.section !== renderedSection;
+              if (showSection) {
+                renderedSection = link.section ?? null;
+              }
+
+              return (
+                <div key={link.href} className="space-y-2">
+                  {showSection ? (
+                    <p className="px-3 pt-3 text-xs font-semibold uppercase tracking-[0.26em] text-[var(--dashboard-sidebar-muted)]">
+                      {link.section}
+                    </p>
+                  ) : null}
+                  <Link
+                    href={link.href}
+                    onClick={handleClose}
+                    className={cn(
+                      "flex items-center gap-3 rounded-[24px] border px-4 py-3 text-[15px] font-medium transition duration-200",
+                      active
+                        ? "dashboard-sidebar-active text-white"
+                        : "border-transparent text-[var(--dashboard-sidebar-muted)] hover:border-white/10 hover:bg-white/6 hover:text-[var(--dashboard-sidebar-text)]",
+                    )}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span>{link.label}</span>
+                  </Link>
+                </div>
+              );
+            })}
+          </nav>
+
+          <div className="border-t border-white/10 pt-5">
+            <DashboardSidebarUser />
+          </div>
+        </div>
       </aside>
     </>
   );

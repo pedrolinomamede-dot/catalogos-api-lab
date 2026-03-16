@@ -1,4 +1,5 @@
 import type {
+  DashboardSummaryV2,
   BaseProductsImportResultV2,
   CreateBrandRequest,
   CreateCatalogItemV2Request,
@@ -54,6 +55,7 @@ import {
   updateBaseProductV2,
   updateBaseProductImageV2,
 } from "@/lib/api/v2/base-products";
+import { getDashboardSummaryV2 } from "@/lib/api/v2/dashboard";
 import {
   addCatalogItemV2,
   createCatalogV2,
@@ -209,6 +211,7 @@ export function useDeleteBaseProductV2() {
     mutationFn: (baseProductId: string) => deleteBaseProduct(baseProductId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.baseProducts.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -228,6 +231,7 @@ export function useUpdateBaseProductV2() {
       updateBaseProductV2(input.id, input.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.baseProducts.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -239,6 +243,7 @@ export function useUpdateBaseProductImageV2() {
       updateBaseProductImageV2(input.id, input.imageUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.baseProducts.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -282,6 +287,13 @@ export function useCatalogItemsV2(catalogId: string) {
     queryKey: queryKeys.v2.catalogItems.list(catalogId),
     queryFn: () => listCatalogItemsV2(catalogId),
     enabled: Boolean(catalogId),
+  });
+}
+
+export function useDashboardSummaryV2() {
+  return useQuery<DashboardSummaryV2>({
+    queryKey: queryKeys.v2.dashboard.summary,
+    queryFn: getDashboardSummaryV2,
   });
 }
 
@@ -420,6 +432,7 @@ export function useCreateCategoryV2() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.categories.root });
       queryClient.invalidateQueries({ queryKey: ["v2", "subcategories"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -432,6 +445,7 @@ export function useUpdateCategoryV2(id?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.categories.root });
       queryClient.invalidateQueries({ queryKey: ["v2", "subcategories"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -443,6 +457,7 @@ export function useDeleteCategoryV2() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.categories.root });
       queryClient.invalidateQueries({ queryKey: ["v2", "subcategories"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -455,6 +470,7 @@ export function useCreateSubcategoryV2(categoryId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["v2", "subcategories", categoryId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.categories.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -467,6 +483,7 @@ export function useUpdateSubcategoryV2(categoryId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["v2", "subcategories", categoryId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.categories.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -478,6 +495,7 @@ export function useDeleteSubcategoryV2(categoryId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["v2", "subcategories", categoryId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.categories.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -507,6 +525,7 @@ export function useCreateCatalogV2() {
     mutationFn: (body: CreateCatalogV2Request) => createCatalogV2(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.catalogs.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -518,6 +537,7 @@ export function useUpdateCatalogV2(id?: string) {
       updateCatalogV2(id ?? input.id, input.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.catalogs.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -528,6 +548,7 @@ export function useDeleteCatalogV2() {
     mutationFn: (catalogId: string) => deleteCatalogV2(catalogId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.catalogs.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -538,6 +559,7 @@ export function useAddCatalogItemV2(catalogId: string) {
     mutationFn: (body: CreateCatalogItemV2Request) => addCatalogItemV2(catalogId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.catalogItems.list(catalogId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -574,6 +596,7 @@ export function useAddCatalogItemsV2(catalogId: string) {
           queryKey: queryKeys.v2.catalogItems.list(catalogId),
         });
       }
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -584,6 +607,7 @@ export function useDeleteCatalogItemV2(catalogId: string) {
     mutationFn: (itemId: string) => deleteCatalogItemV2(catalogId, itemId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.catalogItems.list(catalogId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -615,6 +639,7 @@ export function useCreateShareLinkV2() {
     mutationFn: (body: CreateShareLinkV2Request) => createShareLinkV2(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.shareLinks.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -637,6 +662,7 @@ export function useRevokeShareLinkV2() {
     mutationFn: (shareLinkId: string) => revokeShareLinkV2(shareLinkId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.shareLinks.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -647,14 +673,20 @@ export function useDeleteShareLinkV2() {
     mutationFn: (shareLinkId: string) => deleteShareLinkV2(shareLinkId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.shareLinks.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
 
 export function useCreateIntegrationConnectionV2() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: Parameters<typeof createIntegrationConnectionV2>[0]) =>
       createIntegrationConnectionV2(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connections });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
+    },
   });
 }
 
@@ -665,6 +697,7 @@ export function useDisconnectIntegrationConnectionV2() {
     onSuccess: (_data, connectionId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connections });
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connectionById(connectionId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -684,6 +717,7 @@ export function useSyncIntegrationConnectionV2() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.v2.integrations.jobs(variables.connectionId),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -749,6 +783,7 @@ export function useImportBaseProductsCsv() {
     ): Promise<BaseProductsImportResult> => importBaseProductsCsvV2(items),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.baseProducts.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -876,6 +911,7 @@ export function useAddBaseProductImageV2(productBaseId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["v2", "base-products", productBaseId, "images"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.baseProducts.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }
@@ -887,6 +923,7 @@ export function useDeleteBaseProductImageV2(productBaseId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["v2", "base-products", productBaseId, "images"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.baseProducts.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
 }

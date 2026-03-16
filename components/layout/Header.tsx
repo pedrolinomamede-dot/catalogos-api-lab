@@ -1,15 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 import { useUiStore } from "@/lib/stores/ui-store";
+import { DashboardSearchShell } from "@/components/dashboard/dashboard-search-shell";
 
 type HeaderProps = {
-  title?: ReactNode;
   onMenuClick: () => void;
 };
 
-export function Header({ title = "Dashboard", onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick }: HeaderProps) {
   const toggleMobileNav = useUiStore((state) => state.toggleMobileNav);
 
   const handleMenuClick = () => {
@@ -18,18 +16,8 @@ export function Header({ title = "Dashboard", onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="flex items-center justify-between border-b border-stroke bg-surface/95 px-4 py-3 shadow-soft backdrop-blur lg:px-6">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleMenuClick}
-          className="inline-flex items-center justify-center rounded-md border border-stroke bg-surface px-3 py-1.5 text-sm font-medium text-ink shadow-sm transition hover:bg-surface-soft lg:hidden"
-          aria-label="Abrir menu"
-        >
-          Menu
-        </button>
-        <h1 className="text-lg font-semibold text-ink">{title}</h1>
-      </div>
+    <header className="sticky top-0 z-20 border-b border-[rgba(201,185,162,0.28)] bg-[rgba(245,238,228,0.9)] px-4 py-2.5 backdrop-blur-md lg:px-8 lg:py-3">
+      <DashboardSearchShell showMenuButton onMenuClick={handleMenuClick} />
     </header>
   );
 }
