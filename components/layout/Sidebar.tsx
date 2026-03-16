@@ -2,16 +2,15 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  Boxes,
   ChartNoAxesCombined,
   Database,
   FileStack,
   FolderKanban,
   Link2,
   PlugZap,
-  Sparkles,
 } from "lucide-react";
 
 import { DashboardSidebarUser } from "@/components/dashboard/dashboard-sidebar-user";
@@ -118,20 +117,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex h-full flex-col">
           <div className="flex items-start justify-between pb-8">
             <div className="flex items-start gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-[20px] border border-white/10 bg-white/5 text-[#d7ebdf]">
-                <Sparkles className="h-7 w-7" />
+              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[20px] border border-white/10 bg-white/5 p-2 text-[#d7ebdf] shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
+                <Image
+                  src="/solução-viavel-logo.png"
+                  alt="Solução Viável"
+                  width={56}
+                  height={56}
+                  className="h-full w-full object-contain"
+                  priority
+                />
               </div>
               <div className="space-y-1 pt-1">
                 <p
-                  className="text-[2rem] font-medium leading-[0.9] tracking-[-0.05em] text-[var(--dashboard-sidebar-text)]"
+                  className="text-[2rem] font-medium leading-[0.92] tracking-[-0.05em] text-[var(--dashboard-sidebar-text)]"
                   style={{ fontFamily: "var(--font-editorial)" }}
                 >
-                  Easy
+                  Catálogo
                   <br />
-                  Catalog
+                  Fácil
                 </p>
-                <p className="text-xs uppercase tracking-[0.28em] text-[var(--dashboard-sidebar-muted)]">
-                  painel operacional
+                <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--dashboard-sidebar-muted)]">
+                  Solução viável
                 </p>
               </div>
             </div>

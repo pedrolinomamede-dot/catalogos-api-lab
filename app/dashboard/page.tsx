@@ -30,6 +30,31 @@ function formatRelativeDate(value?: string | Date | null) {
   }).format(date);
 }
 
+function formatProviders(providers: string[] | undefined) {
+  if (!providers || providers.length === 0) {
+    return "Nenhum provider conectado";
+  }
+
+  return providers
+    .map((provider) => {
+      switch (provider) {
+        case "VAREJONLINE":
+          return "Varejonline";
+        case "OMIE":
+          return "Omie";
+        case "TINY":
+          return "Tiny";
+        case "BLING":
+          return "Bling";
+        case "CUSTOM":
+          return "Custom";
+        default:
+          return provider;
+      }
+    })
+    .join(" | ");
+}
+
 const quickActions = [
   { href: "/dashboard/base-products", label: "Importar Base Geral" },
   { href: "/dashboard/integrations", label: "Conectar ERP" },
@@ -102,11 +127,6 @@ export default function DashboardPage() {
   const catalogs = summary?.catalogs;
   const shareLinks = summary?.shareLinks;
 
-  const integrationsProvidersLabel =
-    integrations?.providers.length
-      ? integrations.providers.join(" · ")
-      : "Nenhuma integração conectada";
-
   return (
     <section className="space-y-4 lg:space-y-5">
       <DashboardHero
@@ -124,14 +144,17 @@ export default function DashboardPage() {
             body={
               <>
                 <p className="text-[1.55rem] font-semibold leading-[1.02] tracking-[-0.04em] text-[var(--dashboard-title)] lg:text-[1.9rem]">
-                  {isLoading
-                    ? "Carregando Base Geral..."
-                    : `${baseProducts?.active ?? 0} SKUs ativos`}
+                  {isLoading ? "Carregando..." : `${baseProducts?.active ?? 0}`}
+                  {!isLoading ? (
+                    <span className="ml-2 text-[0.92rem] font-medium tracking-[-0.01em] text-[var(--dashboard-subtitle)] lg:text-[1.02rem]">
+                      SKUs ativos
+                    </span>
+                  ) : null}
                 </p>
                 <p className="text-[14px] leading-6 lg:text-[15px]">
                   {isError
                     ? "Não foi possível carregar os dados da Base Geral."
-                    : `Total de SKUs: ${baseProducts?.total ?? 0}. A base continua sendo o centro operacional do sistema.`}
+                    : `Total de SKUs: ${baseProducts?.total ?? 0}.`}
                 </p>
                 <div className="grid gap-1 text-sm font-medium text-[#635648]">
                   <span>Última importação: {formatRelativeDate(baseProducts?.latestImportedAt)}</span>
@@ -155,7 +178,7 @@ export default function DashboardPage() {
                 <p className="text-[15px] font-semibold leading-6 text-[var(--dashboard-title)]">
                   {isLoading
                     ? "Carregando categorias..."
-                    : `${categories?.categoriesTotal ?? 0} categorias e ${categories?.subcategoriesTotal ?? 0} subcategorias.`}
+                    : `Categorias: ${categories?.categoriesTotal ?? 0} | Subcategoria: ${categories?.subcategoriesTotal ?? 0}`}
                 </p>
                 <p className="text-sm leading-6">
                   {isError
@@ -184,17 +207,12 @@ export default function DashboardPage() {
                       : "border-[#e3d8c6] bg-[#f7f0e7] text-[#7a6650]"
                   }`}
                 >
-                  {(integrations?.connected ?? 0) > 0
-                    ? `${integrations?.connected ?? 0} conectada(s)`
-                    : "Nenhuma integração ativa"}
+                  {(integrations?.connected ?? 0) > 0 ? "Conectado" : "Nenhuma integração conectada"}
                 </div>
                 <p className="text-[15px] font-semibold leading-6 text-[var(--dashboard-title)]">
                   {isError
                     ? "Não foi possível carregar o resumo das integrações."
-                    : `${integrations?.healthy ?? 0} saudável(is) em ${integrations?.totalConnections ?? 0} conexão(ões).`}
-                </p>
-                <p className="text-sm leading-6 text-[var(--dashboard-subtitle)]">
-                  {isLoading ? "Carregando providers..." : integrationsProvidersLabel}
+                    : formatProviders(integrations?.providers)}
                 </p>
               </>
             }
@@ -214,12 +232,12 @@ export default function DashboardPage() {
                 <p className="text-[15px] font-semibold leading-6 text-[var(--dashboard-title)]">
                   {isLoading
                     ? "Carregando catálogos..."
-                    : `${catalogs?.total ?? 0} catálogo(s) e ${catalogs?.itemsTotal ?? 0} item(ns) vinculados.`}
+                    : `Catálogos: ${catalogs?.total ?? 0} | Itens: ${catalogs?.itemsTotal ?? 0}`}
                 </p>
                 <p className="text-sm leading-6 text-[var(--dashboard-subtitle)]">
                   {isError
                     ? "Não foi possível carregar o resumo de catálogos."
-                    : "Monte catálogos, organize os itens e prepare o material para distribuição."}
+                    : "Monte catálogos, organize os itens e faça o download do material para distribuição."}
                 </p>
               </>
             }
@@ -239,12 +257,12 @@ export default function DashboardPage() {
                 <p className="text-[15px] font-semibold leading-6 text-[var(--dashboard-title)]">
                   {isLoading
                     ? "Carregando share links..."
-                    : `${shareLinks?.active ?? 0} ativo(s), ${shareLinks?.revoked ?? 0} revogado(s), ${shareLinks?.total ?? 0} total.`}
+                    : `Ativos: ${shareLinks?.active ?? 0} | Revogados: ${shareLinks?.revoked ?? 0}`}
                 </p>
                 <p className="text-sm leading-6 text-[var(--dashboard-subtitle)]">
                   {isError
                     ? "Não foi possível carregar o resumo dos links."
-                    : "Compartilhe catálogos e acompanhe o material publicado com links reais do sistema."}
+                    : "Compartilhe catálogos e acompanhe o material publicado com links reais do sistema, criados por você."}
                 </p>
               </>
             }
@@ -256,7 +274,7 @@ export default function DashboardPage() {
 
       <DashboardQuickActions
         title="Ações Rápidas"
-        description="Atalhos para tarefas comuns no Easy Catalog V2."
+        description="Atalhos para tarefas comuns no Catálogo Fácil."
         actions={quickActions}
       />
     </section>
