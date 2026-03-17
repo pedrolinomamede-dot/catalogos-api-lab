@@ -12,10 +12,10 @@ export function DashboardHero({
   className,
 }: DashboardHeroProps) {
   return (
-    <section className={cn("space-y-2.5", className)}>
+    <section className={cn("space-y-2.5 xl:h-[108px]", className)}>
       <div className="space-y-1">
         <h1
-          className="text-[1.9rem] font-medium uppercase leading-[0.93] tracking-[-0.05em] text-[var(--dashboard-title)] sm:text-[2.4rem] lg:text-[2.9rem]"
+          className="text-[1.9rem] font-medium uppercase leading-[0.93] tracking-[-0.05em] text-[var(--dashboard-title)] sm:text-[2.4rem] lg:text-[2.75rem]"
           style={{ fontFamily: "var(--font-editorial)" }}
         >
           {title}

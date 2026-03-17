@@ -103,7 +103,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         aria-hidden={!isMobileOpen}
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-[272px] transform border-r px-5 py-6 transition-transform duration-200 ${
+        className={`fixed inset-y-0 left-0 z-40 w-[280px] transform border-r px-[14px] py-6 transition-transform duration-200 ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         } ${isDesktopOpen ? "lg:translate-x-0" : "lg:-translate-x-full"}`}
         style={{
@@ -115,7 +115,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         aria-label="Navegação principal"
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-start justify-between pb-8">
+          <div className="flex items-start justify-between pb-6">
             <div className="flex items-start gap-3">
               <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[20px] border border-white/10 bg-white/5 p-2 text-[#d7ebdf] shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
                 <Image
@@ -186,7 +186,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             })}
           </nav>
 
-          <div className="border-t border-white/10 pt-5">
+          <div className="border-t border-white/10 pt-4">
             <DashboardSidebarUser />
           </div>
         </div>

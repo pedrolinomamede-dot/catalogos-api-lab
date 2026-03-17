@@ -60,37 +60,34 @@ const quickActions = [
   { href: "/dashboard/integrations", label: "Conectar ERP" },
   { href: "/dashboard/base-categories", label: "Criar Categoria" },
   { href: "/dashboard/catalogs", label: "Criar Catálogo" },
-  { href: "/dashboard/share-links", label: "Criar Link" },
+  { href: "/dashboard/share-links", label: "Criar Link de Compartilhamento" },
 ];
 
 function BaseFlowVisual() {
   return (
-    <div className="relative h-full min-h-[100px] overflow-hidden rounded-[24px] border border-[rgba(196,182,160,0.24)] bg-[radial-gradient(circle_at_top_left,rgba(234,243,233,0.95),rgba(250,245,237,0.94))] lg:min-h-[112px]">
+    <div className="relative h-full min-h-[118px] overflow-hidden rounded-[24px] border border-[rgba(196,182,160,0.24)] bg-[radial-gradient(circle_at_top_left,rgba(234,243,233,0.95),rgba(250,245,237,0.94))]">
       <svg className="absolute inset-0 h-full w-full" viewBox="0 0 360 140" fill="none">
         <defs>
-          <linearGradient id="base-line" x1="34" y1="104" x2="306" y2="48" gradientUnits="userSpaceOnUse">
+          <linearGradient id="base-line" x1="30" y1="108" x2="320" y2="48" gradientUnits="userSpaceOnUse">
             <stop stopColor="#C9D9C8" />
             <stop offset="0.55" stopColor="#7E988C" />
             <stop offset="1" stopColor="#4A7763" />
           </linearGradient>
         </defs>
         <path
-          d="M38 104C82 92 118 84 151 86C197 88 225 63 270 54C289 50 308 49 324 50"
+          d="M32 108C79 95 123 86 161 87C212 89 241 61 286 52C301 49 316 47 330 47"
           stroke="url(#base-line)"
           strokeWidth="3.5"
           strokeLinecap="round"
         />
-        <circle cx="72" cy="95" r="17" fill="rgba(255,255,255,0.96)" stroke="#D9E4D7" />
-        <circle cx="162" cy="85" r="19" fill="rgba(255,255,255,0.96)" stroke="#D9E4D7" />
-        <circle cx="298" cy="63" r="22" fill="rgba(255,255,255,0.97)" stroke="#D9E4D7" />
       </svg>
-      <div className="absolute left-[56px] top-[74px] rounded-full bg-white/95 p-2 shadow-sm">
+      <div className="absolute left-[54px] top-[82px] rounded-full bg-white/95 p-2 shadow-sm">
         <Boxes className="h-4 w-4 text-[#8a6f4d]" />
       </div>
-      <div className="absolute left-[146px] top-[65px] rounded-full bg-white/95 p-2 shadow-sm">
+      <div className="absolute left-[155px] top-[74px] rounded-full bg-white/95 p-2 shadow-sm">
         <PlugZap className="h-4 w-4 text-[#68826e]" />
       </div>
-      <div className="absolute left-[279px] top-[42px] rounded-full bg-white/98 p-2.5 shadow-md">
+      <div className="absolute left-[292px] top-[44px] rounded-full bg-white/98 p-2.5 shadow-md">
         <CheckCircle2 className="h-5 w-5 text-[#3f755f]" />
       </div>
     </div>
@@ -105,7 +102,7 @@ function ClusterVisual({
   accent: string;
 }) {
   return (
-    <div className="relative h-full min-h-[76px] overflow-hidden rounded-[22px] border border-[rgba(201,189,166,0.22)] bg-[linear-gradient(145deg,rgba(255,252,247,0.9),rgba(247,241,231,0.76))] lg:min-h-[84px]">
+    <div className="relative h-full min-h-[96px] overflow-hidden rounded-[22px] border border-[rgba(201,189,166,0.22)] bg-[linear-gradient(145deg,rgba(255,252,247,0.9),rgba(247,241,231,0.76))]">
       <div className="absolute inset-x-4 top-4 h-px bg-gradient-to-r from-transparent via-[#d7cdbd] to-transparent" />
       <div className="absolute left-5 top-5 flex h-12 w-12 items-center justify-center rounded-[18px] border border-white/80 bg-white/90 shadow-sm">
         <div style={{ color: accent }}>{icon}</div>
@@ -128,14 +125,14 @@ export default function DashboardPage() {
   const shareLinks = summary?.shareLinks;
 
   return (
-    <section className="space-y-4 lg:space-y-5">
+    <section className="space-y-4 lg:space-y-5 xl:pt-[17px]">
       <DashboardHero
         title="Resumo Geral"
         description="Uma visão operacional clara da Base Geral, integrações, categorias, catálogos e links de compartilhamento."
       />
 
-      <div className="grid gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-7">
+      <div className="grid gap-4 xl:grid-cols-[551px_528px] xl:gap-x-[25px] xl:gap-y-[26px]">
+        <div className="space-y-4 xl:space-y-[26px]">
           <DashboardStatCard
             eyebrow="Painel central"
             title="Base Geral"
@@ -163,36 +160,9 @@ export default function DashboardPage() {
               </>
             }
             visual={<BaseFlowVisual />}
-            className="min-h-[304px] lg:min-h-[324px]"
+            className="min-h-[325px] xl:h-[325px]"
           />
-        </div>
 
-        <div className="xl:col-span-5">
-          <DashboardStatCard
-            eyebrow="Estrutura"
-            title="Categorias"
-            actionHref="/dashboard/base-categories"
-            actionLabel="Gerenciar Categorias"
-            body={
-              <>
-                <p className="text-[15px] font-semibold leading-6 text-[var(--dashboard-title)]">
-                  {isLoading
-                    ? "Carregando categorias..."
-                    : `Categorias: ${categories?.categoriesTotal ?? 0} | Subcategoria: ${categories?.subcategoriesTotal ?? 0}`}
-                </p>
-                <p className="text-sm leading-6">
-                  {isError
-                    ? "Não foi possível carregar a estrutura de categorias."
-                    : "Estruture a navegação da Base Geral e dê clareza ao catálogo."}
-                </p>
-              </>
-            }
-            visual={<ClusterVisual accent="#7c7f6c" icon={<FolderTree className="h-7 w-7" />} />}
-            className="min-h-[304px] lg:min-h-[324px]"
-          />
-        </div>
-
-        <div className="xl:col-span-4">
           <DashboardStatCard
             eyebrow="Conectores"
             title="Integrações Ativas"
@@ -217,11 +187,34 @@ export default function DashboardPage() {
               </>
             }
             visual={<ClusterVisual accent="#4c7b66" icon={<PlugZap className="h-7 w-7" />} />}
-            className="min-h-[188px] lg:min-h-[196px]"
+            className="min-h-[245px] xl:h-[245px]"
           />
         </div>
 
-        <div className="xl:col-span-4">
+        <div className="space-y-4 xl:space-y-[25px]">
+          <DashboardStatCard
+            eyebrow="Estrutura"
+            title="Categorias"
+            actionHref="/dashboard/base-categories"
+            actionLabel="Gerenciar Categorias"
+            body={
+              <>
+                <p className="text-[15px] font-semibold leading-6 text-[var(--dashboard-title)]">
+                  {isLoading
+                    ? "Carregando categorias..."
+                    : `Categorias: ${categories?.categoriesTotal ?? 0} | Subcategoria: ${categories?.subcategoriesTotal ?? 0}`}
+                </p>
+                <p className="text-sm leading-6">
+                  {isError
+                    ? "Não foi possível carregar a estrutura de categorias."
+                    : "Estruture a navegação da Base Geral e dê clareza ao catálogo."}
+                </p>
+              </>
+            }
+            visual={<ClusterVisual accent="#7c7f6c" icon={<FolderTree className="h-7 w-7" />} />}
+            className="min-h-[167px] xl:h-[167px]"
+          />
+
           <DashboardStatCard
             eyebrow="Catálogos"
             title="Catálogos Criados"
@@ -242,11 +235,9 @@ export default function DashboardPage() {
               </>
             }
             visual={<ClusterVisual accent="#8c7251" icon={<ScrollText className="h-7 w-7" />} />}
-            className="min-h-[188px] lg:min-h-[196px]"
+            className="min-h-[189px] xl:h-[189px]"
           />
-        </div>
 
-        <div className="xl:col-span-4">
           <DashboardStatCard
             eyebrow="Distribuição"
             title="Links de Compartilhamento"
@@ -267,7 +258,7 @@ export default function DashboardPage() {
               </>
             }
             visual={<ClusterVisual accent="#3f6c5a" icon={<Link2 className="h-7 w-7" />} />}
-            className="min-h-[188px] lg:min-h-[196px]"
+            className="min-h-[190px] xl:h-[190px]"
           />
         </div>
       </div>
