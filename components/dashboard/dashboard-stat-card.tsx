@@ -56,8 +56,8 @@ export function DashboardStatCard({
       </div>
 
       {compact ? (
-        <div className="relative min-w-0 text-[var(--dashboard-subtitle)]">
-          <div className="space-y-1.5 xl:pr-[9.75rem]">{body}</div>
+        <div className="relative min-w-0 flex-1 text-[var(--dashboard-subtitle)]">
+          <div className="flex flex-col space-y-1.5 xl:pr-[9.75rem]">{body}</div>
           {visual ? (
             <div className="mt-2 min-h-[84px] xl:pointer-events-none xl:absolute xl:right-0 xl:top-1/2 xl:mt-0 xl:w-[9rem] xl:-translate-y-1/2 xl:min-h-[96px]">
               {visual}
@@ -65,7 +65,7 @@ export function DashboardStatCard({
           ) : null}
         </div>
       ) : (
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.12fr)_minmax(11rem,0.88fr)] xl:items-center xl:gap-4">
+        <div className="grid flex-1 gap-3 xl:grid-cols-[minmax(0,1.12fr)_minmax(11rem,0.88fr)] xl:items-center xl:gap-4">
           <div className="space-y-2 text-[var(--dashboard-subtitle)]">{body}</div>
           {visual ? <div className="min-h-[96px] xl:min-h-[126px]">{visual}</div> : null}
         </div>

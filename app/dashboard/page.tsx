@@ -125,14 +125,17 @@ export default function DashboardPage() {
   const shareLinks = summary?.shareLinks;
 
   return (
-    <section className="flex flex-col gap-3 lg:gap-3.5 xl:gap-4 xl:pt-1">
+    <section className="flex min-h-0 flex-1 flex-col gap-2.5 lg:gap-3 xl:gap-3.5">
       <DashboardHero
         title="Resumo Geral"
         description="Uma visão operacional clara da Base Geral, integrações, categorias, catálogos e links de compartilhamento."
+        className="flex-shrink-0"
       />
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.5fr)_minmax(21rem,0.96fr)] xl:items-start xl:gap-4 2xl:gap-5">
-        <div className="grid auto-rows-min gap-3 xl:gap-4 2xl:gap-5">
+      {/* Grid principal de cards — preenche o espaço disponível */}
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 lg:flex-row lg:gap-3 xl:gap-3.5">
+        {/* Coluna Esquerda: Base Geral + Integrações */}
+        <div className="flex min-h-0 flex-col gap-2.5 lg:flex-[1.18] lg:gap-3 xl:gap-3.5">
           <DashboardStatCard
             eyebrow="Painel central"
             title="Base Geral"
@@ -160,7 +163,7 @@ export default function DashboardPage() {
               </>
             }
             visual={<BaseFlowVisual />}
-            className="min-h-[18rem] xl:min-h-[clamp(17rem,18vw,18.5rem)]"
+            className="lg:min-h-[clamp(13rem,26dvh,20rem)] lg:flex-[1.6]"
           />
 
           <DashboardStatCard
@@ -188,11 +191,12 @@ export default function DashboardPage() {
             }
             visual={<ClusterVisual accent="#4c7b66" icon={<PlugZap className="h-6 w-6" />} />}
             compact
-            className="min-h-[11.5rem] xl:min-h-[clamp(11rem,11vw,12rem)]"
+            className="lg:min-h-[clamp(8.5rem,16dvh,13rem)] lg:flex-1"
           />
         </div>
 
-        <div className="grid auto-rows-min gap-3 xl:gap-4 2xl:gap-5">
+        {/* Coluna Direita: Categorias + Catálogos + Links */}
+        <div className="flex min-h-0 flex-col gap-2.5 lg:flex-[0.82] lg:gap-3 xl:gap-3.5">
           <DashboardStatCard
             eyebrow="Estrutura"
             title="Categorias"
@@ -214,7 +218,7 @@ export default function DashboardPage() {
             }
             visual={<ClusterVisual accent="#7c7f6c" icon={<FolderTree className="h-6 w-6" />} />}
             compact
-            className="min-h-[10.25rem] xl:min-h-[clamp(9.75rem,9.4vw,10.75rem)]"
+            className="lg:min-h-[clamp(7rem,12.5dvh,10.5rem)] lg:flex-1"
           />
 
           <DashboardStatCard
@@ -238,7 +242,7 @@ export default function DashboardPage() {
             }
             visual={<ClusterVisual accent="#8c7251" icon={<ScrollText className="h-6 w-6" />} />}
             compact
-            className="min-h-[10.5rem] xl:min-h-[clamp(10rem,9.8vw,11.25rem)]"
+            className="lg:min-h-[clamp(7rem,13dvh,11rem)] lg:flex-1"
           />
 
           <DashboardStatCard
@@ -262,16 +266,17 @@ export default function DashboardPage() {
             }
             visual={<ClusterVisual accent="#3f6c5a" icon={<Link2 className="h-6 w-6" />} />}
             compact
-            className="min-h-[10.5rem] xl:min-h-[clamp(10rem,9.8vw,11.25rem)]"
+            className="lg:min-h-[clamp(7rem,13dvh,11rem)] lg:flex-1"
           />
         </div>
       </div>
 
+      {/* Ações Rápidas — fixo na parte inferior */}
       <DashboardQuickActions
         title="Ações Rápidas"
         description="Atalhos para tarefas comuns no Catálogo Fácil."
         actions={quickActions}
-        className="min-h-[6.25rem] xl:min-h-[clamp(5.75rem,5.8vw,6.5rem)] xl:p-4"
+        className="flex-shrink-0 xl:p-4"
       />
     </section>
   );

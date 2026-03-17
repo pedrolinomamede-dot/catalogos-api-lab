@@ -18,7 +18,7 @@ export default function DashboardLayout({
       <div className="flex h-dvh min-h-0 flex-col lg:pl-[280px]">
         <Header onMenuClick={() => setSidebarOpen((open) => !open)} />
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-5 px-4 pb-6 pt-4 sm:px-5 lg:px-6 lg:pb-8 lg:pt-5 xl:gap-6 xl:px-8 2xl:px-10">
+          <div className="mx-auto flex w-full max-w-[1680px] flex-1 min-h-0 flex-col gap-3 px-4 pb-4 pt-3 sm:px-5 sm:pt-3.5 lg:gap-3.5 lg:px-6 lg:pb-6 lg:pt-4 xl:gap-4 xl:px-8 2xl:px-10">
             {children}
             <DashboardSystemFooter />
           </div>

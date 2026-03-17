@@ -23,7 +23,7 @@ export function DashboardQuickActions({
   className,
 }: DashboardQuickActionsProps) {
   return (
-    <DashboardSurfaceCard className={cn("gap-2 sm:gap-2.5", className)}>
+    <DashboardSurfaceCard className={cn("flex-shrink-0 gap-2 sm:gap-2.5", className)}>
       <div className="space-y-1">
         <h2 className="text-[1.4rem] font-medium leading-none tracking-[-0.04em] text-[var(--dashboard-title)] lg:text-[1.62rem]">
           {title}
