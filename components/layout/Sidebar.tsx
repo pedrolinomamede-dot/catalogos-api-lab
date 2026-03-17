@@ -13,7 +13,6 @@ import {
   PlugZap,
 } from "lucide-react";
 
-import { DashboardSidebarUser } from "@/components/dashboard/dashboard-sidebar-user";
 import { useUiStore } from "@/lib/stores/ui-store";
 import { cn } from "@/lib/utils";
 
@@ -152,7 +151,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </button>
           </div>
 
-          <nav className="flex-1 space-y-3">
+          <nav className="flex-1 space-y-3 overflow-y-auto pb-2">
             {links.map((link) => {
               const active = isActive(pathname, link.href);
               const Icon = link.icon;
@@ -185,10 +184,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               );
             })}
           </nav>
-
-          <div className="border-t border-white/10 pt-4">
-            <DashboardSidebarUser />
-          </div>
         </div>
       </aside>
     </>

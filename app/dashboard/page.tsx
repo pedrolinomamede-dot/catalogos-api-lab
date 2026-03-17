@@ -65,7 +65,7 @@ const quickActions = [
 
 function BaseFlowVisual() {
   return (
-    <div className="relative h-full min-h-[118px] overflow-hidden rounded-[24px] border border-[rgba(196,182,160,0.24)] bg-[radial-gradient(circle_at_top_left,rgba(234,243,233,0.95),rgba(250,245,237,0.94))]">
+    <div className="relative h-full min-h-[110px] overflow-hidden rounded-[24px] border border-[rgba(196,182,160,0.24)] bg-[radial-gradient(circle_at_top_left,rgba(234,243,233,0.95),rgba(250,245,237,0.94))]">
       <svg className="absolute inset-0 h-full w-full" viewBox="0 0 360 140" fill="none">
         <defs>
           <linearGradient id="base-line" x1="30" y1="108" x2="320" y2="48" gradientUnits="userSpaceOnUse">
@@ -102,14 +102,14 @@ function ClusterVisual({
   accent: string;
 }) {
   return (
-    <div className="relative h-full min-h-[96px] overflow-hidden rounded-[22px] border border-[rgba(201,189,166,0.22)] bg-[linear-gradient(145deg,rgba(255,252,247,0.9),rgba(247,241,231,0.76))]">
+    <div className="relative h-full min-h-[84px] overflow-hidden rounded-[22px] border border-[rgba(201,189,166,0.22)] bg-[linear-gradient(145deg,rgba(255,252,247,0.9),rgba(247,241,231,0.76))]">
       <div className="absolute inset-x-4 top-4 h-px bg-gradient-to-r from-transparent via-[#d7cdbd] to-transparent" />
-      <div className="absolute left-5 top-5 flex h-12 w-12 items-center justify-center rounded-[18px] border border-white/80 bg-white/90 shadow-sm">
+      <div className="absolute left-4 top-4 flex h-11 w-11 items-center justify-center rounded-[16px] border border-white/80 bg-white/90 shadow-sm">
         <div style={{ color: accent }}>{icon}</div>
       </div>
-      <div className="absolute right-5 bottom-5 h-10 w-10 rounded-full border border-[rgba(196,182,160,0.3)] bg-white/82" />
-      <div className="absolute right-10 top-8 h-2 w-2 rounded-full bg-[#d6cdbd]" />
-      <div className="absolute right-14 bottom-11 h-1.5 w-1.5 rounded-full bg-[#c6d6c8]" />
+      <div className="absolute right-4 bottom-4 h-9 w-9 rounded-full border border-[rgba(196,182,160,0.3)] bg-white/82" />
+      <div className="absolute right-9 top-7 h-2 w-2 rounded-full bg-[#d6cdbd]" />
+      <div className="absolute right-13 bottom-10 h-1.5 w-1.5 rounded-full bg-[#c6d6c8]" />
     </div>
   );
 }
@@ -125,14 +125,14 @@ export default function DashboardPage() {
   const shareLinks = summary?.shareLinks;
 
   return (
-    <section className="space-y-4 lg:space-y-5 xl:pt-[17px]">
+    <section className="flex flex-col gap-3 lg:gap-3.5 xl:gap-4 xl:pt-1">
       <DashboardHero
         title="Resumo Geral"
         description="Uma visão operacional clara da Base Geral, integrações, categorias, catálogos e links de compartilhamento."
       />
 
-      <div className="grid gap-4 xl:grid-cols-[551px_528px] xl:gap-x-[25px] xl:gap-y-[26px]">
-        <div className="space-y-4 xl:space-y-[26px]">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.5fr)_minmax(21rem,0.96fr)] xl:items-start xl:gap-4 2xl:gap-5">
+        <div className="grid auto-rows-min gap-3 xl:gap-4 2xl:gap-5">
           <DashboardStatCard
             eyebrow="Painel central"
             title="Base Geral"
@@ -160,7 +160,7 @@ export default function DashboardPage() {
               </>
             }
             visual={<BaseFlowVisual />}
-            className="min-h-[325px] xl:h-[325px]"
+            className="min-h-[18rem] xl:min-h-[clamp(17rem,18vw,18.5rem)]"
           />
 
           <DashboardStatCard
@@ -179,19 +179,20 @@ export default function DashboardPage() {
                 >
                   {(integrations?.connected ?? 0) > 0 ? "Conectado" : "Nenhuma integração conectada"}
                 </div>
-                <p className="text-[15px] font-semibold leading-6 text-[var(--dashboard-title)]">
+                <p className="text-[14px] font-semibold leading-5 text-[var(--dashboard-title)]">
                   {isError
                     ? "Não foi possível carregar o resumo das integrações."
                     : formatProviders(integrations?.providers)}
                 </p>
               </>
             }
-            visual={<ClusterVisual accent="#4c7b66" icon={<PlugZap className="h-7 w-7" />} />}
-            className="min-h-[245px] xl:h-[245px]"
+            visual={<ClusterVisual accent="#4c7b66" icon={<PlugZap className="h-6 w-6" />} />}
+            compact
+            className="min-h-[11.5rem] xl:min-h-[clamp(11rem,11vw,12rem)]"
           />
         </div>
 
-        <div className="space-y-4 xl:space-y-[25px]">
+        <div className="grid auto-rows-min gap-3 xl:gap-4 2xl:gap-5">
           <DashboardStatCard
             eyebrow="Estrutura"
             title="Categorias"
@@ -199,20 +200,21 @@ export default function DashboardPage() {
             actionLabel="Gerenciar Categorias"
             body={
               <>
-                <p className="text-[15px] font-semibold leading-6 text-[var(--dashboard-title)]">
+                <p className="text-[14px] font-semibold leading-5 text-[var(--dashboard-title)]">
                   {isLoading
                     ? "Carregando categorias..."
                     : `Categorias: ${categories?.categoriesTotal ?? 0} | Subcategoria: ${categories?.subcategoriesTotal ?? 0}`}
                 </p>
-                <p className="text-sm leading-6">
+                <p className="text-[13px] leading-5">
                   {isError
                     ? "Não foi possível carregar a estrutura de categorias."
                     : "Estruture a navegação da Base Geral e dê clareza ao catálogo."}
                 </p>
               </>
             }
-            visual={<ClusterVisual accent="#7c7f6c" icon={<FolderTree className="h-7 w-7" />} />}
-            className="min-h-[167px] xl:h-[167px]"
+            visual={<ClusterVisual accent="#7c7f6c" icon={<FolderTree className="h-6 w-6" />} />}
+            compact
+            className="min-h-[10.25rem] xl:min-h-[clamp(9.75rem,9.4vw,10.75rem)]"
           />
 
           <DashboardStatCard
@@ -222,20 +224,21 @@ export default function DashboardPage() {
             actionLabel="Abrir Catálogos"
             body={
               <>
-                <p className="text-[15px] font-semibold leading-6 text-[var(--dashboard-title)]">
+                <p className="text-[14px] font-semibold leading-5 text-[var(--dashboard-title)]">
                   {isLoading
                     ? "Carregando catálogos..."
                     : `Catálogos: ${catalogs?.total ?? 0} | Itens: ${catalogs?.itemsTotal ?? 0}`}
                 </p>
-                <p className="text-sm leading-6 text-[var(--dashboard-subtitle)]">
+                <p className="text-[13px] leading-5 text-[var(--dashboard-subtitle)]">
                   {isError
                     ? "Não foi possível carregar o resumo de catálogos."
                     : "Monte catálogos, organize os itens e faça o download do material para distribuição."}
                 </p>
               </>
             }
-            visual={<ClusterVisual accent="#8c7251" icon={<ScrollText className="h-7 w-7" />} />}
-            className="min-h-[189px] xl:h-[189px]"
+            visual={<ClusterVisual accent="#8c7251" icon={<ScrollText className="h-6 w-6" />} />}
+            compact
+            className="min-h-[10.5rem] xl:min-h-[clamp(10rem,9.8vw,11.25rem)]"
           />
 
           <DashboardStatCard
@@ -245,20 +248,21 @@ export default function DashboardPage() {
             actionLabel="Abrir Share Links"
             body={
               <>
-                <p className="text-[15px] font-semibold leading-6 text-[var(--dashboard-title)]">
+                <p className="text-[14px] font-semibold leading-5 text-[var(--dashboard-title)]">
                   {isLoading
                     ? "Carregando share links..."
                     : `Ativos: ${shareLinks?.active ?? 0} | Revogados: ${shareLinks?.revoked ?? 0}`}
                 </p>
-                <p className="text-sm leading-6 text-[var(--dashboard-subtitle)]">
+                <p className="text-[13px] leading-5 text-[var(--dashboard-subtitle)]">
                   {isError
                     ? "Não foi possível carregar o resumo dos links."
                     : "Compartilhe catálogos e acompanhe o material publicado com links reais do sistema, criados por você."}
                 </p>
               </>
             }
-            visual={<ClusterVisual accent="#3f6c5a" icon={<Link2 className="h-7 w-7" />} />}
-            className="min-h-[190px] xl:h-[190px]"
+            visual={<ClusterVisual accent="#3f6c5a" icon={<Link2 className="h-6 w-6" />} />}
+            compact
+            className="min-h-[10.5rem] xl:min-h-[clamp(10rem,9.8vw,11.25rem)]"
           />
         </div>
       </div>
@@ -267,6 +271,7 @@ export default function DashboardPage() {
         title="Ações Rápidas"
         description="Atalhos para tarefas comuns no Catálogo Fácil."
         actions={quickActions}
+        className="min-h-[6.25rem] xl:min-h-[clamp(5.75rem,5.8vw,6.5rem)] xl:p-4"
       />
     </section>
   );
