@@ -31,15 +31,15 @@ export function DashboardStatCard({
   return (
     <DashboardSurfaceCard
       className={cn(
-        "flex flex-col",
-        compact ? "xl:p-5" : "",
-        compact ? "gap-2.5 sm:gap-3" : "gap-3 sm:gap-3.5",
+        "dashboard-compact-card-gap flex flex-col",
+        compact ? "lg:p-4" : "",
+        compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-2.5",
         className,
       )}
     >
       <div className="space-y-1">
         {eyebrow ? (
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#6f665b]">
+          <p className="dashboard-compact-eyebrow text-xs font-semibold uppercase tracking-[0.28em] text-[#6f665b]">
             {eyebrow}
           </p>
         ) : null}
@@ -57,17 +57,17 @@ export function DashboardStatCard({
 
       {compact ? (
         <div className="relative min-w-0 flex-1 text-[var(--dashboard-subtitle)]">
-          <div className="flex flex-col space-y-1.5 xl:pr-[9.75rem]">{body}</div>
+          <div className="dashboard-compact-card-body flex flex-col space-y-1.5 lg:pr-[9.75rem]">{body}</div>
           {visual ? (
-            <div className="mt-2 min-h-[84px] xl:pointer-events-none xl:absolute xl:right-0 xl:top-1/2 xl:mt-0 xl:w-[9rem] xl:-translate-y-1/2 xl:min-h-[96px]">
+            <div className="dashboard-compact-card-visual mt-2 min-h-[68px] lg:pointer-events-none lg:absolute lg:right-0 lg:top-1/2 lg:mt-0 lg:w-[9rem] lg:-translate-y-1/2 lg:min-h-[76px]">
               {visual}
             </div>
           ) : null}
         </div>
       ) : (
-        <div className="grid flex-1 gap-3 xl:grid-cols-[minmax(0,1.12fr)_minmax(11rem,0.88fr)] xl:items-center xl:gap-4">
+        <div className="grid flex-1 gap-3 lg:grid-cols-[minmax(0,1.12fr)_minmax(9rem,0.88fr)] lg:items-center lg:gap-3 xl:gap-4">
           <div className="space-y-2 text-[var(--dashboard-subtitle)]">{body}</div>
-          {visual ? <div className="min-h-[96px] xl:min-h-[126px]">{visual}</div> : null}
+          {visual ? <div className="min-h-[80px] lg:min-h-[72px] xl:min-h-[100px]">{visual}</div> : null}
         </div>
       )}
 

@@ -116,7 +116,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex h-full flex-col">
           <div className="flex items-start justify-between pb-6">
             <div className="flex items-start gap-3">
-              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[20px] border border-white/10 bg-white/5 p-2 text-[#d7ebdf] shadow-[0_10px_24px_rgba(0,0,0,0.16)]">
+              <div className="flex h-[3.5rem] w-[3.5rem] items-center justify-center overflow-hidden rounded-[18px] border border-white/12 bg-white/6 p-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.22),0_0_0_1px_rgba(255,250,240,0.08)]">
                 <Image
                   src="/solução-viavel-logo.png"
                   alt="Solução Viável"

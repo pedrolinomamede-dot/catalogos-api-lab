@@ -11,7 +11,7 @@ export function DashboardSurfaceCard({
 }: DashboardSurfaceCardProps) {
   return (
     <div
-      className={cn("dashboard-panel flex flex-col rounded-[28px] p-4 sm:p-5 xl:p-6", className)}
+      className={cn("dashboard-panel flex flex-col rounded-[28px] p-3.5 sm:p-4 lg:p-4 xl:p-5", className)}
       style={style}
       {...props}
     />

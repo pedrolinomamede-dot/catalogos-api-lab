@@ -23,15 +23,15 @@ export function DashboardQuickActions({
   className,
 }: DashboardQuickActionsProps) {
   return (
-    <DashboardSurfaceCard className={cn("flex-shrink-0 gap-2 sm:gap-2.5", className)}>
-      <div className="space-y-1">
-        <h2 className="text-[1.4rem] font-medium leading-none tracking-[-0.04em] text-[var(--dashboard-title)] lg:text-[1.62rem]">
+    <DashboardSurfaceCard className={cn("dashboard-compact-qa flex-shrink-0 gap-1.5 sm:gap-2", className)}>
+      <div className="space-y-0.5">
+        <h2 className="text-[1.2rem] font-medium leading-none tracking-[-0.04em] text-[var(--dashboard-title)] lg:text-[1.35rem]">
           {title}
         </h2>
-        <p className="text-[13px] text-[var(--dashboard-subtitle)] lg:text-sm">{description}</p>
+        <p className="dashboard-compact-qa-desc text-[13px] text-[var(--dashboard-subtitle)] lg:text-sm">{description}</p>
       </div>
 
-      <div className="mt-0.5 flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         {actions.map((action) => (
           <Button
             key={action.href}

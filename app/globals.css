@@ -42,7 +42,11 @@
   --dashboard-shell-bg: #ede7dc;
   --dashboard-panel-bg: rgba(255, 251, 244, 0.96);
   --dashboard-panel-border: rgba(196, 182, 160, 0.32);
-  --dashboard-panel-shadow: 0 14px 28px rgba(25, 18, 10, 0.07);
+  --dashboard-panel-shadow:
+    0 1px 2px rgba(25, 18, 10, 0.04),
+    0 4px 8px rgba(25, 18, 10, 0.05),
+    0 16px 32px rgba(25, 18, 10, 0.07),
+    0 32px 64px rgba(25, 18, 10, 0.03);
   --dashboard-title: #2f261e;
   --dashboard-subtitle: #64584c;
   --dashboard-accent: #2e6c58;
@@ -140,16 +144,67 @@ textarea {
   .dashboard-panel-soft {
     border: 1px solid rgba(196, 182, 160, 0.2);
     background: rgba(255, 253, 248, 0.92);
-    box-shadow: 0 10px 24px rgba(25, 18, 10, 0.045);
+    box-shadow:
+      0 2px 6px rgba(25, 18, 10, 0.03),
+      0 10px 24px rgba(25, 18, 10, 0.045);
   }
 
   .dashboard-sidebar-active {
     background:
-      linear-gradient(135deg, rgba(255, 252, 245, 0.2), rgba(255, 252, 245, 0.08));
-    border: 1px solid rgba(255, 250, 240, 0.28);
+      linear-gradient(135deg, rgba(255, 252, 245, 0.22), rgba(255, 252, 245, 0.06));
+    border: 1px solid rgba(255, 250, 240, 0.32);
     box-shadow:
       0 0 0 1px var(--dashboard-sidebar-active-ring),
-      0 8px 22px rgba(5, 22, 17, 0.28),
-      inset 0 0 14px rgba(255, 251, 244, 0.14);
+      0 0 20px rgba(160, 210, 185, 0.22),
+      0 8px 22px rgba(5, 22, 17, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 0 18px rgba(255, 251, 244, 0.13);
+  }
+}
+
+/* Viewport-height adaptive: compress text/spacing, keep illustrations */
+@media (max-height: 840px) and (min-width: 1024px) {
+  .dashboard-compact-hero-desc {
+    display: none;
+  }
+
+  .dashboard-compact-hero-divider {
+    display: none;
+  }
+
+  .dashboard-compact-qa {
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+  }
+
+  .dashboard-compact-qa-desc {
+    display: none;
+  }
+
+  .dashboard-compact-card-gap {
+    gap: 0.375rem !important;
+    padding-top: 0.625rem !important;
+    padding-bottom: 0.625rem !important;
+  }
+}
+
+/* Very short screens: also hide illustrations */
+@media (max-height: 720px) and (min-width: 1024px) {
+  .dashboard-compact-card-visual {
+    display: none;
+  }
+
+  .dashboard-compact-card-body {
+    padding-right: 0 !important;
+  }
+
+  .dashboard-compact-eyebrow {
+    display: none;
+  }
+
+  .dashboard-compact-card-gap {
+    gap: 0.25rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
   }
 }

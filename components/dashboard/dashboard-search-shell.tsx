@@ -27,7 +27,10 @@ export function DashboardSearchShell({
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex h-10 w-full items-center rounded-full border border-[#ddd1c2] bg-[#fffaf3] px-4 text-[14px] text-[#7a7267] sm:h-12 sm:px-5 sm:text-[15px] lg:h-[52px]">
+          <div
+            className="flex h-10 w-full items-center rounded-full border border-[#ddd1c2] bg-[#fffaf3] px-4 text-[14px] text-[#7a7267] sm:h-12 sm:px-5 sm:text-[15px] lg:h-[52px]"
+            style={{ boxShadow: "inset 0 2px 5px rgba(25, 18, 10, 0.08)" }}
+          >
             <span className="truncate sm:hidden">Busque...</span>
             <span className="hidden truncate sm:block">
               Busque por produtos, categorias ou status de integração...
