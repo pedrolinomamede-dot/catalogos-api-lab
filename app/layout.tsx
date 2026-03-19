@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Fraunces, Manrope, Playfair_Display } from "next/font/google";
+import { Fraunces, Inter, Playfair_Display } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { Providers } from "@/lib/providers";
 import "./globals.css";
 
-const manrope = Manrope({
+const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
 });
@@ -38,7 +38,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body
-        className={`${manrope.variable} ${fraunces.variable} ${playfairDisplay.variable}`}
+        className={`${inter.variable} ${fraunces.variable} ${playfairDisplay.variable}`}
       >
         <Providers>{children}</Providers>
         <ServiceWorkerRegister />

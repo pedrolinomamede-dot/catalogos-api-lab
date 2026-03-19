@@ -18,18 +18,18 @@ export function PageHeader({
   return (
     <div className="space-y-3">
       {breadcrumbs ? (
-        <div className="text-sm text-muted-foreground">{breadcrumbs}</div>
+        <div className="text-sm text-white/50">{breadcrumbs}</div>
       ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
+          <h1 className="text-2xl font-semibold text-[#D8CFBC]">{title}</h1>
           {description ? (
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-sm text-white/60">{description}</p>
           ) : null}
         </div>
         {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
       </div>
-      <Separator />
+      <Separator className="bg-white/10" />
     </div>
   );
 }

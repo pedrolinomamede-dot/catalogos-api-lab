@@ -15,10 +15,10 @@ export default function DashboardLayout({
   return (
     <div className="dashboard-shell h-dvh min-h-dvh text-foreground">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex h-dvh min-h-0 flex-col lg:pl-[280px]">
+      <div className="flex h-dvh min-h-0 flex-col lg:pl-[292px]">
         <Header onMenuClick={() => setSidebarOpen((open) => !open)} />
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto flex w-full max-w-[1680px] flex-1 min-h-0 flex-col gap-2 px-4 pb-2 pt-2 sm:px-5 sm:pt-2.5 lg:gap-2.5 lg:px-6 lg:pb-3 lg:pt-2.5 xl:gap-3 xl:px-8 2xl:px-10">
+          <div className="mx-auto flex w-full max-w-[1680px] flex-1 min-h-0 flex-col gap-2 px-4 pb-2 pt-1 sm:px-5 sm:pt-1.5 lg:gap-2.5 lg:px-6 lg:pb-3 lg:pt-1 xl:gap-3 xl:px-8 2xl:px-10">
             {children}
             <DashboardSystemFooter />
           </div>

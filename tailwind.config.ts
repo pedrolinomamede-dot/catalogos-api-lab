@@ -56,6 +56,10 @@ const config: Config = {
       boxShadow: {
         soft: "var(--shadow-soft)",
       },
+      fontFamily: {
+        sans: ["var(--font-sans)", "sans-serif"],
+        serif: ["var(--font-editorial)", "serif"],
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

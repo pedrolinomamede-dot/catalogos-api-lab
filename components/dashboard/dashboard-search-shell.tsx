@@ -1,4 +1,4 @@
-import { Bell, Info, Search } from "lucide-react";
+import { Bell, ChevronDown, Search } from "lucide-react";
 
 type DashboardSearchShellProps = {
   showMenuButton?: boolean;
@@ -10,45 +10,33 @@ export function DashboardSearchShell({
   onMenuClick,
 }: DashboardSearchShellProps) {
   return (
-    <div className="flex w-full items-center gap-2.5 sm:gap-3 lg:gap-4 xl:gap-5">
+    <div className="flex w-full items-center justify-end gap-2.5 sm:gap-3">
       {showMenuButton ? (
         <button
           type="button"
           onClick={onMenuClick}
-          className="inline-flex h-9 items-center justify-center rounded-full border border-[rgba(198,181,158,0.5)] bg-[rgba(255,251,245,0.9)] px-4 text-sm font-medium text-[#2f261e] shadow-sm lg:hidden"
+          className="mr-auto inline-flex h-9 items-center justify-center rounded-full border border-white/60 bg-white/30 px-4 text-sm font-medium text-white shadow-sm backdrop-blur-xl lg:hidden"
         >
           Menu
         </button>
       ) : null}
 
-      <div className="dashboard-panel flex min-h-[56px] flex-1 items-center gap-2 rounded-[22px] px-3 py-2 sm:min-h-[64px] sm:gap-3 sm:rounded-[28px] sm:px-4 sm:py-3 lg:min-h-[68px] lg:rounded-[30px] lg:px-4 xl:min-h-[72px] xl:px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f4ecdf] text-[#6a6258] sm:h-10 sm:w-10 lg:h-10 lg:w-10">
-          <Search className="h-4 w-4 sm:h-5 sm:w-5" />
-        </div>
+      {/* Search pill — compact, right-aligned */}
+      <div className="flex h-[38px] w-64 items-center gap-2 rounded-full border border-white/60 bg-white/30 px-4 backdrop-blur-xl transition-all hover:bg-white/40">
+        <Search className="h-4 w-4 shrink-0 text-white/70" />
+        <span className="truncate text-sm text-white/70">Rescan...</span>
+      </div>
 
-        <div className="min-w-0 flex-1">
-          <div
-            className="flex h-10 w-full items-center rounded-full border border-[#ddd1c2] bg-[#fffaf3] px-4 text-[14px] text-[#7a7267] sm:h-12 sm:px-5 sm:text-[15px] lg:h-[52px]"
-            style={{ boxShadow: "inset 0 2px 5px rgba(25, 18, 10, 0.08)" }}
-          >
-            <span className="truncate sm:hidden">Busque...</span>
-            <span className="hidden truncate sm:block">
-              Busque por produtos, categorias ou status de integração...
-            </span>
-          </div>
-        </div>
+      {/* Bell */}
+      <div className="relative flex h-[38px] w-[38px] items-center justify-center rounded-full border border-white/60 bg-white/30 text-white backdrop-blur-xl shadow-[0_4px_4px_rgba(0,0,0,0.50),inset_0_2px_4px_rgba(255,255,255,0.8)] transition-all hover:bg-white/50">
+        <Bell className="h-5 w-5" />
+        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-white bg-[#e63946] shadow-[0_0_5px_rgba(230,57,70,0.5)]" />
+      </div>
 
-        <div className="hidden items-center gap-2.5 sm:flex lg:gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#ddcfbe] bg-[#fffaf4] text-[#2f261e] lg:h-12 lg:w-12 xl:h-[56px] xl:w-[56px] 2xl:h-[60px] 2xl:w-[60px]">
-            <Bell className="h-5 w-5" />
-          </div>
-          <div className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f6eadb,#d2ddcf)] text-sm font-semibold text-[#244438] lg:h-12 lg:w-12 xl:h-[56px] xl:w-[56px] 2xl:h-[60px] 2xl:w-[60px]">
-            EC
-            <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#104d3b] text-white">
-              <Info className="h-3 w-3" />
-            </span>
-          </div>
-        </div>
+      {/* User avatar */}
+      <div className="flex h-[38px] items-center gap-2 rounded-full border border-white/80 bg-gradient-to-b from-[#f8ead6] to-[#d4b380] py-1.5 pl-3.5 pr-3 shadow-[0_4px_4px_rgba(0,0,0,0.50),inset_0_2px_4px_rgba(255,255,255,0.9),inset_0_-2px_4px_rgba(0,0,0,0.1)]">
+        <span className="text-sm font-semibold text-[#3d2e1f] drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]">EC</span>
+        <ChevronDown className="h-3.5 w-3.5 text-[#3d2e1f]/70" />
       </div>
     </div>
   );
