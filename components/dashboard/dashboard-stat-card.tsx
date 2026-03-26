@@ -2,8 +2,10 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { DashboardSurfaceCard } from "@/components/dashboard/dashboard-surface-card";
+import { DashboardSurfaceCard, type GlassVariant } from "@/components/dashboard/dashboard-surface-card";
 import { cn } from "@/lib/utils";
+
+export type ButtonVariant = "dark" | "light" | "outline";
 
 type DashboardStatCardProps = {
   title: string;
@@ -12,10 +14,18 @@ type DashboardStatCardProps = {
   footer?: ReactNode;
   actionHref?: string;
   actionLabel?: string;
-  actionClassName?: string;
   className?: string;
-  compact?: boolean;
-  embossed?: boolean;
+  variant?: GlassVariant;
+  buttonVariant?: ButtonVariant;
+  delay?: number;
+};
+
+const buttonClasses: Record<ButtonVariant, string> = {
+  dark: "bg-[#1c1c1e] text-white hover:bg-black shadow-[4px_8px_12px_rgba(0,0,0,0.25)]",
+  light:
+    "bg-white/20 backdrop-blur-md text-white border border-white/30 hover:bg-white/30 shadow-[3px_6px_10px_rgba(0,0,0,0.10)]",
+  outline:
+    "bg-white/40 backdrop-blur-sm border border-white/60 text-slate-800 hover:bg-white/60 shadow-[3px_6px_10px_rgba(0,0,0,0.10)]",
 };
 
 export function DashboardStatCard({
@@ -25,94 +35,68 @@ export function DashboardStatCard({
   footer,
   actionHref,
   actionLabel,
-  actionClassName,
   className,
-  compact = false,
-  embossed = false,
+  variant = "glass",
+  buttonVariant = "dark",
+  delay = 0,
 }: DashboardStatCardProps) {
+  const isOnDark = variant === "gradient-purple";
+
   return (
     <DashboardSurfaceCard
-      embossed={embossed}
-      className={cn(
-        "dashboard-compact-card-gap relative flex flex-col",
-        compact ? "gap-2.5 sm:gap-3" : "gap-3 sm:gap-3.5",
-        className,
-      )}
+      variant={variant}
+      delay={delay}
+      className={cn("flex flex-col", className)}
     >
-      {/* Icon — gold embroidered on card */}
-      {Icon ? (
-        <div className={cn("absolute z-20", compact ? "right-3 top-3 sm:right-4 sm:top-4" : "right-4 top-4 sm:right-5 sm:top-5")}>
-          <Icon
+      {/* Header: title + icon */}
+      <div className="flex justify-between items-start mb-4">
+        <h3
+          className={cn(
+            "text-lg font-medium",
+            isOnDark ? "text-white/90" : "text-slate-800",
+          )}
+        >
+          {title}
+        </h3>
+        {Icon ? (
+          <div
             className={cn(
-              "text-[#d4af37]/70 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]",
-              compact ? "h-8 w-8" : "h-10 w-10",
+              "p-2 rounded-full shadow-sm",
+              isOnDark
+                ? "bg-white/20 backdrop-blur-md"
+                : "bg-white/50",
             )}
-            strokeWidth={1.2}
-          />
-        </div>
-      ) : null}
-
-      {/* Title — gold gradient, pulled up */}
-      <h2
-        className={cn(
-          "-mt-2 font-semibold uppercase tracking-[0.12em] drop-shadow-sm",
-          embossed
-            ? "bg-gradient-to-b from-[#fffae6] via-[#f5c518] to-[#996515] bg-clip-text text-transparent"
-            : "text-[var(--dashboard-title)]",
-          compact ? "text-base" : "text-[20px]",
-        )}
-        style={{ fontFamily: "var(--font-editorial)" }}
-      >
-        {title}
-      </h2>
+          >
+            <Icon
+              className={cn(
+                "w-5 h-5",
+                isOnDark ? "text-white" : "text-[#9b8bf4]",
+              )}
+            />
+          </div>
+        ) : null}
+      </div>
 
       {/* Body */}
-      <div
-        className={cn(
-          "flex-1",
-          compact ? "space-y-1" : "space-y-1.5",
-          embossed ? "text-white/70" : "text-[var(--dashboard-subtitle)]",
-        )}
-      >
+      <div className="flex-1">
         {body}
       </div>
 
-      {/* Action button — pushed down */}
-      <div className={cn("mt-auto flex flex-wrap items-center gap-2 pt-2", actionClassName)}>
-        {actionHref && actionLabel ? (
-          embossed ? (
-            <div className="group relative inline-block">
-              <div className="absolute inset-[-2px] z-0 rounded-xl bg-[#f5c518] opacity-40 blur-[5px] transition-all duration-300 group-hover:opacity-60 group-hover:blur-[7px]" />
-              <Link
-                href={actionHref}
-                className={cn(
-                  "relative z-10 inline-flex items-center rounded-xl border border-[#b58b57]/50 text-sm font-bold",
-                  "bg-[#0e2e22] bg-[url('/textura-couro.jpg')] bg-cover bg-center",
-                  "shadow-[0_4px_6px_rgba(0,0,0,0.6),inset_0_2px_4px_rgba(255,255,255,0.15)]",
-                  "transition-all duration-300 hover:-translate-y-0.5 hover:brightness-110",
-                  "h-9 px-4 text-[14px]",
-                )}
-              >
-                <div className="absolute left-1/4 top-0 h-[1px] w-1/2 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent" />
-                <span className="bg-gradient-to-b from-[#fffae6] via-[#f5c518] to-[#996515] bg-clip-text text-transparent">
-                  {actionLabel}
-                </span>
-              </Link>
-            </div>
-          ) : (
-            <Link
-              href={actionHref}
-              className={cn(
-                "inline-flex items-center rounded-full border border-[#c9baa6] bg-[#f8f2e9] px-4 text-sm font-semibold text-[#2f261e] shadow-none hover:bg-[#f0e7d9]",
-                "h-9 px-4 text-[14px]",
-              )}
-            >
-              {actionLabel}
-            </Link>
-          )
-        ) : null}
-        {footer}
-      </div>
+      {/* Action button */}
+      {actionHref && actionLabel ? (
+        <div className="mt-4">
+          <Link
+            href={actionHref}
+            className={cn(
+              "inline-flex items-center justify-center px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 active:scale-95",
+              buttonClasses[buttonVariant],
+            )}
+          >
+            {actionLabel}
+          </Link>
+        </div>
+      ) : null}
+      {footer ? <div className="mt-4">{footer}</div> : null}
     </DashboardSurfaceCard>
   );
 }

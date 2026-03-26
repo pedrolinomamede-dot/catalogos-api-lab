@@ -13,13 +13,10 @@ export function DashboardHero({
 }: DashboardHeroProps) {
   return (
     <section className={cn("flex-shrink-0 space-y-1", className)}>
-      <h1
-        className="text-[1.9rem] font-medium uppercase leading-[0.93] tracking-[-0.05em] text-[var(--dashboard-title)] drop-shadow-md sm:text-[2.3rem] lg:text-[2.3rem] xl:text-[2.5rem]"
-        style={{ fontFamily: "var(--font-editorial)" }}
-      >
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
         {title}
       </h1>
-      <p className="mt-1 text-sm font-medium text-white">
+      <p className="mt-1 text-sm text-slate-500">
         {description}
       </p>
     </section>

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { LayoutGrid, Menu, X } from "lucide-react";
 import { DashboardSystemFooter } from "@/components/dashboard/dashboard-system-footer";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { DecorativeSpheres } from "@/components/dashboard/dashboard-decorative-spheres";
 
 export default function DashboardLayout({
   children,
@@ -13,16 +15,44 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="dashboard-shell h-dvh min-h-dvh text-foreground">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex h-dvh min-h-0 flex-col lg:pl-[292px]">
-        <Header onMenuClick={() => setSidebarOpen((open) => !open)} />
-        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto flex w-full max-w-[1680px] flex-1 min-h-0 flex-col gap-2 px-4 pb-2 pt-1 sm:px-5 sm:pt-1.5 lg:gap-2.5 lg:px-6 lg:pb-3 lg:pt-1 xl:gap-3 xl:px-8 2xl:px-10">
+    <div className="dashboard-shell min-h-dvh flex items-center justify-center p-0 md:p-4 lg:p-8 font-sans text-slate-800 selection:bg-[#9b8bf4] selection:text-white">
+      <DecorativeSpheres />
+
+      <div className="relative z-10 w-full max-w-[1400px] h-[100dvh] md:h-[90vh] flex flex-col md:flex-row items-center">
+        {/* Mobile Header */}
+        <div className="md:hidden w-full bg-white/20 backdrop-blur-xl border-b border-white/30 p-4 flex justify-between items-center z-30 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#1c1c1e] to-[#3a3a3c] rounded-lg flex items-center justify-center shadow-md shrink-0">
+              <LayoutGrid className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-lg tracking-tight text-slate-900">Catálogo Fácil</span>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 bg-white/40 rounded-full shadow-sm"
+          >
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+        {/* Overlay for mobile sidebar */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Content Area */}
+        <div className="flex flex-col flex-1 h-full w-full min-w-0 overflow-hidden relative z-20 bg-white/30 md:bg-white/10 backdrop-blur-xl md:backdrop-blur-2xl shadow-none md:shadow-[25px_40px_60px_rgba(0,0,0,0.12),inset_1px_1px_0px_rgba(255,255,255,0.5)] rounded-none md:rounded-[2.5rem] border-0 md:border md:border-white/30 md:border-l-white/20">
+          <Header onMenuClick={() => setSidebarOpen((open) => !open)} />
+          <main className="flex-1 p-6 md:px-8 overflow-y-auto pb-24 md:pb-6">
             {children}
             <DashboardSystemFooter />
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </div>
   );

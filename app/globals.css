@@ -33,23 +33,23 @@
   --ui-border: 214.3 31.8% 91.4%;
   --ui-input: 214.3 31.8% 91.4%;
   --ui-ring: 222.2 84% 4.9%;
-  --dashboard-sidebar-bg: #0f4d3b;
-  --dashboard-sidebar-border: rgba(235, 244, 233, 0.16);
-  --dashboard-sidebar-text: #f4f0e4;
-  --dashboard-sidebar-muted: rgba(234, 242, 228, 0.72);
-  --dashboard-sidebar-active-bg: rgba(255, 251, 242, 0.12);
-  --dashboard-sidebar-active-ring: rgba(247, 242, 229, 0.4);
-  --dashboard-shell-bg: #ede7dc;
-  --dashboard-panel-bg: rgba(255, 251, 244, 0.96);
-  --dashboard-panel-border: rgba(196, 182, 160, 0.32);
-  --dashboard-panel-shadow:
-    0 1px 2px rgba(25, 18, 10, 0.04),
-    0 4px 8px rgba(25, 18, 10, 0.05),
-    0 16px 32px rgba(25, 18, 10, 0.07),
-    0 32px 64px rgba(25, 18, 10, 0.03);
-  --dashboard-title: #D8CFBC;
-  --dashboard-subtitle: rgba(255, 255, 255, 0.7);
-  --dashboard-accent: #2e6c58;
+  --dashboard-sidebar-bg: rgba(255, 255, 255, 0.10);
+  --dashboard-sidebar-border: rgba(255, 255, 255, 0.30);
+  --dashboard-sidebar-text: #334155;
+  --dashboard-sidebar-muted: #64748b;
+  --dashboard-sidebar-active-bg: #222225;
+  --dashboard-sidebar-active-ring: rgba(255, 255, 255, 0.05);
+  --dashboard-shell-bg: transparent;
+  --dashboard-panel-bg: rgba(255, 255, 255, 0.10);
+  --dashboard-panel-border: rgba(255, 255, 255, 0.50);
+  --dashboard-panel-shadow: 25px 40px 60px rgba(0, 0, 0, 0.12), inset 1px 1px 0px rgba(255, 255, 255, 0.5);
+  --dashboard-title: #0f172a;
+  --dashboard-subtitle: #64748b;
+  --dashboard-accent: #9b8bf4;
+  --glass-purple-from: rgba(155, 139, 244, 0.25);
+  --glass-purple-to: rgba(122, 101, 232, 0.25);
+  --glass-blue-from: rgba(224, 234, 252, 0.25);
+  --glass-blue-to: rgba(207, 222, 243, 0.25);
 }
 
 .dark {
@@ -135,15 +135,16 @@ textarea {
     border: 1px solid var(--dashboard-panel-border);
     background: var(--dashboard-panel-bg);
     box-shadow: var(--dashboard-panel-shadow);
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 
   .dashboard-panel-soft {
-    border: 1px solid rgba(196, 182, 160, 0.2);
-    background: rgba(255, 253, 248, 0.92);
-    box-shadow:
-      0 2px 6px rgba(25, 18, 10, 0.03),
-      0 10px 24px rgba(25, 18, 10, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.30);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 15px 25px 30px rgba(0, 0, 0, 0.08), inset 1px 1px 0px rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
 }

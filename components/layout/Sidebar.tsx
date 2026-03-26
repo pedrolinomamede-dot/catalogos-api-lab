@@ -2,15 +2,16 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  ChartNoAxesCombined,
+  Home,
   Database,
-  FileStack,
   FolderKanban,
-  Link2,
   PlugZap,
+  FileStack,
+  Link2,
+  LayoutGrid,
+  X,
 } from "lucide-react";
 
 import { useUiStore } from "@/lib/stores/ui-store";
@@ -24,44 +25,16 @@ type SidebarProps = {
 type SidebarLink = {
   href: string;
   label: string;
-  icon: typeof ChartNoAxesCombined;
-  section?: string;
+  icon: typeof Home;
 };
 
 const links: SidebarLink[] = [
-  {
-    href: "/dashboard",
-    label: "Visão Geral",
-    icon: ChartNoAxesCombined,
-  },
-  {
-    href: "/dashboard/base-products",
-    label: "Base Geral",
-    icon: Database,
-    section: "Base Geral",
-  },
-  {
-    href: "/dashboard/base-categories",
-    label: "Categorias",
-    icon: FolderKanban,
-  },
-  {
-    href: "/dashboard/integrations",
-    label: "Integrações",
-    icon: PlugZap,
-    section: "Integrações",
-  },
-  {
-    href: "/dashboard/catalogs",
-    label: "Catálogos",
-    icon: FileStack,
-    section: "Catálogos",
-  },
-  {
-    href: "/dashboard/share-links",
-    label: "Share Links",
-    icon: Link2,
-  },
+  { href: "/dashboard", label: "Visão Geral", icon: Home },
+  { href: "/dashboard/base-products", label: "Base Geral", icon: Database },
+  { href: "/dashboard/base-categories", label: "Categorias", icon: FolderKanban },
+  { href: "/dashboard/integrations", label: "Integrações", icon: PlugZap },
+  { href: "/dashboard/catalogs", label: "Catálogos", icon: FileStack },
+  { href: "/dashboard/share-links", label: "Share Links", icon: Link2 },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -90,129 +63,72 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     onClose();
   };
 
-  let renderedSection: string | null = null;
-
   return (
-    <>
-      <div
-        className={`fixed inset-0 z-30 bg-[#07140f]/55 transition-opacity lg:hidden ${
-          isMobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
+    <aside
+      className={cn(
+        "fixed md:relative top-0 left-0 h-full md:h-[98%] w-[280px] md:w-[240px] p-6 md:pr-12 md:-mr-8 flex flex-col shrink-0 overflow-y-auto z-50 md:z-10",
+        "bg-white/80 md:bg-white/10 backdrop-blur-3xl md:backdrop-blur-2xl",
+        "shadow-2xl md:shadow-[-20px_40px_80px_rgba(0,0,0,0.15),inset_1px_1px_0px_rgba(255,255,255,0.5)]",
+        "rounded-r-3xl md:rounded-l-[2rem] md:rounded-r-none",
+        "border border-white/50 md:border-white/30 md:border-r-transparent",
+        "transition-transform duration-300 ease-in-out",
+        isMobileOpen ? "translate-x-0" : "-translate-x-full",
+        isDesktopOpen ? "md:translate-x-0" : "md:-translate-x-full",
+      )}
+      aria-label="Navegação principal"
+    >
+      {/* Close button inside sidebar for mobile */}
+      <button
         onClick={handleClose}
-        aria-hidden={!isMobileOpen}
-      />
-      <aside
-        className={cn(
-          "fixed top-4 bottom-4 left-4 z-40 w-[260px] transform overflow-hidden rounded-[2rem] px-[14px] py-6 transition-transform duration-200",
-          "bg-[#0e2e22] bg-[url('/textura-couro.jpg')] bg-cover bg-center",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full",
-          isDesktopOpen ? "lg:translate-x-0" : "lg:-translate-x-full",
-        )}
-        style={{
-          border: "1px solid var(--dashboard-sidebar-border)",
-          boxShadow: "8px 0 24px rgba(0,0,0,0.60), inset 0 1px 2px rgba(255,255,255,0.15)",
-        }}
-        aria-label="Navegação principal"
+        className="md:hidden absolute top-6 right-6 p-2 bg-black/5 rounded-full"
       >
-        {/* Dark overlay */}
-        <div className="pointer-events-none absolute inset-0 z-0 bg-black/30" />
-        {/* Inner glow */}
-        <div className="pointer-events-none absolute left-[-30%] top-1/4 z-0 h-1/2 w-[160%] rounded-full bg-[#2a6a55] opacity-15 blur-[80px] mix-blend-screen" />
+        <X className="w-5 h-5" />
+      </button>
 
-        <div className="relative z-10 flex h-full flex-col">
-          {/* Branding */}
-          <div className="flex items-start justify-between pb-6">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/solução-viavel-logo.png"
-                alt="Solução Viável"
-                width={52}
-                height={52}
-                className="h-[3.2rem] w-[3.2rem] shrink-0 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)]"
-                priority
-              />
-              <div className="space-y-1 pt-1">
-                <p
-                  className="bg-gradient-to-b from-[#fffae6] via-[#f5c518] to-[#996515] bg-clip-text text-[2rem] font-medium leading-[0.92] tracking-[-0.05em] text-transparent drop-shadow-[0_1.5px_0.5px_rgba(0,0,0,0.95)]"
-                  style={{ fontFamily: "var(--font-editorial)" }}
-                >
-                  Catálogo
-                  <br />
-                  Fácil
-                </p>
-                <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[#f5c518]/50">
-                  Solução viável
-                </p>
-              </div>
-            </div>
+      {/* Subtle inner shadow for depth */}
+      <div className="hidden md:block absolute inset-0 pointer-events-none rounded-l-[2rem]" />
 
-            <button
-              type="button"
-              onClick={handleClose}
-              className="rounded-full border border-[#d4af37]/30 px-3 py-1 text-xs font-medium text-[#f5c518]/60 lg:hidden"
-              aria-label="Fechar menu"
-            >
-              Fechar
-            </button>
+      <div className="relative z-10 flex flex-col h-full mt-12 md:mt-0">
+        {/* Logo */}
+        <div className="hidden md:flex items-center gap-3 mb-10 px-2">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#1c1c1e] to-[#3a3a3c] rounded-xl flex items-center justify-center shadow-md shrink-0">
+            <LayoutGrid className="w-5 h-5 text-white" />
           </div>
-
-          {/* Nav */}
-          <nav className="flex-1 space-y-3 overflow-y-auto pb-2">
-            {links.map((link) => {
-              const active = isActive(pathname, link.href);
-              const Icon = link.icon;
-              const showSection = link.section && link.section !== renderedSection;
-              if (showSection) {
-                renderedSection = link.section ?? null;
-              }
-
-              return (
-                <div key={link.href} className="space-y-2">
-                  {showSection ? (
-                    <p className="px-3 pt-3 text-xs font-semibold uppercase tracking-[0.26em] text-[#f5c518]/40">
-                      {link.section}
-                    </p>
-                  ) : null}
-                  <Link
-                    href={link.href}
-                    onClick={handleClose}
-                    className={cn(
-                      "relative flex items-center gap-3 overflow-hidden rounded-[24px] border px-4 py-3 text-[20px] font-medium transition-all duration-300",
-                      active
-                        ? "border-[#d4af37]/30 bg-gradient-to-r from-black/20 to-transparent shadow-[inset_0_1px_2px_rgba(255,255,255,0.05),0_4px_4px_rgba(0,0,0,0.50)]"
-                        : "border-transparent hover:bg-black/10",
-                    )}
-                  >
-                    {/* Gold left bar indicator (active only) */}
-                    {active && (
-                      <div className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-[#fffae6] via-[#f5c518] to-[#996515] shadow-[0_0_8px_rgba(245,197,24,0.6)]" />
-                    )}
-                    <div
-                      className={cn(
-                        "relative z-10 flex items-center gap-3",
-                        active
-                          ? "text-[#f5c518] drop-shadow-[0_1.5px_0.5px_rgba(0,0,0,0.95)]"
-                          : "text-[#f5c518]/50",
-                      )}
-                    >
-                      <Icon className="h-5 w-5 shrink-0" />
-                      <span
-                        className={cn(
-                          active
-                            ? "bg-gradient-to-b from-[#fffae6] via-[#f5c518] to-[#996515] bg-clip-text font-semibold text-transparent"
-                            : "",
-                        )}
-                      >
-                        {link.label}
-                      </span>
-                    </div>
-                  </Link>
-                </div>
-              );
-            })}
-          </nav>
+          <span className="font-bold text-xl tracking-tight text-slate-900">
+            Catálogo Fácil
+          </span>
         </div>
-      </aside>
-    </>
+
+        {/* Nav */}
+        <nav className="space-y-2">
+          {links.map((link) => {
+            const active = isActive(pathname, link.href);
+            const Icon = link.icon;
+
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={handleClose}
+                className={cn(
+                  "flex items-center gap-3 px-5 py-3.5 rounded-2xl transition-all duration-300 relative overflow-hidden",
+                  active
+                    ? "bg-[#222225] text-white/90 shadow-[0_4px_12px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.05)]"
+                    : "text-slate-600 hover:bg-white/60 hover:text-slate-900 hover:shadow-sm",
+                )}
+              >
+                {active && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent pointer-events-none" />
+                )}
+                <div className="relative z-10 flex items-center gap-3">
+                  <Icon className="w-5 h-5 shrink-0" />
+                  <span className="font-medium text-[15px]">{link.label}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </aside>
   );
 }
