@@ -146,6 +146,7 @@ export async function GET(
 
   const modeParam = request.nextUrl.searchParams.get("mode")?.trim().toLowerCase();
   const variant = modeParam === "editavel" ? "editable" : "final";
+  const themeParam = request.nextUrl.searchParams.get("theme")?.trim().toLowerCase() ?? null;
 
   let pdfData: ShareLinkPdfData | null;
   try {
@@ -190,6 +191,7 @@ export async function GET(
               pdfStripeFontFamily: true,
               pdfStripeFontWeight: true,
               pdfStripeFontSize: true,
+              pdfTheme: true,
             },
           },
         },
@@ -345,12 +347,16 @@ export async function GET(
             pdfStripeFontFamily: entry.catalog.pdfStripeFontFamily,
             pdfStripeFontWeight: entry.catalog.pdfStripeFontWeight,
             pdfStripeFontSize: entry.catalog.pdfStripeFontSize,
+            pdfTheme: entry.catalog.pdfTheme,
             products,
           };
         }),
       );
 
-      return {
+      const resolvedTheme =
+        themeParam ?? catalogs[0]?.pdfTheme ?? null;
+
+      const result: ShareLinkPdfData = {
         brandName: brand?.name ?? "Catalogo",
         brandLogoUrl: brand?.logoUrl ?? null,
         shareLinkName: shareLink.name,
@@ -358,6 +364,12 @@ export async function GET(
         catalogCount: catalogs.length,
         catalogs,
       };
+
+      if (resolvedTheme) {
+        (result as Record<string, unknown>).templateVersion = resolvedTheme;
+      }
+
+      return result;
     });
   } catch (error) {
     if (isPrismaMissingColumnError(error)) {

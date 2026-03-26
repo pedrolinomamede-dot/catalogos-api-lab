@@ -200,13 +200,11 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
       width: "210mm",
       height: "373.3mm",
       printBackground: true,
-      displayHeaderFooter: true,
-      headerTemplate: buildHeaderTemplate(),
-      footerTemplate: buildFooterTemplate(),
+      displayHeaderFooter: false,
       margin: {
         top: "0mm",
         right: "0mm",
-        bottom: "8mm",
+        bottom: "0mm",
         left: "0mm",
       },
     });

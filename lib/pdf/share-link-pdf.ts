@@ -59,6 +59,7 @@ export type ShareLinkPdfCatalog = {
   pdfStripeFontFamily?: string | null;
   pdfStripeFontWeight?: number | null;
   pdfStripeFontSize?: number | null;
+  pdfTheme?: string | null;
   products: ShareLinkPdfProduct[];
 };
 

@@ -1,5 +1,5 @@
 export type Color = [number, number, number];
-export type PdfTemplateVersion = "classic" | "corporate_v1" | "corporate_v2" | "corporate_v3";
+export type PdfTemplateVersion = "classic" | "corporate_v1" | "corporate_v2" | "corporate_v3" | "dark_neon" | "glassmorphism";
 
 export type PdfTheme = {
   version: PdfTemplateVersion;

@@ -264,6 +264,7 @@ model CatalogV2 {
   pdfStripeFontFamily   String?
   pdfStripeFontWeight   Int?
   pdfStripeFontSize     Int?
+  pdfTheme              String?
   items                 CatalogItemV2[]
   shareLinks            ShareLinkCatalogV2[]
   createdAt             DateTime             @default(now())

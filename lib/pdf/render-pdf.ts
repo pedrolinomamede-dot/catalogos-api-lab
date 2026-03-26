@@ -17,8 +17,14 @@ function isTemplateVersion(value: string | undefined): value is PdfTemplateVersi
     value === "classic" ||
     value === "corporate_v1" ||
     value === "corporate_v2" ||
-    value === "corporate_v3"
+    value === "corporate_v3" ||
+    value === "dark_neon" ||
+    value === "glassmorphism"
   );
+}
+
+function isHtmlOnlyTemplate(version: PdfTemplateVersion): boolean {
+  return version === "dark_neon" || version === "glassmorphism";
 }
 
 function resolveTemplateVersion(value: string | undefined): PdfTemplateVersion {
@@ -66,7 +72,9 @@ export async function renderPdf(
     return generateEditableShareLinkPdf(payload);
   }
 
-  if (engine === "html") {
+  const useHtml = engine === "html" || isHtmlOnlyTemplate(templateVersion);
+
+  if (useHtml) {
     const hasCatalogSpecificBackground = payload.catalogs.some((catalog) => {
       const value =
         typeof catalog.pdfBackgroundImageUrl === "string"
