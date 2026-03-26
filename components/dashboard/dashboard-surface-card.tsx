@@ -1,13 +1,16 @@
-import type { HTMLAttributes } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { motion } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
 export type GlassVariant = "glass" | "gradient-purple" | "gradient-blue";
 
-type DashboardSurfaceCardProps = HTMLAttributes<HTMLDivElement> & {
+type DashboardSurfaceCardProps = {
+  className?: string;
+  style?: CSSProperties;
   variant?: GlassVariant;
   delay?: number;
+  children?: ReactNode;
 };
 
 const glassClasses: Record<GlassVariant, string> = {
@@ -25,7 +28,6 @@ export function DashboardSurfaceCard({
   variant = "glass",
   delay = 0,
   children,
-  ...props
 }: DashboardSurfaceCardProps) {
   return (
     <motion.div
@@ -37,7 +39,6 @@ export function DashboardSurfaceCard({
         className,
       )}
       style={style}
-      {...props}
     >
       {/* Glass Layer */}
       <div
