@@ -10,6 +10,7 @@ import { CatalogAddProductsDialog } from "@/components/admin/catalog-add-product
 import { CatalogFormDialog } from "@/components/admin/catalog-form-dialog";
 import { CatalogImportCsvDialog } from "@/components/admin/catalog-import-csv-dialog";
 import { CatalogPdfBackgroundDialog } from "@/components/admin/catalog-pdf-background-dialog";
+import { CatalogPdfThemeDialog, type PdfThemeOption } from "@/components/admin/catalog-pdf-theme-dialog";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
 import { LoadingState } from "@/components/admin/loading-state";
@@ -85,6 +86,7 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
   const [bulkFailures, setBulkFailures] = useState<CatalogItemFailure[]>([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isThemeDialogOpen, setIsThemeDialogOpen] = useState(false);
 
   const deleteMutation = useDeleteCatalogItemV2(catalogId);
   const createShareLinkMutation = useCreateShareLinkV2();
@@ -167,7 +169,7 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
     return true;
   };
 
-  const handleExportPdf = async (mode: PdfExportMode) => {
+  const handleExportPdf = async (mode: PdfExportMode, theme?: PdfThemeOption) => {
     if (!catalog || isExportingPdf) {
       return;
     }
@@ -183,6 +185,7 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
       const blob = await generatePdfMutation.mutateAsync({
         shareLinkId: shareLink.id,
         mode,
+        theme: theme ?? null,
       });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
@@ -196,6 +199,7 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
       anchor.remove();
       URL.revokeObjectURL(url);
       toastSuccess(mode === "editavel" ? "PDF editavel gerado" : "PDF gerado");
+      setIsThemeDialogOpen(false);
     } catch (err) {
       const message = getErrorMessage(err);
       toastError(message.title, message.description ?? "Tente novamente.");
@@ -247,17 +251,10 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              onClick={() => handleExportPdf("final")}
+              onClick={() => setIsThemeDialogOpen(true)}
               disabled={isExportingPdf}
             >
-              {isExportingPdf ? "Gerando PDF..." : "Exportar PDF final"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleExportPdf("editavel")}
-              disabled={isExportingPdf}
-            >
-              {isExportingPdf ? "Gerando PDF..." : "Exportar PDF editavel"}
+              {isExportingPdf ? "Gerando PDF..." : "Exportar PDF"}
             </Button>
             <Button
               variant="outline"
@@ -487,6 +484,13 @@ export function CatalogDetails({ catalogId }: CatalogDetailsProps) {
         confirmVariant="destructive"
         isLoading={isBulkDeleting}
         onConfirm={handleBulkDelete}
+      />
+
+      <CatalogPdfThemeDialog
+        open={isThemeDialogOpen}
+        onClose={() => setIsThemeDialogOpen(false)}
+        onConfirm={(theme, mode) => handleExportPdf(mode, theme)}
+        isExporting={isExportingPdf}
       />
     </section>
   );

@@ -77,8 +77,13 @@ export async function deleteShareLinkV2(id: string): Promise<void> {
 export async function downloadShareLinkPdfV2(
   id: string,
   mode: PdfExportMode = "final",
+  theme?: string | null,
 ): Promise<Blob> {
-  const url = withQuery(`/api/v2/share-links/${id}/pdf`, { mode });
+  const params: Record<string, string> = { mode };
+  if (theme) {
+    params.theme = theme;
+  }
+  const url = withQuery(`/api/v2/share-links/${id}/pdf`, params);
   const res = await fetch(url, {
     method: "GET",
     headers: {

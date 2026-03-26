@@ -649,10 +649,12 @@ export function useGenerateShareLinkPdfV2() {
     mutationFn: ({
       shareLinkId,
       mode = "final",
+      theme,
     }: {
       shareLinkId: string;
       mode?: PdfExportMode;
-    }) => downloadShareLinkPdfV2(shareLinkId, mode),
+      theme?: string | null;
+    }) => downloadShareLinkPdfV2(shareLinkId, mode, theme),
   });
 }
 
