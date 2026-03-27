@@ -22,7 +22,7 @@ export function DashboardSearchShell({
       ) : null}
 
       {/* Search pill */}
-      <div className="flex h-[38px] w-64 items-center gap-2 rounded-full border border-white/60 bg-white/40 px-4 backdrop-blur-xl transition-all hover:bg-white/50">
+      <div className="flex h-[38px] w-64 items-center gap-2 rounded-full border border-white/60 bg-white/40 px-4 backdrop-blur-xl transition-all hover:bg-white/50 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06),inset_0_1px_2px_rgba(0,0,0,0.04)]">
         <Search className="h-4 w-4 shrink-0 text-slate-500" />
         <span className="truncate text-sm text-slate-500">Pesquisar...</span>
       </div>

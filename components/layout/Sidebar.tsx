@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
   Home,
   Database,
@@ -10,7 +11,6 @@ import {
   PlugZap,
   FileStack,
   Link2,
-  LayoutGrid,
   X,
 } from "lucide-react";
 
@@ -91,8 +91,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div className="relative z-10 flex flex-col h-full mt-12 md:mt-0">
         {/* Logo */}
         <div className="hidden md:flex items-center gap-3 mb-10 px-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#1c1c1e] to-[#3a3a3c] rounded-xl flex items-center justify-center shadow-md shrink-0">
-            <LayoutGrid className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.15)] shrink-0 overflow-hidden bg-white/50">
+            <Image
+              src="/solução-viavel-logo.png"
+              alt="Catálogo Fácil"
+              width={40}
+              height={40}
+              className="object-contain"
+            />
           </div>
           <span className="font-bold text-xl tracking-tight text-slate-900">
             Catálogo Fácil
@@ -113,7 +119,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={cn(
                   "flex items-center gap-3 px-5 py-3.5 rounded-2xl transition-all duration-300 relative overflow-hidden",
                   active
-                    ? "bg-[#222225] text-white/90 shadow-[0_4px_12px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.05)]"
+                    ? "bg-[#222225] text-white/90 shadow-[0_4px_16px_rgba(155,139,244,0.35),0_8px_24px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.08)]"
                     : "text-slate-600 hover:bg-white/60 hover:text-slate-900 hover:shadow-sm",
                 )}
               >

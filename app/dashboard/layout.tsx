@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutGrid, Menu, X } from "lucide-react";
+import Image from "next/image";
+import { Menu, X } from "lucide-react";
 import { DashboardSystemFooter } from "@/components/dashboard/dashboard-system-footer";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -22,8 +23,14 @@ export default function DashboardLayout({
         {/* Mobile Header */}
         <div className="md:hidden w-full bg-white/20 backdrop-blur-xl border-b border-white/30 p-4 flex justify-between items-center z-30 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#1c1c1e] to-[#3a3a3c] rounded-lg flex items-center justify-center shadow-md shrink-0">
-              <LayoutGrid className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md shrink-0 overflow-hidden bg-white/50">
+              <Image
+                src="/solução-viavel-logo.png"
+                alt="Catálogo Fácil"
+                width={32}
+                height={32}
+                className="object-contain"
+              />
             </div>
             <span className="font-bold text-lg tracking-tight text-slate-900">Catálogo Fácil</span>
           </div>
