@@ -66,40 +66,85 @@ function PdfCatalogIntro({
 
   return (
     <header
-      className="mx-auto mb-4 flex w-[160mm] items-center justify-between gap-3 rounded-2xl border border-rose-100/70 bg-white/90 px-2.5 py-1.5"
-      style={{ boxShadow: "0 8px 22px rgba(20, 28, 47, 0.15)" }}
+      className="mx-auto mb-6 flex w-[160mm] items-center justify-between gap-6 rounded-full px-8 py-4"
+      style={{
+        backgroundColor: "#F1F5F7",
+        boxShadow:
+          "5px 5px 9px rgba(100, 116, 128, 0.8), -4px -4px 7px #ffffff, inset 2px 2px 3px rgba(255, 255, 255, 0.9), inset -2px -2px 3px rgba(100, 116, 128, 0.25)",
+      }}
     >
       {leftLogoSrc ? (
         <div
-          className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
-          style={{ boxShadow: "0 5px 14px rgba(20, 28, 47, 0.12)" }}
+          className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full"
+          style={{
+            backgroundColor: "#E2E7E9",
+            boxShadow:
+              "inset 3px 3px 5px rgba(100, 116, 128, 0.8), inset -3px -3px 5px #ffffff",
+          }}
         >
-          <img src={leftLogoSrc} alt="Logo esquerda" className="h-full w-full object-contain" />
+          <img
+            src={leftLogoSrc}
+            alt="Logo esquerda"
+            className="h-full w-full object-contain drop-shadow-md"
+          />
         </div>
       ) : (
-        <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
+        <div
+          className="flex h-16 w-24 shrink-0 items-center justify-center rounded-full text-xs font-bold tracking-widest text-slate-400"
+          style={{
+            backgroundColor: "#E2E7E9",
+            boxShadow:
+              "inset 3px 3px 5px rgba(100, 116, 128, 0.8), inset -3px -3px 5px #ffffff",
+            textShadow: "1px 1px 1px #ffffff",
+          }}
+        >
           {leftInitials}
         </div>
       )}
 
       <div className="min-w-0 flex-1 text-center">
-        <p className={`${sans.className} text-[44px] font-bold uppercase leading-none tracking-[0.04em] text-slate-900`}>
+        <p
+          className={`${display.className} text-[48px] font-medium leading-[0.9] tracking-tight text-slate-600`}
+          style={{
+            textShadow:
+              "-1px -1px 1px rgba(100, 116, 128, 0.65), 1px 1px 1px #ffffff",
+          }}
+        >
           {catalog.name}
         </p>
-        <p className={`${display.className} mt-1 text-[14px] font-semibold leading-none text-rose-600/85`}>
+        <p
+          className={`${sans.className} mt-3 text-[11px] font-bold uppercase leading-none tracking-[0.3em] text-slate-400`}
+          style={{ textShadow: "1px 1px 1px #ffffff" }}
+        >
           {yearLabel}
         </p>
       </div>
 
       {rightLogoSrc ? (
         <div
-          className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white"
-          style={{ boxShadow: "0 5px 14px rgba(20, 28, 47, 0.12)" }}
+          className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full"
+          style={{
+            backgroundColor: "#E2E7E9",
+            boxShadow:
+              "inset 3px 3px 5px rgba(100, 116, 128, 0.8), inset -3px -3px 5px #ffffff",
+          }}
         >
-          <img src={rightLogoSrc} alt="Logo direita" className="h-full w-full object-contain" />
+          <img
+            src={rightLogoSrc}
+            alt="Logo direita"
+            className="h-full w-full object-contain drop-shadow-md"
+          />
         </div>
       ) : (
-        <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-white text-xs text-rose-500">
+        <div
+          className="flex h-16 w-24 shrink-0 items-center justify-center rounded-full text-xs font-bold tracking-widest text-slate-400"
+          style={{
+            backgroundColor: "#E2E7E9",
+            boxShadow:
+              "inset 3px 3px 5px rgba(100, 116, 128, 0.8), inset -3px -3px 5px #ffffff",
+            textShadow: "1px 1px 1px #ffffff",
+          }}
+        >
           {rightInitials}
         </div>
       )}
@@ -116,8 +161,6 @@ function PdfMeasureStripe({
   categoryName: string;
   measureLabel: string;
 }) {
-  const stripeBgColor = resolveHexColor(catalog.pdfStripeBgColor, "#0B1B5E");
-  const stripeLineColor = resolveHexColor(catalog.pdfStripeLineColor, "#D81B3A");
   const stripeTextColor = resolveHexColor(catalog.pdfStripeTextColor, "#FFFFFF");
   const stripeFontClass = resolveStripeFontClass(catalog.pdfStripeFontFamily);
   const stripeFontWeight = resolveStripeFontWeight(catalog.pdfStripeFontWeight);
@@ -127,8 +170,9 @@ function PdfMeasureStripe({
     <div
       className="mb-3 -mx-[10mm] flex translate-y-[1mm] items-center gap-2 rounded-none px-[10mm] py-1.5"
       style={{
-        backgroundColor: stripeBgColor,
-        boxShadow: "0 14px 24px rgba(0, 0, 0, 0.42)",
+        backgroundColor: "#F1F5F7",
+        boxShadow:
+          "0 5px 8px rgba(100, 116, 128, 0.8), 0 -3px 7px #ffffff",
       }}
     >
       <span
@@ -138,11 +182,20 @@ function PdfMeasureStripe({
           fontWeight: stripeFontWeight,
           fontSize: `${stripeFontSize}px`,
           lineHeight: 1.1,
+          textShadow:
+            "-1px -1px 1px rgba(100, 116, 128, 0.65), 1px 1px 1px #ffffff",
         }}
       >
         {categoryName}
       </span>
-      <span className="h-[6px] w-28 rounded-sm" style={{ backgroundColor: stripeLineColor }} />
+      <span
+        className="h-[4px] w-28 rounded-full"
+        style={{
+          backgroundColor: "#E2E7E9",
+          boxShadow:
+            "inset 2px 2px 3px rgba(100, 116, 128, 0.8), inset -2px -2px 3px #ffffff",
+        }}
+      />
       <div className="min-w-0">
         <span
           className={`${stripeFontClass}`}
@@ -151,6 +204,8 @@ function PdfMeasureStripe({
             fontWeight: stripeFontWeight,
             fontSize: `${stripeFontSize}px`,
             lineHeight: 1.1,
+            textShadow:
+              "-1px -1px 1px rgba(100, 116, 128, 0.65), 1px 1px 1px #ffffff",
           }}
         >
           {measureLabel}
@@ -163,10 +218,23 @@ function PdfMeasureStripe({
 function PdfLineHeader({ lineLabel }: { lineLabel: string }) {
   return (
     <div className="mb-2 text-center">
-      <p className={`${display.className} text-[26px] font-bold italic leading-none text-slate-900`}>
+      <p
+        className={`${display.className} text-[26px] font-bold italic leading-none text-slate-600`}
+        style={{
+          textShadow:
+            "-1px -1px 1px rgba(100, 116, 128, 0.65), 1px 1px 1px #ffffff",
+        }}
+      >
         {lineLabel}
       </p>
-      <div className="mx-auto mt-2 h-px w-[72%] bg-rose-200/80" />
+      <div
+        className="mx-auto mt-2 h-[4px] w-[72%] rounded-full"
+        style={{
+          backgroundColor: "#E2E7E9",
+          boxShadow:
+            "inset 2px 2px 3px rgba(100, 116, 128, 0.8), inset -2px -2px 3px #ffffff",
+        }}
+      />
     </div>
   );
 }
@@ -181,15 +249,24 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
 
   return (
     <article
-      className="break-inside-avoid rounded-[20px] px-2 pt-2 pb-2 [page-break-inside:avoid]"
+      className="break-inside-avoid rounded-[24px] px-2 pt-2 pb-2 [page-break-inside:avoid]"
       style={{
-        boxShadow: "0 14px 24px rgba(20, 28, 47, 0.14)",
+        backgroundColor: "#F1F5F7",
+        boxShadow:
+          "5px 5px 9px rgba(100, 116, 128, 0.8), -4px -4px 7px #ffffff, inset 2px 2px 3px rgba(255, 255, 255, 0.9), inset -2px -2px 3px rgba(100, 116, 128, 0.25)",
       }}
     >
-      <div className="relative flex h-[8.8rem] w-full items-center justify-center overflow-visible">
+      <div
+        className="relative flex h-[8.8rem] w-full items-center justify-center overflow-hidden rounded-[16px]"
+        style={{
+          backgroundColor: "#E2E7E9",
+          boxShadow:
+            "inset 4px 4px 6px rgba(100, 116, 128, 0.8), inset -3px -3px 6px #ffffff",
+        }}
+      >
         {imageSrc ? (
           <div
-            className="relative flex h-full w-full items-center justify-center"
+            className="relative flex h-full w-full items-center justify-center p-4"
             style={{
               transform: `translate(${imageLayout.offsetX}%, ${imageLayout.offsetY}%) scale(${visualScale})`,
               transformOrigin: "center",
@@ -199,7 +276,7 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
               src={imageSrc}
               alt={product.name}
               loading="eager"
-              className="h-full w-full object-contain"
+              className="h-full w-full object-contain drop-shadow-md mix-blend-multiply"
             />
           </div>
         ) : (
@@ -211,19 +288,31 @@ function PdfProductCard({ product }: { product: ShareLinkPdfProduct }) {
 
       <div className="px-1.5 pt-2.5 pb-1.5">
         <div className="space-y-1">
-          <p className="line-clamp-4 min-h-[3.3rem] text-[9.5px] font-semibold leading-[1.05] text-slate-900">
+          <p className="line-clamp-4 min-h-[3.3rem] text-[9.5px] font-semibold leading-[1.05] text-slate-700">
             {product.name}
           </p>
-          <span
-            className="inline-flex w-fit items-center rounded-md px-2.5 py-1 text-[13px] font-bold leading-none"
+          <div
+            className="inline-flex w-fit items-center justify-center rounded-full p-[3px]"
             style={{
-              backgroundColor: "hsl(223 62% 28%)",
-              color: "white",
-              boxShadow: "inset 0 0 0 1px hsla(223, 62%, 38%, 0.45)",
+              backgroundColor: "#E2E7E9",
+              boxShadow:
+                "inset 2px 2px 4px rgba(100, 116, 128, 0.5), inset -2px -2px 4px #ffffff",
             }}
           >
-            {skuLabel}
-          </span>
+            <span
+              className="inline-flex items-center justify-center rounded-full px-3 py-1.5 text-[11px] font-bold uppercase leading-none tracking-wider"
+              style={{
+                backgroundColor: "#F1F5F7",
+                color: "#ea580c",
+                boxShadow:
+                  "inset 1px 1px 3px rgba(100, 116, 128, 0.4), inset -1px -1px 3px #ffffff",
+                textShadow:
+                  "0 0 6px rgba(234, 88, 12, 0.8), 0 0 12px rgba(234, 88, 12, 0.5)",
+              }}
+            >
+              {skuLabel}
+            </span>
+          </div>
         </div>
       </div>
     </article>
@@ -277,12 +366,17 @@ function PdfPageFrame({
           />
         </>
       ) : (
-        <div className="pointer-events-none absolute inset-0 z-0 bg-white" />
+        <div
+          className="pointer-events-none absolute inset-0 z-0"
+          style={{ background: "#E2E7E9" }}
+        />
       )}
 
       <div className="relative z-10 flex h-full flex-col px-[10mm] pt-[8mm] pb-[10mm]">
         <div className="mb-1 flex justify-end">
-          <span className="text-[11px] text-slate-500/70">{formatCompactDate(generatedAt)}</span>
+          <span className="text-[11px] text-slate-500/70">
+            {formatCompactDate(generatedAt)}
+          </span>
         </div>
         <div className="relative z-10 flex-1">{children}</div>
       </div>
@@ -363,8 +457,15 @@ function PdfContentLayer({
 
               return (
                 <div key={block.id} className={blockIndex === 0 ? "" : "mt-4"}>
-                  <div className="rounded-2xl border border-rose-100/80 bg-white/75 py-10 text-center text-sm text-slate-500">
-                    Nenhum produto neste catalogo.
+                  <div
+                    className="rounded-2xl py-10 text-center text-sm text-slate-500"
+                    style={{
+                      backgroundColor: "#F1F5F7",
+                      boxShadow:
+                        "5px 5px 9px rgba(100, 116, 128, 0.8), -4px -4px 7px #ffffff, inset 2px 2px 3px rgba(255, 255, 255, 0.9), inset -2px -2px 3px rgba(100, 116, 128, 0.25)",
+                    }}
+                  >
+                    Nenhum produto neste catálogo.
                   </div>
                 </div>
               );
@@ -380,7 +481,7 @@ export function CatalogPdfClassic({ data }: { data: ShareLinkPdfData }) {
   const pages = buildPdfPages(data);
 
   return (
-    <div className={`${sans.className} relative isolate bg-white text-slate-900`}>
+    <div className={`${sans.className} relative isolate text-slate-900`} style={{ background: "#E2E7E9" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poppins:wght@400;500;600;700&display=swap');
         @page {
