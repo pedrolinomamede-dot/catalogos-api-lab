@@ -67,21 +67,26 @@ O motor de PDF e a feature mais complexa do sistema:
 
 ---
 
-## Ambiente LAB
+## Ambiente LAB — ISOLADO DO PRINCIPAL
 
 ### REGRAS CRITICAS — NUNCA VIOLAR
 
-1. **NUNCA fazer push para `origin` ou `catalogos-api`** — apenas para remote `lab`
-2. **Comando de push:** `git push lab codex/dashboard-overview-functional`
-3. **Worktree local:** `C:\Users\Pedro Mamede\.codex\worktrees\aa81\sistema-catalogos-api` (Windows) — no Linux sera outro path
+1. **Clonar APENAS de `catalogos-api-lab`** — não há conexão com repositório principal
+2. **Única remote deve ser `origin` → LAB** — nenhuma outra remote deve existir
+3. **Comando de push:** `git push origin codex/dashboard-overview-functional`
 4. **Branch:** `codex/dashboard-overview-functional`
-5. **Sempre validar com `git remote -v` e `git branch --show-current` antes de push**
+5. **Sempre validar com `git remote -v` antes de push** — deve mostrar APENAS origin
 
-### Git Remotes
+### Git Remote (esperado ao clonar LAB)
 ```
-catalogos-api  → github.com/pedrolinomamede-dot/catalogos-api.git       (PRODUCAO — NUNCA PUSH)
-origin         → github.com/pedrolinomamede-dot/sistema-catalogos-ipe.git (PRINCIPAL — NUNCA PUSH)
-lab            → github.com/pedrolinomamede-dot/catalogos-api-lab.git    (LAB — UNICO PERMITIDO)
+origin  → github.com/pedrolinomamede-dot/catalogos-api-lab.git (UNICO PERMITIDO)
+```
+
+### O que NÃO deve existir
+```
+❌ catalogos-api  (NUNCA adicionar)
+❌ principal      (NUNCA adicionar)
+❌ nenhum outro remote
 ```
 
 ### Servidor LAB
@@ -90,8 +95,8 @@ lab            → github.com/pedrolinomamede-dot/catalogos-api-lab.git    (LAB 
 - **PM2 app:** `catalogos-api-lab`
 - **Porta:** 3002
 
-### Bloco de Deploy
-Apos commit+push, fornecer este bloco EXATO para o Pedro executar no servidor:
+### Bloco de Deploy no Servidor LAB
+Apos commit+push para `origin`, fornecer este bloco EXATO para o Pedro executar no servidor:
 
 ```bash
 set -euo pipefail
@@ -140,8 +145,6 @@ curl -fsSI "http://127.0.0.1:${APP_PORT}/dashboard" || true
 
 echo "LAB_DEPLOY_OK branch=${BRANCH} url=http://187.77.63.171:${APP_PORT}/dashboard"
 ```
-
-**NOTA:** No servidor, `origin` aponta para o repo LAB (diferente do local).
 
 ---
 
@@ -241,10 +244,66 @@ Decisao tomada com o Pedro:
 
 ---
 
-## Comandos Uteis
+## Setup no Zorin OS (ou qualquer Linux)
+
+**IMPORTANTE:** O repositório GitHub `catalogos-api-lab` é **completamente isolado** do repositório principal `catalogos-api`. Quando você clonar, não haverá qualquer conexão com o projeto principal — isso é intencional.
+
+### Clonar o repositório LAB
+```bash
+# Clone APENAS do repositório LAB
+git clone https://github.com/pedrolinomamede-dot/catalogos-api-lab.git
+cd catalogos-api-lab
+
+# Verificar que só existe 1 remote (origin → LAB)
+git remote -v
+# Deve mostrar:
+# origin  https://github.com/pedrolinomamede-dot/catalogos-api-lab.git (fetch)
+# origin  https://github.com/pedrolinomamede-dot/catalogos-api-lab.git (push)
+```
+
+### Instalar dependências
+```bash
+npm install
+```
+
+### Configurar ambiente
+```bash
+cp .env.example .env
+# Editar .env com:
+# - DATABASE_URL (PostgreSQL local ou remoto)
+# - NEXTAUTH_SECRET (gerador: openssl rand -base64 32)
+# - Outras variáveis conforme necessário
+```
+
+### Preparar banco de dados
+```bash
+# Se usando Docker Compose (PostgreSQL local)
+docker-compose up -d
+
+# Rodar migrations
+npx prisma migrate deploy
+npx prisma generate
+```
+
+### Instalar dependências do Playwright (para PDFs)
+```bash
+# Linux (obrigatório para PDF generation)
+sudo npx playwright install-deps chromium
+npx playwright install chromium
+```
+
+### Rodar em desenvolvimento
+```bash
+npm run dev
+# App estará em http://localhost:3000
+```
+
+---
+
+## Comandos Uteis (desenvolvimento)
 
 ```bash
-# Dev
+# Dev local
 npm run dev
 
 # Build (sempre rodar antes de commit)
@@ -256,11 +315,27 @@ npx prisma generate
 npx prisma studio
 
 # Push para LAB (UNICO permitido)
+git push origin codex/dashboard-overview-functional
+# OU (se tiver adicionado remote lab manualmente)
 git push lab codex/dashboard-overview-functional
+
+# Verificar remotes (deve ser APENAS origin)
+git remote -v
 
 # Playwright deps (Linux)
 sudo npx playwright install-deps chromium
 ```
+
+---
+
+## Seguranca: O que NUNCA fazer
+
+- ❌ Adicionar remote `catalogos-api` ou `principal` — isso cria conexão com produção
+- ❌ Fazer `git push` sem especificar o remote — sempre use `git push origin`
+- ❌ Clonar de qualquer lugar que não seja `catalogos-api-lab`
+- ❌ Mergear branches de fora
+
+O LAB deve **sempre** ser isolado do principal.
 
 ---
 
