@@ -67,33 +67,21 @@ O motor de PDF e a feature mais complexa do sistema:
 
 ---
 
-## Ambiente LAB — ISOLADO DO PRINCIPAL
+## Ambiente e Repositorio
 
-### REGRAS CRITICAS — NUNCA VIOLAR
-
-1. **Clonar APENAS de `catalogos-api-lab`** — não há conexão com repositório principal
-2. **Única remote deve ser `origin` → LAB** — nenhuma outra remote deve existir
-3. **Comando de push:** `git push origin codex/dashboard-overview-functional`
-4. **Branch:** `codex/dashboard-overview-functional`
-5. **Sempre validar com `git remote -v` antes de push** — deve mostrar APENAS origin
-
-### Git Remote (esperado ao clonar LAB)
-```
-origin  → github.com/pedrolinomamede-dot/catalogos-api-lab.git (UNICO PERMITIDO)
-```
-
-### O que NÃO deve existir
-```
-❌ catalogos-api  (NUNCA adicionar)
-❌ principal      (NUNCA adicionar)
-❌ nenhum outro remote
-```
+### Repositorio
+- **GitHub:** `https://github.com/pedrolinomamede-dot/catalogos-api-lab.git`
+- **Remote:** `origin` (unico)
+- **Branch:** `codex/dashboard-overview-functional`
+- **Push:** `git push origin codex/dashboard-overview-functional`
+- Sempre validar `git remote -v` antes de push — deve mostrar apenas `origin`
 
 ### Servidor LAB
 - **URL:** http://187.77.63.171:3002/dashboard
 - **Pasta:** `/var/www/catalogos-api-lab`
 - **PM2 app:** `catalogos-api-lab`
 - **Porta:** 3002
+- **Status:** Hostinger desativado (nao renovado) — migracao para Supabase + Railway pendente
 
 ### Bloco de Deploy no Servidor LAB
 Apos commit+push para `origin`, fornecer este bloco EXATO para o Pedro executar no servidor:
@@ -246,19 +234,10 @@ Decisao tomada com o Pedro:
 
 ## Setup no Zorin OS (ou qualquer Linux)
 
-**IMPORTANTE:** O repositório GitHub `catalogos-api-lab` é **completamente isolado** do repositório principal `catalogos-api`. Quando você clonar, não haverá qualquer conexão com o projeto principal — isso é intencional.
-
-### Clonar o repositório LAB
+### Clonar o repositorio
 ```bash
-# Clone APENAS do repositório LAB
 git clone https://github.com/pedrolinomamede-dot/catalogos-api-lab.git
 cd catalogos-api-lab
-
-# Verificar que só existe 1 remote (origin → LAB)
-git remote -v
-# Deve mostrar:
-# origin  https://github.com/pedrolinomamede-dot/catalogos-api-lab.git (fetch)
-# origin  https://github.com/pedrolinomamede-dot/catalogos-api-lab.git (push)
 ```
 
 ### Instalar dependências
@@ -314,12 +293,10 @@ npx prisma migrate deploy
 npx prisma generate
 npx prisma studio
 
-# Push para LAB (UNICO permitido)
+# Push
 git push origin codex/dashboard-overview-functional
-# OU (se tiver adicionado remote lab manualmente)
-git push lab codex/dashboard-overview-functional
 
-# Verificar remotes (deve ser APENAS origin)
+# Verificar remote
 git remote -v
 
 # Playwright deps (Linux)
@@ -328,14 +305,11 @@ sudo npx playwright install-deps chromium
 
 ---
 
-## Seguranca: O que NUNCA fazer
+## Seguranca
 
-- ❌ Adicionar remote `catalogos-api` ou `principal` — isso cria conexão com produção
-- ❌ Fazer `git push` sem especificar o remote — sempre use `git push origin`
-- ❌ Clonar de qualquer lugar que não seja `catalogos-api-lab`
-- ❌ Mergear branches de fora
-
-O LAB deve **sempre** ser isolado do principal.
+- Sempre especificar o remote no push: `git push origin ...`
+- Nao adicionar remotes extras — deve existir apenas `origin`
+- Nao commitar arquivos `.env`, credenciais ou logs
 
 ---
 
