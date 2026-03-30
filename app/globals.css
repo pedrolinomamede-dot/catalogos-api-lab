@@ -87,6 +87,17 @@ body {
   overflow-x: hidden;
 }
 
+@media print {
+  html,
+  body {
+    height: auto !important;
+    min-height: auto !important;
+    max-width: none !important;
+    overflow: visible !important;
+    background: none !important;
+  }
+}
+
 body {
   min-height: 100vh;
   color: var(--ink);

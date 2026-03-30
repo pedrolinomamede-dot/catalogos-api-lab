@@ -228,15 +228,14 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
       console.warn("[pdf] Background image failed to load:", failedBackgrounds);
     }
 
-    await page.addStyleTag({
-      content: `
-        html, body {
-          height: auto !important;
-          min-height: auto !important;
-          max-width: none !important;
-          overflow: visible !important;
-        }
-      `,
+    await page.evaluate(() => {
+      for (const el of [document.documentElement, document.body]) {
+        el.style.setProperty("height", "auto", "important");
+        el.style.setProperty("min-height", "auto", "important");
+        el.style.setProperty("max-width", "none", "important");
+        el.style.setProperty("overflow", "visible", "important");
+      }
+      void document.body.offsetHeight;
     });
 
     const pdf = await page.pdf({
