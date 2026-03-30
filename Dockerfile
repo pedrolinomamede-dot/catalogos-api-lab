@@ -30,33 +30,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Install Chromium system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libnss3 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libgbm1 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2 \
-    libxshmfence1 \
-    libgtk-3-0 \
-    libx11-xcb1 \
-    fonts-noto-color-emoji \
-    fonts-freefont-ttf \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Playwright and download Chromium browser to a shared location
+# Install Playwright with ALL system dependencies (automatic detection)
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
-RUN npm install playwright@1.58.2 && npx playwright install chromium && npm cache clean --force
+RUN npx -y playwright@1.58.2 install --with-deps chromium
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
