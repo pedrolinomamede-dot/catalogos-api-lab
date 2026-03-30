@@ -168,6 +168,7 @@ function GlassPdfPageFrame({
 }) {
   return (
     <section
+      data-pdf-page
       className={`relative h-[373.3mm] w-full overflow-hidden bg-white ${isLast ? "" : "break-after-page"}`}
     >
       {/* Background layer */}

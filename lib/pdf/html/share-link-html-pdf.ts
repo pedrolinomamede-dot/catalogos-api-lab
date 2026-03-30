@@ -216,7 +216,7 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
     }
 
     // Count how many PAGE sections exist (direct children of main[data-pdf-ready])
-    const PAGE_SECTION_SELECTOR = "main[data-pdf-ready] > section";
+    const PAGE_SECTION_SELECTOR = "section[data-pdf-page]";
 
     const sectionCount = await page.evaluate((selector) => {
       return document.querySelectorAll(selector).length;

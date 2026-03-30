@@ -344,6 +344,7 @@ function PdfPageFrame({
 }) {
   return (
     <section
+      data-pdf-page
       className={`relative h-[373.3mm] w-full overflow-hidden ${isLast ? "" : "break-after-page"}`}
     >
       {backgroundImageUrl ? (

@@ -236,6 +236,7 @@ function DarkPdfPageFrame({
 }) {
   return (
     <section
+      data-pdf-page
       className={`relative h-[373.3mm] w-full overflow-hidden bg-[#0A0A0B] ${isLast ? "" : "break-after-page"}`}
     >
       {/* Layer 1: Background image — muted, blurred, screen-blended */}
