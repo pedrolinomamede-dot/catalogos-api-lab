@@ -215,14 +215,12 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
       console.warn("[pdf] Background preload timed out.", backgroundCandidates);
     }
 
-    // Count how many page sections exist
-    const sectionCount = await page.evaluate(() => {
-      const main = document.querySelector("main[data-pdf-ready]");
-      if (!main) return 0;
-      return main.querySelectorAll(":scope > div > section, :scope section").length ||
-        document.querySelectorAll("section[class*='h-[373']").length ||
-        document.querySelectorAll("section").length;
-    });
+    // Count how many PAGE sections exist (direct children of main[data-pdf-ready])
+    const PAGE_SECTION_SELECTOR = "main[data-pdf-ready] > section";
+
+    const sectionCount = await page.evaluate((selector) => {
+      return document.querySelectorAll(selector).length;
+    }, PAGE_SECTION_SELECTOR);
 
     console.log(`[pdf] Found ${sectionCount} page sections. Generating per-page PDFs.`);
 
@@ -238,25 +236,24 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
       return Buffer.from(pdf);
     }
 
-    // Multi-page: generate each page separately by hiding other sections
+    // Multi-page: generate each page separately by hiding other page sections
     const pageBuffers: Buffer[] = [];
 
     for (let i = 0; i < sectionCount; i++) {
-      // Show only the i-th section, hide all others
-      await page.evaluate((targetIndex) => {
-        const sections = document.querySelectorAll("section");
-        sections.forEach((section, idx) => {
+      // Show only the i-th page section, hide all others
+      await page.evaluate((args) => {
+        const { selector, targetIndex } = args;
+        const pageSections = document.querySelectorAll(selector);
+        pageSections.forEach((section, idx) => {
           const el = section as HTMLElement;
           if (idx === targetIndex) {
-            el.style.display = "";
             el.style.removeProperty("display");
           } else {
             el.style.setProperty("display", "none", "important");
           }
         });
-        // Force reflow
         void document.body.offsetHeight;
-      }, i);
+      }, { selector: PAGE_SECTION_SELECTOR, targetIndex: i });
 
       const pagePdf = await page.pdf({
         width: "210mm",
@@ -270,12 +267,11 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
     }
 
     // Restore all sections (cleanup)
-    await page.evaluate(() => {
-      const sections = document.querySelectorAll("section");
-      sections.forEach((section) => {
+    await page.evaluate((selector) => {
+      document.querySelectorAll(selector).forEach((section) => {
         (section as HTMLElement).style.removeProperty("display");
       });
-    });
+    }, PAGE_SECTION_SELECTOR);
 
     console.log(`[pdf] Merging ${pageBuffers.length} page PDFs.`);
     return await mergePdfBuffers(pageBuffers);
