@@ -399,6 +399,11 @@ export function CatalogPdfDark({ data }: { data: ShareLinkPdfData }) {
         html, body {
           margin: 0;
           padding: 0;
+          height: auto !important;
+          min-height: 0 !important;
+          max-width: none !important;
+          overflow: visible !important;
+          background: none !important;
         }
 
         main[data-pdf-ready] {
