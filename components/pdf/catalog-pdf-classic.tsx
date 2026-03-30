@@ -405,18 +405,6 @@ function PdfContentLayer({
             backgroundImageUrl={page.backgroundImageUrl}
           >
             {page.blocks.map((block, blockIndex) => {
-              if (block.type === "catalog-intro") {
-                return (
-                  <div key={block.id} className={blockIndex === 0 ? "" : "mt-2"}>
-                    <PdfCatalogIntro
-                      data={data}
-                      catalog={block.catalog}
-                      generatedAt={data.generatedAt}
-                    />
-                  </div>
-                );
-              }
-
               if (block.type === "group-lead") {
                 return (
                   <section

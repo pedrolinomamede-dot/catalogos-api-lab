@@ -57,7 +57,7 @@ export type PdfPageModel = {
 
 export const PAGE_HEIGHT_MM = 373.3;
 export const SAFE_TOP_MM = 8;
-export const SAFE_BOTTOM_MM = 22;
+export const SAFE_BOTTOM_MM = 14;
 export const DATE_ROW_RESERVE_MM = 4;
 export const PAGE_CONTENT_HEIGHT_MM =
   PAGE_HEIGHT_MM - SAFE_TOP_MM - SAFE_BOTTOM_MM - DATE_ROW_RESERVE_MM;
@@ -65,8 +65,8 @@ export const PAGE_CONTENT_HEIGHT_MM =
 export const BLOCK_HEIGHT_MM = {
   catalogIntro: 42,
   lineHeader: 16,
-  groupLeadCompact: 88,
-  groupLeadWide: 98,
+  groupLeadCompact: 85,
+  groupLeadWide: 95,
   groupRowCompact: 68,
   groupRowWide: 78,
   catalogEmpty: 28,
@@ -199,15 +199,6 @@ export function buildPdfPages(data: ShareLinkPdfData): PdfPageModel[] {
       currentPage.blocks.push(block);
       currentPage.usedHeightMm += heightMm;
     };
-
-    pushBlock(
-      {
-        id: `catalog-${catalog.id}-intro`,
-        type: "catalog-intro",
-        catalog,
-      },
-      BLOCK_HEIGHT_MM.catalogIntro,
-    );
 
     const lineGroups = buildLineCategoryMeasureGroups(catalog.products);
     const hasProducts = lineGroups.some((lineGroup) =>

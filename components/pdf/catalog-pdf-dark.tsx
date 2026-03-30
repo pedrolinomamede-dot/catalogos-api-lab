@@ -308,18 +308,6 @@ function DarkPdfContentLayer({
             backgroundImageUrl={page.backgroundImageUrl}
           >
             {page.blocks.map((block, blockIndex) => {
-              if (block.type === "catalog-intro") {
-                return (
-                  <div key={block.id} className={blockIndex === 0 ? "" : "mt-2"}>
-                    <DarkPdfCatalogIntro
-                      data={data}
-                      catalog={block.catalog}
-                      generatedAt={data.generatedAt}
-                    />
-                  </div>
-                );
-              }
-
               if (block.type === "line-header") {
                 return (
                   <div key={block.id} className={blockIndex === 0 ? "" : "mt-3"}>

@@ -256,14 +256,6 @@ function GlassPdfContentLayer({
             backgroundImageUrl={page.backgroundImageUrl}
           >
             {page.blocks.map((block, blockIndex) => {
-              if (block.type === "catalog-intro") {
-                return (
-                  <div key={block.id} className={blockIndex === 0 ? "" : "mt-2"}>
-                    <GlassPdfCatalogIntro catalog={block.catalog} />
-                  </div>
-                );
-              }
-
               if (block.type === "group-lead") {
                 return (
                   <section
