@@ -65,10 +65,10 @@ export const PAGE_CONTENT_HEIGHT_MM =
 export const BLOCK_HEIGHT_MM = {
   catalogIntro: 42,
   lineHeader: 16,
-  groupLeadCompact: 72,
-  groupLeadWide: 82,
-  groupRowCompact: 64,
-  groupRowWide: 74,
+  groupLeadCompact: 88,
+  groupLeadWide: 98,
+  groupRowCompact: 68,
+  groupRowWide: 78,
   catalogEmpty: 28,
 };
 
