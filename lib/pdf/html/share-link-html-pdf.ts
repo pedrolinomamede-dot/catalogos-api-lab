@@ -26,6 +26,35 @@ const READY_SELECTOR = "[data-pdf-ready='true']";
 const NAVIGATION_TIMEOUT_MS = 45_000;
 const BACKGROUND_IMAGE_PATH = "/pdf/imagem-fundo.jpg";
 
+function resolvePlaywrightCacheBrowser() {
+  try {
+    const pw = require("playwright");
+    if (pw?.chromium?.executablePath) {
+      const p = pw.chromium.executablePath();
+      if (p && fs.existsSync(p)) return p;
+    }
+  } catch {
+    /* playwright package not available */
+  }
+
+  const cacheDir =
+    process.env.PLAYWRIGHT_BROWSERS_PATH ||
+    path.join(process.env.HOME || "/root", ".cache", "ms-playwright");
+  try {
+    if (fs.existsSync(cacheDir)) {
+      const entries = fs.readdirSync(cacheDir).filter((e) => e.startsWith("chromium-")).sort().reverse();
+      for (const entry of entries) {
+        const candidate = path.join(cacheDir, entry, "chrome-linux", "chrome");
+        if (fs.existsSync(candidate)) return candidate;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return null;
+}
+
 function resolveConfiguredBrowserPath() {
   const configured = process.env.PDF_HTML_BROWSER_PATH?.trim();
   if (configured && fs.existsSync(configured)) {
@@ -38,6 +67,9 @@ function resolveConfiguredBrowserPath() {
       return absolutePath;
     }
   }
+
+  const playwrightBrowser = resolvePlaywrightCacheBrowser();
+  if (playwrightBrowser) return playwrightBrowser;
 
   return null;
 }
