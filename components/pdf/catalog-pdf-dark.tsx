@@ -400,6 +400,10 @@ export function CatalogPdfDark({ data }: { data: ShareLinkPdfData }) {
         html, body {
           margin: 0;
           padding: 0;
+          overflow: visible !important;
+          max-width: none !important;
+          height: auto !important;
+          background: transparent !important;
         }
 
         main[data-pdf-ready] {
