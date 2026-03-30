@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { chromium, type LaunchOptions } from "playwright-core";
+import { PDFDocument } from "pdf-lib";
 
 import {
   createPdfRenderPayload,
@@ -113,18 +114,6 @@ function resolveRenderBaseUrl() {
   return `http://localhost:${port}`;
 }
 
-function buildHeaderTemplate() {
-  return `
-    <div style="width:100%;height:8mm;font-size:1px;color:transparent;">.</div>
-  `;
-}
-
-function buildFooterTemplate() {
-  return `
-    <div style="width:100%;height:8mm;font-size:1px;color:transparent;">.</div>
-  `;
-}
-
 function isPreloadableImageSource(value: string) {
   return (
     value.startsWith("/") || /^https?:\/\//i.test(value) || value.startsWith("data:")
@@ -143,6 +132,19 @@ function resolveBackgroundPreloadCandidates(data: ShareLinkPdfData) {
   });
 
   return [...uniqueCandidates].filter(isPreloadableImageSource);
+}
+
+async function mergePdfBuffers(buffers: Buffer[]): Promise<Buffer> {
+  const merged = await PDFDocument.create();
+  for (const buf of buffers) {
+    const doc = await PDFDocument.load(buf);
+    const pages = await merged.copyPages(doc, doc.getPageIndices());
+    for (const p of pages) {
+      merged.addPage(p);
+    }
+  }
+  const bytes = await merged.save();
+  return Buffer.from(bytes);
 }
 
 export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<Buffer> {
@@ -213,65 +215,70 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
       console.warn("[pdf] Background preload timed out.", backgroundCandidates);
     }
 
-    const backgroundStates = await page.evaluate(() => {
-      type BackgroundState = "pending" | "ready" | "error" | undefined;
-      type WindowWithBackgroundState = Window & {
-        __PDF_BG_READY_STATE__?: Record<string, BackgroundState>;
-      };
-      return (window as WindowWithBackgroundState).__PDF_BG_READY_STATE__ ?? {};
-    });
-
-    const failedBackgrounds = backgroundCandidates.filter(
-      (candidate) => backgroundStates[candidate] !== "ready",
-    );
-    if (failedBackgrounds.length > 0) {
-      console.warn("[pdf] Background image failed to load:", failedBackgrounds);
-    }
-
-    const debugInfo = await page.evaluate(() => {
+    // Count how many page sections exist
+    const sectionCount = await page.evaluate(() => {
       const main = document.querySelector("main[data-pdf-ready]");
-      const sections = document.querySelectorAll("section");
-      const body = document.body;
-      const html = document.documentElement;
-      return {
-        htmlScrollHeight: html.scrollHeight,
-        bodyScrollHeight: body.scrollHeight,
-        sectionCount: sections.length,
-        bodyOverflowX: getComputedStyle(body).overflowX,
-        bodyOverflowY: getComputedStyle(body).overflowY,
-        bodyHeight: getComputedStyle(body).height,
-        htmlHeight: getComputedStyle(html).height,
-        sections: Array.from(sections).map((s, i) => ({
-          index: i,
-          offsetTop: (s as HTMLElement).offsetTop,
-          offsetHeight: (s as HTMLElement).offsetHeight,
-          className: (s as HTMLElement).className.slice(0, 80),
-        })),
-      };
+      if (!main) return 0;
+      return main.querySelectorAll(":scope > div > section, :scope section").length ||
+        document.querySelectorAll("section[class*='h-[373']").length ||
+        document.querySelectorAll("section").length;
     });
-    console.log("[pdf] DEBUG:", JSON.stringify(debugInfo, null, 2));
 
-    try {
-      await page.screenshot({ path: "/tmp/pdf-debug-fullpage.png", fullPage: true });
-      console.log("[pdf] DEBUG screenshot saved to /tmp/pdf-debug-fullpage.png");
-    } catch (e) {
-      console.warn("[pdf] DEBUG screenshot failed:", e);
+    console.log(`[pdf] Found ${sectionCount} page sections. Generating per-page PDFs.`);
+
+    if (sectionCount <= 1) {
+      // Single page — generate directly
+      const pdf = await page.pdf({
+        width: "210mm",
+        height: "373.3mm",
+        printBackground: true,
+        displayHeaderFooter: false,
+        margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+      });
+      return Buffer.from(pdf);
     }
 
-    const pdf = await page.pdf({
-      width: "210mm",
-      height: "373.3mm",
-      printBackground: true,
-      displayHeaderFooter: false,
-      margin: {
-        top: "0mm",
-        right: "0mm",
-        bottom: "0mm",
-        left: "0mm",
-      },
+    // Multi-page: generate each page separately by hiding other sections
+    const pageBuffers: Buffer[] = [];
+
+    for (let i = 0; i < sectionCount; i++) {
+      // Show only the i-th section, hide all others
+      await page.evaluate((targetIndex) => {
+        const sections = document.querySelectorAll("section");
+        sections.forEach((section, idx) => {
+          const el = section as HTMLElement;
+          if (idx === targetIndex) {
+            el.style.display = "";
+            el.style.removeProperty("display");
+          } else {
+            el.style.setProperty("display", "none", "important");
+          }
+        });
+        // Force reflow
+        void document.body.offsetHeight;
+      }, i);
+
+      const pagePdf = await page.pdf({
+        width: "210mm",
+        height: "373.3mm",
+        printBackground: true,
+        displayHeaderFooter: false,
+        margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+      });
+
+      pageBuffers.push(Buffer.from(pagePdf));
+    }
+
+    // Restore all sections (cleanup)
+    await page.evaluate(() => {
+      const sections = document.querySelectorAll("section");
+      sections.forEach((section) => {
+        (section as HTMLElement).style.removeProperty("display");
+      });
     });
 
-    return Buffer.from(pdf);
+    console.log(`[pdf] Merging ${pageBuffers.length} page PDFs.`);
+    return await mergePdfBuffers(pageBuffers);
   } finally {
     await browser.close();
     await deletePdfRenderPayload(token);
