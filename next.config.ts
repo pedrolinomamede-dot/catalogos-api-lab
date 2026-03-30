@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   reactCompiler: true,
+  serverExternalPackages: ["@sparticuz/chromium", "playwright-core"],
   async headers() {
     return [
       {

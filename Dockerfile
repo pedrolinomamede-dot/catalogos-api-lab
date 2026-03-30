@@ -50,6 +50,8 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@sparticuz ./node_modules/@sparticuz
+COPY --from=builder /app/node_modules/playwright-core ./node_modules/playwright-core
 
 # Create uploads directory and fix permissions
 RUN mkdir -p /app/public/uploads && \
