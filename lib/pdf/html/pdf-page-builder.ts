@@ -57,7 +57,7 @@ export type PdfPageModel = {
 
 export const PAGE_HEIGHT_MM = 373.3;
 export const SAFE_TOP_MM = 8;
-export const SAFE_BOTTOM_MM = 14;
+export const SAFE_BOTTOM_MM = 22;
 export const DATE_ROW_RESERVE_MM = 4;
 export const PAGE_CONTENT_HEIGHT_MM =
   PAGE_HEIGHT_MM - SAFE_TOP_MM - SAFE_BOTTOM_MM - DATE_ROW_RESERVE_MM;
