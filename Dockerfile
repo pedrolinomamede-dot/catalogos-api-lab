@@ -30,7 +30,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Install Chromium system dependencies + Playwright
+# Install Chromium system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 \
     libatk1.0-0 \
@@ -54,7 +54,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Playwright and download Chromium browser
+# Install Playwright and download Chromium browser to a shared location
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
 RUN npm install playwright@1.58.2 && npx playwright install chromium && npm cache clean --force
 
 # Create non-root user
@@ -71,8 +72,10 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
-# Create uploads directory
-RUN mkdir -p /app/public/uploads && chown -R nextjs:nodejs /app/public/uploads
+# Create uploads directory and fix permissions
+RUN mkdir -p /app/public/uploads && \
+    chown -R nextjs:nodejs /app/public/uploads && \
+    chown -R nextjs:nodejs /app/.playwright-browsers
 
 USER nextjs
 

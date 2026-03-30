@@ -228,6 +228,17 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
       console.warn("[pdf] Background image failed to load:", failedBackgrounds);
     }
 
+    await page.addStyleTag({
+      content: `
+        html, body {
+          height: auto !important;
+          min-height: auto !important;
+          max-width: none !important;
+          overflow: visible !important;
+        }
+      `,
+    });
+
     const pdf = await page.pdf({
       width: "210mm",
       height: "373.3mm",
