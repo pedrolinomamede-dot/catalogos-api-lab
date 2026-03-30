@@ -215,66 +215,16 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
       console.warn("[pdf] Background preload timed out.", backgroundCandidates);
     }
 
-    // Count how many PAGE sections exist (direct children of main[data-pdf-ready])
-    const PAGE_SECTION_SELECTOR = "section[data-pdf-page]";
+    const pdf = await page.pdf({
+      width: "210mm",
+      height: "373.3mm",
+      printBackground: true,
+      displayHeaderFooter: false,
+      margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+    });
 
-    const sectionCount = await page.evaluate((selector) => {
-      return document.querySelectorAll(selector).length;
-    }, PAGE_SECTION_SELECTOR);
-
-    console.log(`[pdf] Found ${sectionCount} page sections. Generating per-page PDFs.`);
-
-    if (sectionCount <= 1) {
-      // Single page — generate directly
-      const pdf = await page.pdf({
-        width: "210mm",
-        height: "373.3mm",
-        printBackground: true,
-        displayHeaderFooter: false,
-        margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
-      });
-      return Buffer.from(pdf);
-    }
-
-    // Multi-page: generate each page separately by hiding other page sections
-    const pageBuffers: Buffer[] = [];
-
-    for (let i = 0; i < sectionCount; i++) {
-      // Show only the i-th page section, hide all others
-      await page.evaluate((args) => {
-        const { selector, targetIndex } = args;
-        const pageSections = document.querySelectorAll(selector);
-        pageSections.forEach((section, idx) => {
-          const el = section as HTMLElement;
-          if (idx === targetIndex) {
-            el.style.removeProperty("display");
-          } else {
-            el.style.setProperty("display", "none", "important");
-          }
-        });
-        void document.body.offsetHeight;
-      }, { selector: PAGE_SECTION_SELECTOR, targetIndex: i });
-
-      const pagePdf = await page.pdf({
-        width: "210mm",
-        height: "373.3mm",
-        printBackground: true,
-        displayHeaderFooter: false,
-        margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
-      });
-
-      pageBuffers.push(Buffer.from(pagePdf));
-    }
-
-    // Restore all sections (cleanup)
-    await page.evaluate((selector) => {
-      document.querySelectorAll(selector).forEach((section) => {
-        (section as HTMLElement).style.removeProperty("display");
-      });
-    }, PAGE_SECTION_SELECTOR);
-
-    console.log(`[pdf] Merging ${pageBuffers.length} page PDFs.`);
-    return await mergePdfBuffers(pageBuffers);
+    console.log(`[pdf] PDF generated (${pdf.byteLength} bytes).`);
+    return Buffer.from(pdf);
   } finally {
     await browser.close();
     await deletePdfRenderPayload(token);
