@@ -93,7 +93,14 @@ function buildLaunchOptions(executablePath: string): LaunchOptions {
   };
 
   if (process.platform === "linux") {
-    launchOptions.args = ["--no-sandbox", "--disable-setuid-sandbox"];
+    launchOptions.args = [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-gpu",
+      "--disable-dev-shm-usage",
+      "--disable-software-rasterizer",
+      "--single-process",
+    ];
   }
 
   return launchOptions;
