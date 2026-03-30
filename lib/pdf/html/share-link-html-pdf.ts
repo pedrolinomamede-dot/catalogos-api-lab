@@ -228,15 +228,35 @@ export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<
       console.warn("[pdf] Background image failed to load:", failedBackgrounds);
     }
 
-    await page.evaluate(() => {
-      for (const el of [document.documentElement, document.body]) {
-        el.style.setProperty("height", "auto", "important");
-        el.style.setProperty("min-height", "auto", "important");
-        el.style.setProperty("max-width", "none", "important");
-        el.style.setProperty("overflow", "visible", "important");
-      }
-      void document.body.offsetHeight;
+    const debugInfo = await page.evaluate(() => {
+      const main = document.querySelector("main[data-pdf-ready]");
+      const sections = document.querySelectorAll("section");
+      const body = document.body;
+      const html = document.documentElement;
+      return {
+        htmlScrollHeight: html.scrollHeight,
+        bodyScrollHeight: body.scrollHeight,
+        sectionCount: sections.length,
+        bodyOverflowX: getComputedStyle(body).overflowX,
+        bodyOverflowY: getComputedStyle(body).overflowY,
+        bodyHeight: getComputedStyle(body).height,
+        htmlHeight: getComputedStyle(html).height,
+        sections: Array.from(sections).map((s, i) => ({
+          index: i,
+          offsetTop: (s as HTMLElement).offsetTop,
+          offsetHeight: (s as HTMLElement).offsetHeight,
+          className: (s as HTMLElement).className.slice(0, 80),
+        })),
+      };
     });
+    console.log("[pdf] DEBUG:", JSON.stringify(debugInfo, null, 2));
+
+    try {
+      await page.screenshot({ path: "/tmp/pdf-debug-fullpage.png", fullPage: true });
+      console.log("[pdf] DEBUG screenshot saved to /tmp/pdf-debug-fullpage.png");
+    } catch (e) {
+      console.warn("[pdf] DEBUG screenshot failed:", e);
+    }
 
     const pdf = await page.pdf({
       width: "210mm",
