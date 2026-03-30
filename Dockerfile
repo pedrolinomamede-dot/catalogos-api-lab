@@ -30,9 +30,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Install Playwright with ALL system dependencies (automatic detection)
-ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
-RUN npx -y playwright@1.58.2 install --with-deps chromium
+# Install system Chromium (more reliable in containers than Playwright's bundled version)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    fonts-noto-color-emoji \
+    fonts-freefont-ttf \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CHROME_BIN=/usr/bin/chromium
+ENV PDF_HTML_BROWSER_PATH=/usr/bin/chromium
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
@@ -50,8 +57,7 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
 # Create uploads directory and fix permissions
 RUN mkdir -p /app/public/uploads && \
-    chown -R nextjs:nodejs /app/public/uploads && \
-    chown -R nextjs:nodejs /app/.playwright-browsers
+    chown -R nextjs:nodejs /app/public/uploads
 
 USER nextjs
 
