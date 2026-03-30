@@ -491,8 +491,6 @@ export function CatalogPdfClassic({ data }: { data: ShareLinkPdfData }) {
         html, body {
           margin: 0;
           padding: 0;
-          height: auto !important;
-          min-height: auto !important;
         }
         main[data-pdf-ready] {
           padding: 0;
