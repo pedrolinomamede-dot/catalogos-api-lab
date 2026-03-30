@@ -335,10 +335,7 @@ export function CatalogPdfGlass({ data }: { data: ShareLinkPdfData }) {
           margin: 0;
           padding: 0;
           height: auto !important;
-          min-height: 0 !important;
-          max-width: none !important;
-          overflow: visible !important;
-          background: none !important;
+          min-height: auto !important;
         }
         main[data-pdf-ready] {
           padding: 0;
