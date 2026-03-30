@@ -68,10 +68,10 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
-# Install Playwright browsers (only Chromium)
+# Install Playwright and download Chromium
 COPY --from=deps /app/node_modules/playwright-core ./node_modules/playwright-core
 COPY --from=deps /app/node_modules/playwright ./node_modules/playwright
-RUN npx playwright install chromium
+RUN node ./node_modules/playwright/install.js chromium
 
 # Create uploads directory
 RUN mkdir -p /app/public/uploads && chown -R nextjs:nodejs /app/public/uploads
