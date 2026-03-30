@@ -30,16 +30,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Install system Chromium (more reliable in containers than Playwright's bundled version)
+# Install fonts and basic deps (Chromium is provided by @sparticuz/chromium npm package)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium \
     fonts-noto-color-emoji \
     fonts-freefont-ttf \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
-ENV CHROME_BIN=/usr/bin/chromium
-ENV PDF_HTML_BROWSER_PATH=/usr/bin/chromium
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { chromium, type LaunchOptions } from "playwright-core";
+import { chromium, type LaunchOptions, type Browser } from "playwright-core";
 import { PDFDocument } from "pdf-lib";
 
 import {
@@ -27,36 +27,55 @@ const READY_SELECTOR = "[data-pdf-ready='true']";
 const NAVIGATION_TIMEOUT_MS = 45_000;
 const BACKGROUND_IMAGE_PATH = "/pdf/imagem-fundo.jpg";
 
-function resolvePlaywrightCacheBrowser() {
+// ---------------------------------------------------------------------------
+// Browser resolution: @sparticuz/chromium (containers) → local browsers
+// ---------------------------------------------------------------------------
+
+async function launchBrowser(): Promise<Browser> {
+  // Try @sparticuz/chromium first (works in Railway, Lambda, etc.)
   try {
-    const pw = require("playwright");
-    if (pw?.chromium?.executablePath) {
-      const p = pw.chromium.executablePath();
-      if (p && fs.existsSync(p)) return p;
+    const sparticuzChromium = await import("@sparticuz/chromium");
+    const mod = sparticuzChromium.default ?? sparticuzChromium;
+    const execPath = await mod.executablePath();
+    if (execPath) {
+      console.log("[pdf] Using @sparticuz/chromium:", execPath);
+      return chromium.launch({
+        headless: true,
+        executablePath: execPath,
+        args: mod.args ?? [],
+      });
     }
   } catch {
-    /* playwright package not available */
+    /* @sparticuz/chromium not available */
   }
 
-  const cacheDir =
-    process.env.PLAYWRIGHT_BROWSERS_PATH ||
-    path.join(process.env.HOME || "/root", ".cache", "ms-playwright");
-  try {
-    if (fs.existsSync(cacheDir)) {
-      const entries = fs.readdirSync(cacheDir).filter((e) => e.startsWith("chromium-")).sort().reverse();
-      for (const entry of entries) {
-        const candidate = path.join(cacheDir, entry, "chrome-linux", "chrome");
-        if (fs.existsSync(candidate)) return candidate;
-      }
-    }
-  } catch {
-    /* ignore */
+  // Fallback: local browser
+  const localPath = resolveLocalBrowserPath();
+  if (!localPath) {
+    throw new Error(
+      "No Chromium browser found. Install @sparticuz/chromium or set PDF_HTML_BROWSER_PATH.",
+    );
   }
 
-  return null;
+  console.log("[pdf] Using local browser:", localPath);
+  const launchOptions: LaunchOptions = {
+    headless: true,
+    executablePath: localPath,
+  };
+
+  if (process.platform === "linux") {
+    launchOptions.args = [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-gpu",
+      "--disable-dev-shm-usage",
+    ];
+  }
+
+  return chromium.launch(launchOptions);
 }
 
-function resolveConfiguredBrowserPath() {
+function resolveLocalBrowserPath() {
   const configured = process.env.PDF_HTML_BROWSER_PATH?.trim();
   if (configured && fs.existsSync(configured)) {
     return configured;
@@ -69,43 +88,38 @@ function resolveConfiguredBrowserPath() {
     }
   }
 
-  const playwrightBrowser = resolvePlaywrightCacheBrowser();
-  if (playwrightBrowser) return playwrightBrowser;
+  // Playwright cache
+  try {
+    const pw = require("playwright");
+    if (pw?.chromium?.executablePath) {
+      const p = pw.chromium.executablePath();
+      if (p && fs.existsSync(p)) return p;
+    }
+  } catch { /* not available */ }
+
+  const cacheDir =
+    process.env.PLAYWRIGHT_BROWSERS_PATH ||
+    path.join(process.env.HOME || "/root", ".cache", "ms-playwright");
+  try {
+    if (fs.existsSync(cacheDir)) {
+      const entries = fs.readdirSync(cacheDir).filter((e) => e.startsWith("chromium-")).sort().reverse();
+      for (const entry of entries) {
+        for (const sub of ["chrome-linux64", "chrome-linux"]) {
+          const candidate = path.join(cacheDir, entry, sub, "chrome");
+          if (fs.existsSync(candidate)) return candidate;
+        }
+      }
+    }
+  } catch { /* ignore */ }
 
   return null;
 }
 
 function resolveWaitUntil() {
   const raw = process.env.PDF_HTML_WAIT_UNTIL?.trim().toLowerCase();
-  if (raw === "load") {
-    return "load";
-  }
-  if (raw === "domcontentloaded") {
-    return "domcontentloaded";
-  }
+  if (raw === "load") return "load";
+  if (raw === "domcontentloaded") return "domcontentloaded";
   return "networkidle";
-}
-
-function buildLaunchOptions(executablePath: string): LaunchOptions {
-  const launchOptions: LaunchOptions = {
-    headless: true,
-    executablePath,
-  };
-
-  if (process.platform === "linux") {
-    launchOptions.args = [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-gpu",
-      "--disable-dev-shm-usage",
-      "--disable-software-rasterizer",
-      "--no-zygote",
-      "--disable-crash-reporter",
-      "--font-render-hinting=none",
-    ];
-  }
-
-  return launchOptions;
 }
 
 function resolveRenderBaseUrl() {
@@ -157,17 +171,10 @@ async function mergePdfBuffers(buffers: Buffer[]): Promise<Buffer> {
 }
 
 export async function generateShareLinkHtmlPdf(data: ShareLinkPdfData): Promise<Buffer> {
-  const executablePath = resolveConfiguredBrowserPath();
-  if (!executablePath) {
-    throw new Error(
-      "No Chromium browser executable found for HTML PDF engine. Configure PDF_HTML_BROWSER_PATH.",
-    );
-  }
-
   const token = await createPdfRenderPayload(data);
   const renderUrl = `${resolveRenderBaseUrl()}/pdf-render/catalog?token=${encodeURIComponent(token)}`;
 
-  const browser = await chromium.launch(buildLaunchOptions(executablePath));
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage({
       viewport: { width: 1280, height: 1810 },
