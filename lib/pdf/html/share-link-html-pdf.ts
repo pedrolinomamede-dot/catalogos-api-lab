@@ -99,7 +99,9 @@ function buildLaunchOptions(executablePath: string): LaunchOptions {
       "--disable-gpu",
       "--disable-dev-shm-usage",
       "--disable-software-rasterizer",
-      "--single-process",
+      "--no-zygote",
+      "--disable-crash-reporter",
+      "--font-render-hinting=none",
     ];
   }
 
