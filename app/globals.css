@@ -80,26 +80,13 @@
   margin: 0;
 }
 
-html,
+html {
+  min-height: 100%;
+}
+
 body {
-  height: 100%;
   max-width: 100vw;
   overflow-x: hidden;
-}
-
-@media print {
-  html,
-  body {
-    height: auto !important;
-    min-height: auto !important;
-    max-width: none !important;
-    overflow: visible !important;
-    background: none !important;
-  }
-}
-
-body {
-  min-height: 100vh;
   color: var(--ink);
   background:
     radial-gradient(circle at 15% 0%, #f8e7d0 0%, transparent 45%),
