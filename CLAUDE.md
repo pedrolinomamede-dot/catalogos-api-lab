@@ -327,7 +327,14 @@ npx playwright install chromium
 ```
 
 ### Bloco de Deploy na VPS
-Apos commit+push para `origin main`, fornecer este bloco para o Pedro executar no servidor:
+Apos commit+push para `origin main`, a fonte de verdade do deploy passa a ser:
+
+```bash
+cd /var/www/catalogos-api-lab/app
+bash ./scripts/deploy-platon-vps.sh
+```
+
+Bloco equivalente (referencia operacional do script):
 
 ```bash
 set -euo pipefail
@@ -416,6 +423,10 @@ npx playwright install chromium
 # PM2 standalone
 HOSTNAME=0.0.0.0 PORT=3000 pm2 start .next/standalone/server.js --name catalogos-api-lab
 pm2 restart catalogos-api-lab --update-env
+
+# Deploy/update na Platon
+cd /var/www/catalogos-api-lab/app
+bash ./scripts/deploy-platon-vps.sh
 ```
 
 ---
