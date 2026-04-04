@@ -165,6 +165,12 @@ origin  → github.com/pedrolinomamede-dot/catalogos-api-lab.git (UNICO PERMITID
 - **codex/main-updated-continuation** — branch local de continuidade para novos ajustes
 - **Branches historicas preservadas:** `codex/dashboard-overview-functional`, `codex/dashboard-overview-functional-0Gl51`
 
+### Arquivos locais fora do Git
+- **CLAUDE.md** — fonte oficial de contexto persistente do projeto
+- **AGENTS.md** — arquivo local mantido apenas como registro historico; nao e fonte oficial de verdade
+- **.codex** — arquivo/pasta local de ferramenta; nao faz parte do projeto e deve permanecer fora do Git
+- **Regra pratica:** nao versionar `AGENTS.md` nem `.codex`; toda decisao operacional duradoura deve ser registrada no `CLAUDE.md`
+
 ---
 
 ## Estrutura de Pastas Chave
