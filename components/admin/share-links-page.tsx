@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import type { ShareLinkV2 } from "@/types/api";
-import type { PdfExportMode } from "@/types/api";
+import type { MeResponse, PdfExportMode, ShareLinkV2 } from "@/types/api";
 
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -29,6 +28,7 @@ import { copyTextToClipboard } from "@/lib/browser/copy-to-clipboard";
 import {
   useDeleteShareLinkV2,
   useGenerateShareLinkPdfV2,
+  useMe,
   useRevokeShareLinkV2,
   useShareLinkV2,
   useShareLinksV2,
@@ -47,6 +47,7 @@ const buildShareLinkUrl = (identifier: string) => {
 
 type ShareLinkRowProps = {
   shareLink: ShareLinkV2;
+  showOwner: boolean;
   isSelected: boolean;
   isGenerating: boolean;
   onToggleSelection: (shareLinkId: string) => void;
@@ -58,6 +59,7 @@ type ShareLinkRowProps = {
 
 function ShareLinkRow({
   shareLink,
+  showOwner,
   isSelected,
   isGenerating,
   onToggleSelection,
@@ -96,6 +98,20 @@ function ShareLinkRow({
           <p className="text-xs text-muted-foreground">{shareLink.id}</p>
         </div>
       </TableCell>
+      {showOwner ? (
+        <TableCell>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              {shareLink.ownerName?.trim() || "-"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {shareLink.ownerWhatsappPhone?.trim() ||
+                shareLink.ownerEmail?.trim() ||
+                "-"}
+            </p>
+          </div>
+        </TableCell>
+      ) : null}
       <TableCell>
         <span
           className={
@@ -161,6 +177,7 @@ function ShareLinkRow({
 }
 
 export function ShareLinksPageClient() {
+  const { data: me } = useMe();
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error, refetch } = useShareLinksV2({
     page,
@@ -194,6 +211,7 @@ export function ShareLinksPageClient() {
   const totalPages = Math.max(1, meta?.totalPages ?? 1);
   const currentPage = Math.min(Math.max(page, 1), totalPages);
   const selectedCount = selectedIds.size;
+  const showOwner = (me as MeResponse | undefined)?.role === "ADMIN";
   const allPageSelected =
     shareLinks.length > 0 &&
     shareLinks.every((shareLink) => selectedIds.has(shareLink.id));
@@ -414,6 +432,7 @@ export function ShareLinksPageClient() {
                   />
                 </TableHead>
                 <TableHead>Nome</TableHead>
+                {showOwner ? <TableHead>Responsável</TableHead> : null}
                 <TableHead>Status</TableHead>
                 <TableHead>Catalogos</TableHead>
                 <TableHead>Criado em</TableHead>
@@ -425,6 +444,7 @@ export function ShareLinksPageClient() {
                 <ShareLinkRow
                   key={shareLink.id}
                   shareLink={shareLink}
+                  showOwner={showOwner}
                   isSelected={selectedIds.has(shareLink.id)}
                   isGenerating={generatingId === shareLink.id}
                   onToggleSelection={toggleSelection}

@@ -1,8 +1,19 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { BrandSettingsPanel } from "@/components/admin/brand-settings-panel";
+import { getAuthSession } from "@/lib/auth";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const session = await getAuthSession();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
+  if (session.user.role !== "ADMIN") {
+    redirect("/dashboard");
+  }
+
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-semibold text-ink">Configuracoes</h1>

@@ -11,9 +11,11 @@ import {
   PlugZap,
   FileStack,
   Link2,
+  Users,
   X,
 } from "lucide-react";
 
+import { useMe } from "@/lib/api/hooks";
 import { useUiStore } from "@/lib/stores/ui-store";
 import { cn } from "@/lib/utils";
 
@@ -26,15 +28,17 @@ type SidebarLink = {
   href: string;
   label: string;
   icon: typeof Home;
+  adminOnly?: boolean;
 };
 
 const links: SidebarLink[] = [
   { href: "/dashboard", label: "Visão Geral", icon: Home },
   { href: "/dashboard/base-products", label: "Base Geral", icon: Database },
   { href: "/dashboard/base-categories", label: "Categorias", icon: FolderKanban },
-  { href: "/dashboard/integrations", label: "Integrações", icon: PlugZap },
+  { href: "/dashboard/integrations", label: "Integrações", icon: PlugZap, adminOnly: true },
   { href: "/dashboard/catalogs", label: "Catálogos", icon: FileStack },
   { href: "/dashboard/share-links", label: "Share Links", icon: Link2 },
+  { href: "/dashboard/team", label: "Equipe", icon: Users, adminOnly: true },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -46,6 +50,7 @@ function isActive(pathname: string, href: string) {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { data: me } = useMe();
   const mobileNavOpen = useUiStore((state) => state.mobileNavOpen);
   const sidebarOpen = useUiStore((state) => state.sidebarOpen);
   const setMobileNavOpen = useUiStore((state) => state.setMobileNavOpen);
@@ -57,6 +62,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const isMobileOpen = mobileNavOpen;
   const isDesktopOpen = sidebarOpen;
+  const visibleLinks = links.filter((link) => !link.adminOnly || me?.role === "ADMIN");
 
   const handleClose = () => {
     closeMobileNav();
@@ -107,7 +113,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Nav */}
         <nav className="space-y-2">
-          {links.map((link) => {
+          {visibleLinks.map((link) => {
             const active = isActive(pathname, link.href);
             const Icon = link.icon;
 

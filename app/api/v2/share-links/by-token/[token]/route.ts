@@ -20,6 +20,15 @@ export async function GET(
       OR: [{ slug: normalizedIdentifier }, { token: normalizedIdentifier }],
       isRevoked: false,
     },
+    include: {
+      ownerUser: {
+        select: {
+          id: true,
+          name: true,
+          whatsappPhone: true,
+        },
+      },
+    },
   });
 
   if (!shareLink) {
@@ -50,6 +59,9 @@ export async function GET(
         brandId: shareLink.brandId,
         name: shareLink.name,
         slug: shareLink.slug,
+        ownerUserId: shareLink.ownerUserId,
+        ownerName: shareLink.ownerUser.name,
+        ownerWhatsappPhone: shareLink.ownerUser.whatsappPhone,
         catalogs: catalogs.map((item) => item.catalog),
       },
     });

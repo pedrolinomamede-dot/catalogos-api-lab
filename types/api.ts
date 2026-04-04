@@ -35,6 +35,7 @@ export type IntegrationSyncJobStatus =
 export type IntegrationSyncJobMode = "MANUAL" | "SCHEDULED" | "WEBHOOK";
 
 export type IntegrationSyncResource = "FULL" | "PRODUCTS" | "CATEGORIES" | "IMAGES";
+export type UserRole = "ADMIN" | "SELLER" | "VIEWER";
 
 export type Category = {
   id: string;
@@ -352,14 +353,53 @@ export type ShareLinkCatalogV2 = {
   description?: string | null;
 };
 
+export type AppUserV2 = {
+  id: string;
+  brandId: string;
+  name?: string | null;
+  email: string;
+  role: UserRole;
+  whatsappPhone?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type CreateUserV2Request = {
+  name?: string;
+  email: string;
+  password: string;
+  role: "ADMIN" | "SELLER";
+  whatsappPhone?: string | null;
+  isActive?: boolean;
+};
+
+export type UpdateUserV2Request = Partial<Omit<CreateUserV2Request, "password">> & {
+  password?: string;
+};
+
+export type MeResponse = {
+  userId: string;
+  brandId: string;
+  name?: string | null;
+  email: string | null;
+  role: UserRole;
+  whatsappPhone?: string | null;
+  isActive: boolean;
+};
+
 export type ShareLinkV2 = {
   id: string;
   brandId: string;
+  ownerUserId: string;
   name: string;
   token: string;
   slug?: string | null;
   isRevoked: boolean;
   revokedAt?: Date | null;
+  ownerName?: string | null;
+  ownerEmail?: string | null;
+  ownerWhatsappPhone?: string | null;
   createdAt: Date;
   updatedAt: Date;
   catalogCount?: number;
@@ -475,5 +515,8 @@ export type ShareLinkPublicV2 = {
   brandId: string;
   name: string;
   slug?: string | null;
+  ownerUserId: string;
+  ownerName?: string | null;
+  ownerWhatsappPhone?: string | null;
   catalogs: ShareLinkPublicCatalogV2[];
 };

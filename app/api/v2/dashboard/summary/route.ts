@@ -9,6 +9,11 @@ export async function GET() {
     return auth;
   }
 
+  const shareLinksWhere =
+    auth.role === "SELLER"
+      ? { brandId: auth.brandId, ownerUserId: auth.userId }
+      : { brandId: auth.brandId };
+
   return withBrand(auth.brandId, async (tx) => {
     const [
       totalBaseProducts,
@@ -74,7 +79,7 @@ export async function GET() {
         where: { brandId: auth.brandId },
       }),
       tx.shareLinkV2.findMany({
-        where: { brandId: auth.brandId },
+        where: shareLinksWhere,
         select: {
           isRevoked: true,
         },

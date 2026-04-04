@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import sharp from "sharp";
 
-import { requireRole } from "@/lib/authz";
+import { type AuthContext, requireRoles } from "@/lib/authz";
 import type { ProductImageLayout } from "@/types/api";
 import { compareProductsByLineCategoryMeasure, normalizeCatalogLabel } from "@/lib/catalog/line-grouping";
 import {
@@ -16,6 +17,24 @@ import { jsonError } from "@/lib/utils/errors";
 
 export const dynamic = "force-dynamic";
 const IMAGE_METADATA_TIMEOUT_MS = 6_000;
+
+function buildShareLinkWhere(
+  auth: AuthContext,
+  id: string,
+): Prisma.ShareLinkV2WhereInput {
+  if (auth.role === "SELLER") {
+    return {
+      id,
+      brandId: auth.brandId,
+      ownerUserId: auth.userId,
+    };
+  }
+
+  return {
+    id,
+    brandId: auth.brandId,
+  };
+}
 
 function composeProductDescription(
   description?: string | null,
@@ -139,7 +158,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const auth = await requireRole("ADMIN");
+  const auth = await requireRoles(["ADMIN", "SELLER"]);
   if (auth instanceof NextResponse) {
     return auth;
   }
@@ -152,10 +171,7 @@ export async function GET(
   try {
     pdfData = await withBrand(auth.brandId, async (tx) => {
       const shareLink = await tx.shareLinkV2.findFirst({
-        where: {
-          id,
-          brandId: auth.brandId,
-        },
+        where: buildShareLinkWhere(auth, id),
       });
 
       if (!shareLink || shareLink.isRevoked) {

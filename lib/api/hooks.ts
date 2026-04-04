@@ -1,4 +1,5 @@
 import type {
+  AppUserV2,
   DashboardSummaryV2,
   BaseProductsImportResultV2,
   CreateBrandRequest,
@@ -9,7 +10,9 @@ import type {
   CreateCategoryV2Request,
   CreateSubcategoryV2Request,
   CreateCategoryRequest,
+  CreateUserV2Request,
   ImportBaseProductsCsvV2Item,
+  MeResponse,
   CreateProductRequest,
   UpdateBrandRequest,
   UpdateCategoryRequest,
@@ -17,6 +20,7 @@ import type {
   UpdateCatalogV2Request,
   UpdateBaseProductV2Request,
   UpdateSubcategoryV2Request,
+  UpdateUserV2Request,
   UpdateProductRequest,
 } from "@/types/api";
 
@@ -86,6 +90,11 @@ import {
   revokeShareLinkV2,
 } from "@/lib/api/v2/share-links";
 import {
+  createUserV2,
+  listUsersV2,
+  updateUserV2,
+} from "@/lib/api/v2/users";
+import {
   assignBaseProductCategory,
   createCategoryV2,
   createSubcategoryV2,
@@ -142,6 +151,7 @@ type SubcategoriesV2Params = Parameters<typeof listSubcategoriesV2>[1];
 type CatalogsV2Params = Parameters<typeof listCatalogsV2>[0];
 type ShareLinksV2Params = Parameters<typeof listShareLinksV2>[0];
 type IntegrationConnectionJobsParams = Parameters<typeof listIntegrationConnectionJobsV2>[1];
+type UpdateUserV2Input = { id: string; data: UpdateUserV2Request };
 
 type CatalogItemsBatchFailure = {
   productBaseId: string;
@@ -156,7 +166,7 @@ type CatalogItemsBatchResult = {
 export function useMe() {
   return useQuery({
     queryKey: queryKeys.me,
-    queryFn: () => apiGet<unknown>("/api/auth/me"),
+    queryFn: () => apiGet<MeResponse>("/api/auth/me"),
   });
 }
 
@@ -310,6 +320,13 @@ export function useShareLinkV2(id: string) {
     queryKey: queryKeys.v2.shareLinks.byId(id),
     queryFn: () => getShareLinkV2(id),
     enabled: Boolean(id),
+  });
+}
+
+export function useUsersV2() {
+  return useQuery({
+    queryKey: queryKeys.v2.users.list,
+    queryFn: listUsersV2,
   });
 }
 
@@ -676,6 +693,28 @@ export function useDeleteShareLinkV2() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.shareLinks.root });
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
+    },
+  });
+}
+
+export function useCreateUserV2() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateUserV2Request) => createUserV2(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.users.root });
+    },
+  });
+}
+
+export function useUpdateUserV2() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateUserV2Input) => updateUserV2(input.id, input.data),
+    onSuccess: (_user: AppUserV2, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.users.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.users.byId(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
     },
   });
 }

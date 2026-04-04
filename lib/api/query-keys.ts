@@ -55,6 +55,11 @@ export const queryKeys = {
         ["v2", "share-links", paramsKey ?? "all"] as const,
       byId: (id: string) => ["v2", "share-links", id] as const,
     },
+    users: {
+      root: ["v2", "users"] as const,
+      list: ["v2", "users", "list"] as const,
+      byId: (id: string) => ["v2", "users", id] as const,
+    },
     dashboard: {
       root: ["v2", "dashboard"] as const,
       summary: ["v2", "dashboard", "summary"] as const,
@@ -69,6 +74,5 @@ export const queryKeys = {
     },
   },
 };
-
 
 

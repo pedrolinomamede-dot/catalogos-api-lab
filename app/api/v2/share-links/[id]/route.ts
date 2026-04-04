@@ -1,6 +1,7 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireRole, requireUser } from "@/lib/authz";
+import { type AuthContext, requireRoles } from "@/lib/authz";
 import { withBrand } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
 
@@ -38,23 +39,45 @@ function parseRevokePayload(body: unknown) {
   return { data: { action: "revoke" } satisfies RevokePayload };
 }
 
+function buildShareLinkWhere(
+  auth: AuthContext,
+  id: string,
+): Prisma.ShareLinkV2WhereInput {
+  if (auth.role === "SELLER") {
+    return {
+      id,
+      brandId: auth.brandId,
+      ownerUserId: auth.userId,
+    };
+  }
+
+  return {
+    id,
+    brandId: auth.brandId,
+  };
+}
+
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const auth = await requireUser();
+  const auth = await requireRoles(["ADMIN", "SELLER"]);
   if (auth instanceof NextResponse) {
     return auth;
   }
 
   const shareLink = await withBrand(auth.brandId, (tx) =>
     tx.shareLinkV2.findFirst({
-      where: {
-        id,
-        brandId: auth.brandId,
-      },
+      where: buildShareLinkWhere(auth, id),
       include: {
+        ownerUser: {
+          select: {
+            name: true,
+            email: true,
+            whatsappPhone: true,
+          },
+        },
         catalogs: {
           include: {
             catalog: {
@@ -74,12 +97,15 @@ export async function GET(
     return jsonError(404, "not_found", "Share link not found");
   }
 
-  const { catalogs, ...rest } = shareLink;
+  const { catalogs, ownerUser, ...rest } = shareLink;
 
   return NextResponse.json({
     ok: true,
     data: {
       ...rest,
+      ownerName: ownerUser.name,
+      ownerEmail: ownerUser.email,
+      ownerWhatsappPhone: ownerUser.whatsappPhone,
       catalogs: catalogs.map((item) => item.catalog),
     },
   });
@@ -90,7 +116,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const auth = await requireRole("ADMIN");
+  const auth = await requireRoles(["ADMIN", "SELLER"]);
   if (auth instanceof NextResponse) {
     return auth;
   }
@@ -109,10 +135,7 @@ export async function PATCH(
 
   return withBrand(auth.brandId, async (tx) => {
     const shareLink = await tx.shareLinkV2.findFirst({
-      where: {
-        id,
-        brandId: auth.brandId,
-      },
+      where: buildShareLinkWhere(auth, id),
     });
 
     if (!shareLink) {
@@ -140,7 +163,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const auth = await requireRole("ADMIN");
+  const auth = await requireRoles(["ADMIN", "SELLER"]);
   if (auth instanceof NextResponse) {
     return auth;
   }
@@ -150,10 +173,7 @@ export async function DELETE(
 
   return withBrand(auth.brandId, async (tx) => {
     const shareLink = await tx.shareLinkV2.findFirst({
-      where: {
-        id,
-        brandId: auth.brandId,
-      },
+      where: buildShareLinkWhere(auth, id),
     });
 
     if (!shareLink) {
@@ -183,4 +203,3 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   });
 }
-

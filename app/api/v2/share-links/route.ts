@@ -1,8 +1,8 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 
-import { requireRole, requireUser } from "@/lib/authz";
+import { type AuthContext, requireRoles, requireUser } from "@/lib/authz";
 import { withBrand } from "@/lib/prisma";
 import {
   buildShareLinkSlugCandidate,
@@ -147,6 +147,7 @@ async function createShareLink(
   tx: Prisma.TransactionClient,
   brandId: string,
   name: string,
+  ownerUserId: string,
 ) {
   const baseSlug = slugifyShareLinkName(name);
 
@@ -161,6 +162,7 @@ async function createShareLink(
           name,
           token,
           slug,
+          ownerUserId,
         },
       });
     } catch (error) {
@@ -179,6 +181,50 @@ async function createShareLink(
   throw new Error("Unable to generate a unique token");
 }
 
+function buildShareLinkWhere(
+  auth: AuthContext,
+): Prisma.ShareLinkV2WhereInput {
+  if (auth.role === "SELLER") {
+    return {
+      brandId: auth.brandId,
+      ownerUserId: auth.userId,
+    };
+  }
+
+  return {
+    brandId: auth.brandId,
+  };
+}
+
+function serializeShareLinkListItem(
+  item: Prisma.ShareLinkV2GetPayload<{
+    include: {
+      ownerUser: {
+        select: {
+          name: true;
+          email: true;
+          whatsappPhone: true;
+        };
+      };
+      _count: {
+        select: {
+          catalogs: true;
+        };
+      };
+    };
+  }>,
+) {
+  const { _count, ownerUser, ...shareLink } = item;
+
+  return {
+    ...shareLink,
+    catalogCount: _count.catalogs,
+    ownerName: ownerUser.name,
+    ownerEmail: ownerUser.email,
+    ownerWhatsappPhone: ownerUser.whatsappPhone,
+  };
+}
+
 export async function GET(request: Request) {
   const auth = await requireUser();
   if (auth instanceof NextResponse) {
@@ -191,14 +237,23 @@ export async function GET(request: Request) {
     maxPageSize: 100,
   });
 
+  const where = buildShareLinkWhere(auth);
+
   return withBrand(auth.brandId, async (tx) => {
     const [items, total] = await Promise.all([
       tx.shareLinkV2.findMany({
-        where: { brandId: auth.brandId },
+        where,
         orderBy: { updatedAt: "desc" },
         take,
         skip,
         include: {
+          ownerUser: {
+            select: {
+              name: true,
+              email: true,
+              whatsappPhone: true,
+            },
+          },
           _count: {
             select: {
               catalogs: true,
@@ -206,13 +261,10 @@ export async function GET(request: Request) {
           },
         },
       }),
-      tx.shareLinkV2.count({ where: { brandId: auth.brandId } }),
+      tx.shareLinkV2.count({ where }),
     ]);
 
-    const data = items.map(({ _count, ...item }) => ({
-      ...item,
-      catalogCount: _count.catalogs,
-    }));
+    const data = items.map(serializeShareLinkListItem);
 
     return NextResponse.json({
       ok: true,
@@ -228,7 +280,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireRole("ADMIN");
+  const auth = await requireRoles(["ADMIN", "SELLER"] satisfies UserRole[]);
   if (auth instanceof NextResponse) {
     return auth;
   }
@@ -259,7 +311,12 @@ export async function POST(request: Request) {
         return jsonError(404, "not_found", "Catalog not found");
       }
 
-      const shareLink = await createShareLink(tx, auth.brandId, parsed.data.name);
+      const shareLink = await createShareLink(
+        tx,
+        auth.brandId,
+        parsed.data.name,
+        auth.userId,
+      );
 
       await tx.shareLinkCatalogV2.createMany({
         data: parsed.data.catalogIds.map((catalogId) => ({

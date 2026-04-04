@@ -1,11 +1,11 @@
 "use client";
 
-import { Database, FolderKanban, Plug, BookCopy, Share2, Network, Link as LinkIcon } from "lucide-react";
+import { Database, FolderKanban, Plug, BookCopy, Network, Link as LinkIcon } from "lucide-react";
 
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
 import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
-import { useDashboardSummaryV2 } from "@/lib/api/hooks";
+import { useDashboardSummaryV2, useMe } from "@/lib/api/hooks";
 
 function formatRelativeDate(value?: string | Date | null) {
   if (!value) {
@@ -23,42 +23,22 @@ function formatRelativeDate(value?: string | Date | null) {
   }).format(date);
 }
 
-function formatProviders(providers: string[] | undefined) {
-  if (!providers || providers.length === 0) {
-    return "Nenhum provider conectado";
-  }
-
-  return providers
-    .map((provider) => {
-      switch (provider) {
-        case "VAREJONLINE":
-          return "Varejonline";
-        case "OMIE":
-          return "Omie";
-        case "TINY":
-          return "Tiny";
-        case "BLING":
-          return "Bling";
-        case "CUSTOM":
-          return "Custom";
-        default:
-          return provider;
-      }
-    })
-    .join(" | ");
-}
-
 const quickActions = [
   { href: "/dashboard/base-products", label: "Importar Base" },
-  { href: "/dashboard/integrations", label: "Conectar ERP" },
+  { href: "/dashboard/integrations", label: "Conectar ERP", adminOnly: true },
   { href: "/dashboard/base-categories", label: "Criar Categoria" },
   { href: "/dashboard/catalogs", label: "Criar Catálogo" },
   { href: "/dashboard/share-links", label: "Criar Link" },
 ];
 
 export default function DashboardPage() {
+  const { data: me } = useMe();
   const { data, isLoading, isError } = useDashboardSummaryV2();
   const summary = data;
+  const isAdmin = me?.role === "ADMIN";
+  const visibleQuickActions = quickActions.filter(
+    (action) => !action.adminOnly || isAdmin,
+  );
 
   const baseProducts = summary?.baseProducts;
   const categories = summary?.categories;
@@ -147,26 +127,27 @@ export default function DashboardPage() {
           }
         />
 
-        {/* Integrações — gradient blue */}
-        <DashboardStatCard
-          variant="gradient-blue"
-          buttonVariant="dark"
-          icon={Plug}
-          title="Integrações"
-          actionHref="/dashboard/integrations"
-          actionLabel="Abrir Integrações"
-          delay={0.4}
-          className="col-span-1 md:col-span-6 lg:col-span-4 min-h-[170px]"
-          body={
-            <div className="mt-1">
-              <span className="inline-block bg-white/40 backdrop-blur-sm text-slate-800 text-xs font-medium px-3 py-1 rounded-full border border-white/50">
-                {(integrations?.connected ?? 0) > 0
-                  ? `${integrations?.connected} conectada(s)`
-                  : "Nenhuma conectada"}
-              </span>
-            </div>
-          }
-        />
+        {isAdmin ? (
+          <DashboardStatCard
+            variant="gradient-blue"
+            buttonVariant="dark"
+            icon={Plug}
+            title="Integrações"
+            actionHref="/dashboard/integrations"
+            actionLabel="Abrir Integrações"
+            delay={0.4}
+            className="col-span-1 md:col-span-6 lg:col-span-4 min-h-[170px]"
+            body={
+              <div className="mt-1">
+                <span className="inline-block bg-white/40 backdrop-blur-sm text-slate-800 text-xs font-medium px-3 py-1 rounded-full border border-white/50">
+                  {(integrations?.connected ?? 0) > 0
+                    ? `${integrations?.connected} conectada(s)`
+                    : "Nenhuma conectada"}
+                </span>
+              </div>
+            }
+          />
+        ) : null}
 
         {/* Share Links — glass */}
         <DashboardStatCard
@@ -195,7 +176,7 @@ export default function DashboardPage() {
           <DashboardQuickActions
             title="Ações Rápidas"
             description="Atalhos para tarefas comuns no Catálogo Fácil."
-            actions={quickActions}
+            actions={visibleQuickActions}
           />
         </div>
       </div>

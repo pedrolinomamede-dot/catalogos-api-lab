@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { IntegrationsPageClient } from "@/components/admin/integrations-page";
 import { LoadingState } from "@/components/admin/loading-state";
 import { PageHeader } from "@/components/admin/page-header";
+import { UsersPageClient } from "@/components/admin/users-page";
 import { getAuthSession } from "@/lib/auth";
 
-export default async function IntegrationsPage() {
+export default async function TeamPage() {
   const session = await getAuthSession();
   if (!session?.user?.id) {
     redirect("/login");
@@ -19,11 +19,11 @@ export default async function IntegrationsPage() {
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Integracoes"
-        description="Conecte ERPs, acompanhe o status da sincronizacao e preserve o fluxo CSV/manual."
+        title="Equipe"
+        description="Cadastre vendedores, ajuste acessos e mantenha o WhatsApp comercial de cada usuário."
       />
-      <Suspense fallback={<LoadingState label="Carregando integracoes" />}>
-        <IntegrationsPageClient />
+      <Suspense fallback={<LoadingState label="Carregando equipe" />}>
+        <UsersPageClient />
       </Suspense>
     </section>
   );
