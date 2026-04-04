@@ -11,6 +11,7 @@ import {
   PlugZap,
   FileStack,
   Link2,
+  Settings,
   Users,
   X,
 } from "lucide-react";
@@ -39,6 +40,7 @@ const links: SidebarLink[] = [
   { href: "/dashboard/catalogs", label: "Catálogos", icon: FileStack },
   { href: "/dashboard/share-links", label: "Share Links", icon: Link2 },
   { href: "/dashboard/team", label: "Equipe", icon: Users, adminOnly: true },
+  { href: "/dashboard/settings", label: "Configurações", icon: Settings, adminOnly: true },
 ];
 
 function isActive(pathname: string, href: string) {
