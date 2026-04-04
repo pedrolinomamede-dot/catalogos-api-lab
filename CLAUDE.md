@@ -109,25 +109,35 @@ Sem isso, `overflow-x: clip` e `max-width: 100vw` do globals.css criam clipping 
 ### Arquitetura
 | Servico | Funcao | Status |
 |---------|--------|--------|
-| **VPS Platon 8GB** | Hospedar Next.js + Playwright/Chromium (PDFs) | EM SETUP |
+| **VPS Platon 8GB** | Hospedar Next.js + Playwright/Chromium (PDFs) | ATIVO |
 | **Supabase Database** | PostgreSQL gerenciado | ATIVO |
-| **Supabase Storage** | Imagens de produtos (S3-compatible) | PENDENTE |
+| **Supabase Storage** | Imagens de produtos (S3-compatible) | ATIVO |
 | **Railway** | ABANDONADO — Chromium crasha por restricoes seccomp | DESATIVADO |
 
 ### VPS Platon Host
 - **Plano:** VPS 8GB (4 vCPU, 8GB RAM, 100GB SSD)
 - **SO:** Ubuntu 24.04 LTS
 - **Zona:** Brasil - Sudeste
-- **IP:** (a ser configurado)
+- **IP:** 104.234.41.50
+- **Dominio:** https://catalogofacil.solucaoviavel.com
+- **App dir:** `/var/www/catalogos-api-lab/app`
+- **Uploads dir:** `/var/www/catalogos-api-lab/uploads`
+- **PM2 app:** `catalogos-api-lab`
+- **Porta interna:** `3000`
+- **Nginx:** proxy reverso ativo com SSL via Let's Encrypt
+- **Snapshot baseline:** `baseline-catalogofacil-2026-04-04`
 - **Custo:** R$79,92/mês (com desconto primeira fatura)
 
 ### Supabase
 - **Projeto:** sistema-catalogos-api-lab
 - **URL:** https://lbrxgjueihahqlmnuvhk.supabase.co
 - **Database:** PostgreSQL via Session Pooler (IPv4)
+- **Storage bucket:** `product-images`
+- **Storage mode na VPS:** `STORAGE_DRIVER=s3`
 
 ### Dominio
-- **catalogofacil.solucaoviavel.com** — apontar DNS para IP da VPS Platon
+- **catalogofacil.solucaoviavel.com** — DNS apontado para `104.234.41.50`
+- **HTTPS:** ATIVO
 
 ---
 
@@ -151,8 +161,9 @@ origin  → github.com/pedrolinomamede-dot/catalogos-api-lab.git (UNICO PERMITID
 ```
 
 ### Branches
-- **main** — branch de producao (deploy automatico no Railway enquanto ativo, futuro deploy manual na VPS)
-- **codex/dashboard-overview-functional-0Gl51** — branch de feature/desenvolvimento
+- **main** — branch de producao atualmente publicada na VPS Platon
+- **codex/main-updated-continuation** — branch local de continuidade para novos ajustes
+- **Branches historicas preservadas:** `codex/dashboard-overview-functional`, `codex/dashboard-overview-functional-0Gl51`
 
 ---
 
@@ -236,22 +247,31 @@ prisma/
 
 10. **Abandono Railway → VPS Platon (2026-04-04)** — Railway deu muitos problemas: Chromium crashes, filesystem efemero (perde imagens), importacao de planilhas falhando. Decisao: migrar para VPS Platon 8GB (4 vCPU, 8GB RAM, 100GB SSD, Ubuntu 24.04 LTS, Sudeste BR) + manter Supabase para database. Custo: R$79,92/mês fixo vs Railway variavel.
 
+11. **Baseline funcional na Platon (2026-04-04)** — App publicada em `https://catalogofacil.solucaoviavel.com` com Nginx + PM2 + Certbot. O runtime correto e `node .next/standalone/server.js`; `next start` nao funciona com `output: "standalone"`.
+
+12. **Standalone exige assets copiados (2026-04-04)** — Para o frontend funcionar no modo standalone, foi necessario copiar `public/` para `.next/standalone/public` e `.next/static` para `.next/standalone/.next/static` antes de subir o servidor.
+
+13. **Playwright browser real na VPS (2026-04-04)** — Mesmo com as libs Linux instaladas, a exportacao PDF so funcionou apos `npx playwright install chromium` e `sudo npx playwright install-deps chromium`. Resultado final: PDF validado com sucesso na VPS.
+
+14. **Baseline congelada (2026-04-04)** — Backups locais criados: `.env.backup-2026-04-04`, `catalogos-api-lab.backup-2026-04-04` no Nginx, `pm2 save` executado e snapshot `baseline-catalogofacil-2026-04-04` criado na Platon.
+
 ---
 
 ## Plano de Migracao Atual
 
-### Fase 1: VPS Platon (EM ANDAMENTO)
+### Fase 1: VPS Platon (BASE FUNCIONAL CONCLUIDA)
 1. Provisionar VPS → FEITO
-2. Setup servidor (Node.js, Nginx, PM2, Certbot, Playwright)
-3. Clonar repo e deploy da aplicacao
-4. Apontar DNS catalogofacil.solucaoviavel.com para IP da VPS
-5. SSL com Let's Encrypt
+2. Setup servidor (Node.js, Nginx, PM2, Certbot, Playwright) → FEITO
+3. Clonar repo e deploy da aplicacao → FEITO
+4. Apontar DNS catalogofacil.solucaoviavel.com para IP da VPS → FEITO
+5. SSL com Let's Encrypt → FEITO
+6. Validar dashboard + PDF real → FEITO
 
-### Fase 2: Storage (PENDENTE)
-- Criar bucket no Supabase Storage
-- Configurar env vars S3 no servidor
-- Trocar `STORAGE_DRIVER=s3`
-- Re-upload das imagens dos produtos
+### Fase 2: Storage (ATIVO NO BASELINE)
+- Bucket `product-images` em uso
+- Env vars S3 configuradas na VPS
+- `STORAGE_DRIVER=s3` ativo
+- Revisar somente se houver necessidade de rotacao de credenciais ou reorganizacao de bucket
 
 ### Fase 3: Auth (FUTURO)
 - Substituir NextAuth por Supabase Auth
@@ -269,22 +289,41 @@ prisma/
 
 ### Pacotes necessarios
 ```bash
+# Base
+apt update && apt upgrade -y
+timedatectl set-timezone America/Sao_Paulo
+apt install -y git curl ca-certificates gnupg build-essential pkg-config
+
 # Node.js 20 LTS
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt install -y nodejs
-
-# PM2
 npm install -g pm2
 
 # Nginx + Certbot
 apt install -y nginx certbot python3-certbot-nginx
 
-# Playwright/Chromium deps
-npx playwright install-deps chromium
-npx playwright install chromium
+# Chromium deps (Ubuntu 24.04)
+apt install -y \
+  libnss3 \
+  libatk1.0-0t64 \
+  libatk-bridge2.0-0t64 \
+  libcups2t64 \
+  libdrm2 \
+  libxkbcommon0 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxrandr2 \
+  libgbm1 \
+  libpango-1.0-0 \
+  libcairo2 \
+  libasound2t64 \
+  libxshmfence1 \
+  fonts-noto-color-emoji \
+  fonts-freefont-ttf
 
-# Build tools (Sharp, bcrypt)
-apt install -y build-essential
+# Browser do Playwright
+sudo npx playwright install-deps chromium
+npx playwright install chromium
 ```
 
 ### Bloco de Deploy na VPS
@@ -292,9 +331,9 @@ Apos commit+push para `origin main`, fornecer este bloco para o Pedro executar n
 
 ```bash
 set -euo pipefail
-export PM2_HOME=/root/.pm2
+export PM2_HOME=/home/ubuntu/.pm2
 
-APP_DIR="/var/www/catalogos-api-lab"
+APP_DIR="/var/www/catalogos-api-lab/app"
 APP_NAME="catalogos-api-lab"
 APP_PORT="3000"
 BRANCH="main"
@@ -319,9 +358,19 @@ npx prisma generate
 echo "== Build =="
 npm run build
 
+echo "== Preparando standalone =="
+mkdir -p .next/standalone/.next
+rm -rf .next/standalone/public
+rm -rf .next/standalone/.next/static
+cp -r public .next/standalone/
+cp -r .next/static .next/standalone/.next/
+
+echo "== Garantindo Chromium do Playwright =="
+npx playwright install chromium
+
 echo "== Reiniciando app =="
 pm2 restart "$APP_NAME" --update-env || \
-  pm2 start npm --name "$APP_NAME" --cwd "$APP_DIR" -- start -- -H 0.0.0.0 -p "$APP_PORT"
+  HOSTNAME=0.0.0.0 PORT="$APP_PORT" pm2 start .next/standalone/server.js --name "$APP_NAME"
 pm2 save
 
 echo "== Aguardando app subir =="
@@ -330,6 +379,7 @@ sleep 8
 echo "== Validando =="
 ss -ltnp | grep ":${APP_PORT}" || true
 curl -fsSI "http://127.0.0.1:${APP_PORT}/dashboard" || true
+curl -fsSI "https://catalogofacil.solucaoviavel.com/dashboard" || true
 
 echo "DEPLOY_OK branch=${BRANCH}"
 ```
@@ -353,15 +403,19 @@ npx prisma studio
 # Push para main (producao)
 git push origin main
 
-# Push para feature branch
-git push origin codex/dashboard-overview-functional-0Gl51
+# Push para branch de ajustes atual
+git push origin codex/main-updated-continuation
 
 # Verificar remotes (deve ser APENAS origin)
 git remote -v
 
-# Playwright deps (Linux)
+# Playwright deps/browser (Linux)
 sudo npx playwright install-deps chromium
 npx playwright install chromium
+
+# PM2 standalone
+HOSTNAME=0.0.0.0 PORT=3000 pm2 start .next/standalone/server.js --name catalogos-api-lab
+pm2 restart catalogos-api-lab --update-env
 ```
 
 ---
