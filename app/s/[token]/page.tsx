@@ -24,6 +24,7 @@ type CatalogItemResponse = {
   snapshot?: {
     name: string;
     code: string;
+    price?: Prisma.Decimal | null;
     description?: string | null;
     primaryImageUrl?: string | null;
     galleryJson?: unknown;
@@ -35,6 +36,7 @@ type CatalogItemResponse = {
     id: string;
     name: string;
     sku?: string | null;
+    price?: Prisma.Decimal | null;
     line?: string | null;
     imageLayoutJson?: unknown;
     description?: string | null;
@@ -43,6 +45,14 @@ type CatalogItemResponse = {
     subcategoryId?: string | null;
   } | null;
 };
+
+function toNumber(value: Prisma.Decimal | number | null | undefined) {
+  if (value == null) {
+    return null;
+  }
+
+  return typeof value === "number" ? value : value.toNumber();
+}
 
 function buildGalleryImageUrls(
   primaryImageUrl?: string | null,
@@ -208,6 +218,7 @@ export default async function ShareLinkPage({
                   select: {
                     name: true,
                     code: true,
+                    price: true,
                     description: true,
                     primaryImageUrl: true,
                     galleryJson: true,
@@ -221,6 +232,7 @@ export default async function ShareLinkPage({
                     id: true,
                     name: true,
                     sku: true,
+                    price: true,
                     line: true,
                     imageLayoutJson: true,
                     description: true,
@@ -297,6 +309,7 @@ export default async function ShareLinkPage({
         normalizeCatalogLabel(snapshotAttributes.line) ??
         normalizeCatalogLabel(item.productBase?.line) ??
         null,
+      price: toNumber(item.snapshot?.price ?? item.productBase?.price ?? null),
       sizeLabel:
         normalizeCatalogLabel(snapshotAttributes.size) ?? null,
       imageLayout:
