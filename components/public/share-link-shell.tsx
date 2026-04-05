@@ -5,8 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MessageCircle, Minus, Plus, ShoppingCart, X } from "lucide-react";
 
 import type {
+  CreatePublicAnalyticsEventRequest,
   CreatePublicOrderIntentRequest,
   ProductImageLayout,
+  PublicAnalyticsEventName,
   ShareLinkPublicCatalogV2,
   ShareLinkPublicV2,
 } from "@/types/api";
@@ -101,6 +103,87 @@ function formatCurrency(value: number) {
 
 function normalizeWhatsappPhone(value?: string | null) {
   return (value ?? "").replace(/\D/g, "");
+}
+
+const PUBLIC_SESSION_KEY_STORAGE = "catalogo-facil-public-session-key";
+
+function createPublicSessionKey() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `public-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getOrCreatePublicSessionKey() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const stored = window.localStorage.getItem(PUBLIC_SESSION_KEY_STORAGE);
+    if (stored && stored.trim().length > 0) {
+      return stored;
+    }
+
+    const nextKey = createPublicSessionKey();
+    window.localStorage.setItem(PUBLIC_SESSION_KEY_STORAGE, nextKey);
+    return nextKey;
+  } catch {
+    return createPublicSessionKey();
+  }
+}
+
+function getPublicTrackingContext() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const url = new URL(window.location.href);
+  return {
+    sessionKey: getOrCreatePublicSessionKey(),
+    utmSource: url.searchParams.get("utm_source"),
+    utmMedium: url.searchParams.get("utm_medium"),
+    utmCampaign: url.searchParams.get("utm_campaign"),
+    utmContent: url.searchParams.get("utm_content"),
+    utmTerm: url.searchParams.get("utm_term"),
+    referrer: document.referrer || null,
+  };
+}
+
+async function sendPublicAnalyticsEvent(
+  payload: CreatePublicAnalyticsEventRequest,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const body = JSON.stringify(payload);
+  const endpoint = "/api/v2/analytics-events/public";
+
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      const blob = new Blob([body], { type: "application/json" });
+      if (navigator.sendBeacon(endpoint, blob)) {
+        return;
+      }
+    }
+  } catch {
+    // Fall through to fetch.
+  }
+
+  try {
+    await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body,
+      keepalive: true,
+    });
+  } catch {
+    // Analytics failures must not block the public flow.
+  }
 }
 
 export function ShareLinkShell({
@@ -484,6 +567,63 @@ export function ShareLinkShell({
   const hasProducts = allProducts.length > 0;
   const normalizedWhatsappPhone = normalizeWhatsappPhone(shareLink.ownerWhatsappPhone);
 
+  const trackAnalyticsEvent = useCallback(
+    (
+      eventName: PublicAnalyticsEventName,
+      options?: {
+        productBaseId?: string | null;
+        orderIntentId?: string | null;
+        metadataJson?: Record<string, unknown> | null;
+      },
+    ) => {
+      const trackingContext = getPublicTrackingContext();
+      if (!trackingContext?.sessionKey) {
+        return;
+      }
+
+      void sendPublicAnalyticsEvent({
+        channel: "SHARE_LINK",
+        eventName,
+        shareLinkId: shareLink.id,
+        productBaseId: options?.productBaseId ?? null,
+        orderIntentId: options?.orderIntentId ?? null,
+        sessionKey: trackingContext.sessionKey,
+        utmSource: trackingContext.utmSource,
+        utmMedium: trackingContext.utmMedium,
+        utmCampaign: trackingContext.utmCampaign,
+        utmContent: trackingContext.utmContent,
+        utmTerm: trackingContext.utmTerm,
+        referrer: trackingContext.referrer,
+        metadataJson: options?.metadataJson ?? null,
+      });
+    },
+    [shareLink.id],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const viewedKey = `share-link-viewed:${shareLink.id}`;
+    try {
+      if (window.sessionStorage.getItem(viewedKey)) {
+        return;
+      }
+
+      window.sessionStorage.setItem(viewedKey, "1");
+    } catch {
+      // Ignore storage issues and still attempt tracking once.
+    }
+
+    trackAnalyticsEvent("share_link_viewed", {
+      metadataJson: {
+        catalogCount: shareLink.catalogs.length,
+        productCount: allProducts.length,
+      },
+    });
+  }, [allProducts.length, shareLink.catalogs.length, shareLink.id, trackAnalyticsEvent]);
+
   const cartItems = useMemo(() => {
     return Object.entries(cartByProductId)
       .map(([productId, quantity]) => {
@@ -518,41 +658,77 @@ export function ShareLinkShell({
   const hasPricedItems = cartItems.some((item) => item.unitPrice !== null);
   const hasItemsWithoutPrice = cartItems.some((item) => item.unitPrice === null);
 
-  const updateCartQuantity = useCallback((productId: string, nextQuantity: number) => {
-    setCartByProductId((current) => {
-      if (nextQuantity <= 0) {
-        const { [productId]: _removed, ...rest } = current;
-        return rest;
+  const updateCartQuantity = useCallback(
+    (productId: string, nextQuantity: number) => {
+      setCartByProductId((current) => {
+        if (nextQuantity <= 0) {
+          const { [productId]: _removed, ...rest } = current;
+          return rest;
+        }
+
+        return {
+          ...current,
+          [productId]: nextQuantity,
+        };
+      });
+
+      if (nextQuantity > 0) {
+        trackAnalyticsEvent("share_link_add_to_cart", {
+          productBaseId: productId,
+          metadataJson: {
+            quantity: nextQuantity,
+          },
+        });
       }
+    },
+    [trackAnalyticsEvent],
+  );
 
-      return {
+  const increaseQuantity = useCallback(
+    (productId: string) => {
+      const nextQuantity = (cartByProductId[productId] ?? 0) + 1;
+      setCartByProductId((current) => ({
         ...current,
-        [productId]: nextQuantity,
-      };
-    });
-  }, []);
+        [productId]: (current[productId] ?? 0) + 1,
+      }));
 
-  const increaseQuantity = useCallback((productId: string) => {
-    setCartByProductId((current) => ({
-      ...current,
-      [productId]: (current[productId] ?? 0) + 1,
-    }));
-  }, []);
+      trackAnalyticsEvent("share_link_add_to_cart", {
+        productBaseId: productId,
+        metadataJson: {
+          quantity: nextQuantity,
+        },
+      });
+    },
+    [cartByProductId, trackAnalyticsEvent],
+  );
 
-  const decreaseQuantity = useCallback((productId: string) => {
-    setCartByProductId((current) => {
-      const currentQuantity = current[productId] ?? 0;
-      if (currentQuantity <= 1) {
-        const { [productId]: _removed, ...rest } = current;
-        return rest;
-      }
+  const decreaseQuantity = useCallback(
+    (productId: string) => {
+      const currentQuantity = cartByProductId[productId] ?? 0;
+      const nextQuantity = Math.max(currentQuantity - 1, 0);
 
-      return {
-        ...current,
-        [productId]: currentQuantity - 1,
-      };
-    });
-  }, []);
+      setCartByProductId((current) => {
+        const stateQuantity = current[productId] ?? 0;
+        if (stateQuantity <= 1) {
+          const { [productId]: _removed, ...rest } = current;
+          return rest;
+        }
+
+        return {
+          ...current,
+          [productId]: stateQuantity - 1,
+        };
+      });
+
+      trackAnalyticsEvent("share_link_remove_from_cart", {
+        productBaseId: productId,
+        metadataJson: {
+          quantity: nextQuantity,
+        },
+      });
+    },
+    [cartByProductId, trackAnalyticsEvent],
+  );
 
   const clearCart = useCallback(() => {
     setCartByProductId({});
@@ -605,6 +781,14 @@ export function ShareLinkShell({
     const whatsappUrl = `https://wa.me/${normalizedWhatsappPhone}?text=${encodeURIComponent(
       messageLines.join("\n"),
     )}`;
+
+    trackAnalyticsEvent("share_link_checkout_started", {
+      metadataJson: {
+        itemCount: cartItemCount,
+        subtotal: hasPricedItems ? subtotal : null,
+        hasItemsWithoutPrice,
+      },
+    });
 
     try {
       const payload: CreatePublicOrderIntentRequest = {
@@ -660,6 +844,8 @@ export function ShareLinkShell({
     shareLink.name,
     shareLink.ownerName,
     subtotal,
+    cartItemCount,
+    trackAnalyticsEvent,
   ]);
 
   return (

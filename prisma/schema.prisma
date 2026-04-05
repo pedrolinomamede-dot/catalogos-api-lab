@@ -99,6 +99,7 @@ model Brand {
   integrationConnections IntegrationConnectionV2[]
   orderIntents           OrderIntent[]
   stockReservations      StockReservation[]
+  analyticsEvents        AnalyticsEvent[]
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
 }
@@ -460,6 +461,37 @@ model StockReservationItem {
   @@index([stockReservationId])
   @@index([brandId])
   @@index([productBaseId])
+}
+
+model AnalyticsEvent {
+  id           String             @id @default(uuid()) @db.Uuid
+  brandId      String             @db.Uuid
+  shareLinkId  String?            @db.Uuid
+  ownerUserId  String?            @db.Uuid
+  productBaseId String?           @db.Uuid
+  orderIntentId String?           @db.Uuid
+  channel      OrderIntentChannel
+  eventName    String
+  sessionKey   String?
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  utmContent   String?
+  utmTerm      String?
+  referrer     String?
+  metadataJson Json?
+  occurredAt   DateTime           @default(now())
+  brand        Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId])
+  @@index([shareLinkId])
+  @@index([ownerUserId])
+  @@index([productBaseId])
+  @@index([orderIntentId])
+  @@index([channel])
+  @@index([eventName])
+  @@index([occurredAt])
+  @@index([brandId, eventName, occurredAt])
 }
 
 model ShareLinkCatalogV2 {

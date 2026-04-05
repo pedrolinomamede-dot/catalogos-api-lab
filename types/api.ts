@@ -43,6 +43,11 @@ export type StockReservationStatus =
   | "EXPIRED"
   | "CONVERTED"
   | "CANCELED";
+export type PublicAnalyticsEventName =
+  | "share_link_viewed"
+  | "share_link_add_to_cart"
+  | "share_link_remove_from_cart"
+  | "share_link_checkout_started";
 
 export type Category = {
   id: string;
@@ -543,6 +548,22 @@ export type CreatePublicOrderIntentRequest = {
   customerWhatsapp?: string | null;
   paymentMethod?: string | null;
   notes?: string | null;
+};
+
+export type CreatePublicAnalyticsEventRequest = {
+  channel: Extract<OrderIntentChannel, "SHARE_LINK">;
+  eventName: PublicAnalyticsEventName;
+  shareLinkId: string;
+  productBaseId?: string | null;
+  orderIntentId?: string | null;
+  sessionKey?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  utmContent?: string | null;
+  utmTerm?: string | null;
+  referrer?: string | null;
+  metadataJson?: Record<string, unknown> | null;
 };
 
 export type OrderIntentSummary = {
