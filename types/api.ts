@@ -545,6 +545,8 @@ export type OrderIntentSummary = {
   brandId: string;
   ownerUserId?: string | null;
   shareLinkId?: string | null;
+  shareLinkName?: string | null;
+  shareLinkSlug?: string | null;
   channel: OrderIntentChannel;
   status: OrderIntentStatus;
   customerName?: string | null;

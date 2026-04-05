@@ -13,6 +13,7 @@ import type {
   CreateUserV2Request,
   ImportBaseProductsCsvV2Item,
   MeResponse,
+  OrderIntentSummary,
   CreateProductRequest,
   UpdateBrandRequest,
   UpdateCategoryRequest,
@@ -89,6 +90,7 @@ import {
   listShareLinksV2,
   revokeShareLinkV2,
 } from "@/lib/api/v2/share-links";
+import { listOrderIntentsV2 } from "@/lib/api/v2/order-intents";
 import {
   createUserV2,
   listUsersV2,
@@ -150,6 +152,7 @@ type CategoriesV2Params = Parameters<typeof listCategoriesV2>[0];
 type SubcategoriesV2Params = Parameters<typeof listSubcategoriesV2>[1];
 type CatalogsV2Params = Parameters<typeof listCatalogsV2>[0];
 type ShareLinksV2Params = Parameters<typeof listShareLinksV2>[0];
+type OrderIntentsV2Params = Parameters<typeof listOrderIntentsV2>[0];
 type IntegrationConnectionJobsParams = Parameters<typeof listIntegrationConnectionJobsV2>[1];
 type UpdateUserV2Input = { id: string; data: UpdateUserV2Request };
 
@@ -312,6 +315,14 @@ export function useShareLinksV2(params?: ShareLinksV2Params) {
   return useQuery({
     queryKey: queryKeys.v2.shareLinks.list(paramsKey),
     queryFn: () => listShareLinksV2(params),
+  });
+}
+
+export function useOrderIntentsV2(params?: OrderIntentsV2Params) {
+  const paramsKey = params ?? {};
+  return useQuery({
+    queryKey: queryKeys.v2.orderIntents.list(paramsKey),
+    queryFn: () => listOrderIntentsV2(params),
   });
 }
 
