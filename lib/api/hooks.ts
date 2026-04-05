@@ -14,6 +14,7 @@ import type {
   ImportBaseProductsCsvV2Item,
   MeResponse,
   OrderIntentSummary,
+  UpdateOrderIntentStatusRequest,
   CreateProductRequest,
   UpdateBrandRequest,
   UpdateCategoryRequest,
@@ -90,7 +91,10 @@ import {
   listShareLinksV2,
   revokeShareLinkV2,
 } from "@/lib/api/v2/share-links";
-import { listOrderIntentsV2 } from "@/lib/api/v2/order-intents";
+import {
+  listOrderIntentsV2,
+  updateOrderIntentStatusV2,
+} from "@/lib/api/v2/order-intents";
 import {
   createUserV2,
   listUsersV2,
@@ -155,6 +159,10 @@ type ShareLinksV2Params = Parameters<typeof listShareLinksV2>[0];
 type OrderIntentsV2Params = Parameters<typeof listOrderIntentsV2>[0];
 type IntegrationConnectionJobsParams = Parameters<typeof listIntegrationConnectionJobsV2>[1];
 type UpdateUserV2Input = { id: string; data: UpdateUserV2Request };
+type UpdateOrderIntentStatusInput = {
+  id: string;
+  data: UpdateOrderIntentStatusRequest;
+};
 
 type CatalogItemsBatchFailure = {
   productBaseId: string;
@@ -323,6 +331,18 @@ export function useOrderIntentsV2(params?: OrderIntentsV2Params) {
   return useQuery({
     queryKey: queryKeys.v2.orderIntents.list(paramsKey),
     queryFn: () => listOrderIntentsV2(params),
+  });
+}
+
+export function useUpdateOrderIntentStatusV2() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateOrderIntentStatusInput) =>
+      updateOrderIntentStatusV2(input.id, input.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.orderIntents.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
+    },
   });
 }
 

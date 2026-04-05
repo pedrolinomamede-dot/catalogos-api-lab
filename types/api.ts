@@ -557,6 +557,13 @@ export type OrderIntentSummary = {
   sellerWhatsappSnapshot?: string | null;
   subtotal?: number | null;
   itemCount: number;
+  billedAt?: Date | null;
+  canceledAt?: Date | null;
+  expiredAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type UpdateOrderIntentStatusRequest = {
+  status: Extract<OrderIntentStatus, "BILLED" | "CANCELED">;
 };

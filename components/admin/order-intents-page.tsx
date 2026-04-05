@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/admin/empty-state";
 import { ListPagination } from "@/components/admin/list-pagination";
 import { LoadingState } from "@/components/admin/loading-state";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -18,7 +19,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getErrorMessage } from "@/lib/api/error";
-import { useMe, useOrderIntentsV2 } from "@/lib/api/hooks";
+import { useMe, useOrderIntentsV2, useUpdateOrderIntentStatusV2 } from "@/lib/api/hooks";
+import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 const PAGE_SIZE = 50;
 
@@ -111,10 +113,12 @@ function getSourceLabel(orderIntent: OrderIntentSummary) {
 export function OrderIntentsPageClient() {
   const { data: me, isLoading: isMeLoading, isError: isMeError, error: meError } = useMe();
   const [page, setPage] = useState(1);
+  const [pendingOrderIntentId, setPendingOrderIntentId] = useState<string | null>(null);
   const { data, isLoading, isError, error, refetch } = useOrderIntentsV2({
     page,
     pageSize: PAGE_SIZE,
   });
+  const updateStatus = useUpdateOrderIntentStatusV2();
 
   const orderIntents = useMemo(() => {
     const items = Array.isArray(data) ? data : data?.data ?? [];
@@ -182,6 +186,29 @@ export function OrderIntentsPageClient() {
     );
   }
 
+  async function handleStatusChange(
+    orderIntent: OrderIntentSummary,
+    status: "BILLED" | "CANCELED",
+  ) {
+    setPendingOrderIntentId(orderIntent.id);
+    try {
+      await updateStatus.mutateAsync({
+        id: orderIntent.id,
+        data: { status },
+      });
+
+      toastSuccess(
+        status === "BILLED" ? "Pedido faturado" : "Pedido cancelado",
+        orderIntent.customerName?.trim() || orderIntent.customerWhatsapp?.trim() || undefined,
+      );
+    } catch (mutationError) {
+      const message = getErrorMessage(mutationError);
+      toastError(message.title, message.description ?? "Tente novamente.");
+    } finally {
+      setPendingOrderIntentId(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Card className="space-y-4 p-4">
@@ -196,11 +223,14 @@ export function OrderIntentsPageClient() {
               <TableHead>Subtotal</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Criado em</TableHead>
+              {showOwner ? <TableHead className="text-right">Ações</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {orderIntents.map((orderIntent) => {
               const customer = getCustomerLabel(orderIntent);
+              const isPendingRow =
+                pendingOrderIntentId === orderIntent.id && updateStatus.isPending;
               return (
                 <TableRow key={orderIntent.id}>
                   <TableCell>
@@ -255,6 +285,33 @@ export function OrderIntentsPageClient() {
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDate(orderIntent.createdAt)}
                   </TableCell>
+                  {showOwner ? (
+                    <TableCell className="text-right">
+                      {orderIntent.status === "OPEN" ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isPendingRow}
+                            onClick={() => handleStatusChange(orderIntent, "CANCELED")}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={isPendingRow}
+                            onClick={() => handleStatusChange(orderIntent, "BILLED")}
+                          >
+                            {isPendingRow ? "Salvando..." : "Faturar"}
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               );
             })}

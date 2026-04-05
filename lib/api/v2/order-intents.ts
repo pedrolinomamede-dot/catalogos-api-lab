@@ -1,6 +1,9 @@
-import type { OrderIntentSummary } from "@/types/api";
+import type {
+  OrderIntentSummary,
+  UpdateOrderIntentStatusRequest,
+} from "@/types/api";
 
-import { apiGet } from "@/lib/api/client";
+import { apiGet, apiPatch } from "@/lib/api/client";
 
 type ApiEnvelope<T, M = unknown> = {
   ok: true;
@@ -28,4 +31,16 @@ export async function listOrderIntentsV2(
     params,
   );
   return res.meta ? { data: res.data, meta: res.meta } : res.data;
+}
+
+export async function updateOrderIntentStatusV2(
+  id: string,
+  body: UpdateOrderIntentStatusRequest,
+) {
+  const res = await apiPatch<
+    UpdateOrderIntentStatusRequest,
+    ApiEnvelope<OrderIntentSummary>
+  >(`/api/v2/order-intents/${id}`, body);
+
+  return res.data;
 }
