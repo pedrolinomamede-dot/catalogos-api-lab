@@ -4,7 +4,12 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MessageCircle, Minus, Plus, ShoppingCart, X } from "lucide-react";
 
-import type { ProductImageLayout, ShareLinkPublicCatalogV2, ShareLinkPublicV2 } from "@/types/api";
+import type {
+  CreatePublicOrderIntentRequest,
+  ProductImageLayout,
+  ShareLinkPublicCatalogV2,
+  ShareLinkPublicV2,
+} from "@/types/api";
 
 import { OfflineBanner } from "@/components/public/OfflineBanner";
 import { Input } from "@/components/ui/input";
@@ -113,6 +118,8 @@ export function ShareLinkShell({
   const [query, setQuery] = useState("");
   const [lightbox, setLightbox] = useState<LightboxState>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutSubmitting, setIsCheckoutSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [cartByProductId, setCartByProductId] = useState<CartState>({});
   const [cardTonesByProductId, setCardTonesByProductId] = useState<
     Record<string, ProductCardTone>
@@ -550,12 +557,21 @@ export function ShareLinkShell({
   const clearCart = useCallback(() => {
     setCartByProductId({});
     setIsCartOpen(false);
+    setCheckoutError(null);
   }, []);
 
-  const handleCheckout = useCallback(() => {
-    if (cartItems.length === 0 || !normalizedWhatsappPhone || typeof window === "undefined") {
+  const handleCheckout = useCallback(async () => {
+    if (
+      cartItems.length === 0 ||
+      !normalizedWhatsappPhone ||
+      typeof window === "undefined" ||
+      isCheckoutSubmitting
+    ) {
       return;
     }
+
+    setCheckoutError(null);
+    setIsCheckoutSubmitting(true);
 
     const greetingTarget = shareLink.ownerName?.trim() || "vendedor";
     const itemLines = cartItems.flatMap((item, index) => {
@@ -590,12 +606,57 @@ export function ShareLinkShell({
       messageLines.join("\n"),
     )}`;
 
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    try {
+      const payload: CreatePublicOrderIntentRequest = {
+        channel: "SHARE_LINK",
+        shareLinkId: shareLink.id,
+        items: cartItems.map((item) => ({
+          catalogId: item.product.catalogId,
+          productBaseId: item.product.id,
+          quantity: item.quantity,
+        })),
+      };
+
+      const response = await fetch("/api/v2/order-intents/public", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        let message = "Nao foi possivel registrar seu pedido agora.";
+        try {
+          const errorPayload = (await response.json()) as {
+            error?: { message?: string };
+          };
+          if (errorPayload.error?.message) {
+            message = errorPayload.error.message;
+          }
+        } catch {
+          // Ignore JSON parse issues and keep generic message.
+        }
+
+        setCheckoutError(message);
+        return;
+      }
+
+      window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+      clearCart();
+    } catch {
+      setCheckoutError("Nao foi possivel registrar seu pedido agora.");
+    } finally {
+      setIsCheckoutSubmitting(false);
+    }
   }, [
     cartItems,
+    clearCart,
     hasItemsWithoutPrice,
     hasPricedItems,
+    isCheckoutSubmitting,
     normalizedWhatsappPhone,
+    shareLink.id,
     shareLink.name,
     shareLink.ownerName,
     subtotal,
@@ -1034,6 +1095,11 @@ export function ShareLinkShell({
                     ? `Pedido enviado para ${shareLink.ownerName}`
                     : "Pedido enviado para o vendedor responsavel"}
                 </p>
+                {checkoutError ? (
+                  <p className="mt-2 text-sm font-medium text-rose-600">
+                    {checkoutError}
+                  </p>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -1143,7 +1209,7 @@ export function ShareLinkShell({
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 <MessageCircle className="h-4 w-4" />
-                Finalizar no WhatsApp
+                {isCheckoutSubmitting ? "Registrando pedido..." : "Finalizar no WhatsApp"}
               </button>
             </div>
           </div>

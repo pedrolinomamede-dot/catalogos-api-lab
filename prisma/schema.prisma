@@ -66,6 +66,18 @@ enum IntegrationSyncResource {
   IMAGES
 }
 
+enum OrderIntentChannel {
+  SHARE_LINK
+  SITE
+}
+
+enum OrderIntentStatus {
+  OPEN
+  BILLED
+  CANCELED
+  EXPIRED
+}
+
 model Brand {
   id                     String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                   String
@@ -78,6 +90,7 @@ model Brand {
   variations             ProductVariation[]
   images                 ProductImage[]
   integrationConnections IntegrationConnectionV2[]
+  orderIntents           OrderIntent[]
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
 }
@@ -93,6 +106,7 @@ model User {
   isActive     Boolean  @default(true)
   brand        Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
   ownedShareLinks ShareLinkV2[] @relation("ShareLinkOwner")
+  orderIntents OrderIntent[] @relation("OrderIntentOwner")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -339,11 +353,67 @@ model ShareLinkV2 {
   revokedAt DateTime?
   ownerUser User                 @relation("ShareLinkOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
   catalogs  ShareLinkCatalogV2[]
+  orderIntents OrderIntent[]
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
 
   @@index([brandId])
   @@index([ownerUserId])
+}
+
+model OrderIntent {
+  id                    String             @id @default(uuid()) @db.Uuid
+  brandId               String             @db.Uuid
+  ownerUserId           String?            @db.Uuid
+  shareLinkId           String?            @db.Uuid
+  channel               OrderIntentChannel
+  status                OrderIntentStatus  @default(OPEN)
+  customerName          String?
+  customerEmail         String?
+  customerWhatsapp      String?
+  paymentMethod         String?
+  notes                 String?
+  sellerNameSnapshot    String?
+  sellerWhatsappSnapshot String?
+  subtotal              Decimal?           @db.Decimal(10, 2)
+  itemCount             Int                @default(0)
+  brand                 Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  ownerUser             User?              @relation("OrderIntentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  shareLink             ShareLinkV2?       @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
+  items                 OrderIntentItem[]
+  billedAt              DateTime?
+  canceledAt            DateTime?
+  expiredAt             DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([brandId])
+  @@index([ownerUserId])
+  @@index([shareLinkId])
+  @@index([channel])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderIntentItem {
+  id           String      @id @default(uuid()) @db.Uuid
+  orderIntentId String     @db.Uuid
+  brandId      String      @db.Uuid
+  catalogId    String?     @db.Uuid
+  productBaseId String     @db.Uuid
+  productName  String
+  sku          String?
+  catalogName  String?
+  quantity     Int
+  unitPrice    Decimal?    @db.Decimal(10, 2)
+  lineTotal    Decimal?    @db.Decimal(10, 2)
+  orderIntent  OrderIntent @relation(fields: [orderIntentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+
+  @@index([orderIntentId])
+  @@index([brandId])
+  @@index([catalogId])
+  @@index([productBaseId])
 }
 
 model ShareLinkCatalogV2 {

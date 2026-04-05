@@ -36,6 +36,8 @@ export type IntegrationSyncJobMode = "MANUAL" | "SCHEDULED" | "WEBHOOK";
 
 export type IntegrationSyncResource = "FULL" | "PRODUCTS" | "CATEGORIES" | "IMAGES";
 export type UserRole = "ADMIN" | "SELLER" | "VIEWER";
+export type OrderIntentChannel = "SHARE_LINK" | "SITE";
+export type OrderIntentStatus = "OPEN" | "BILLED" | "CANCELED" | "EXPIRED";
 
 export type Category = {
   id: string;
@@ -519,4 +521,40 @@ export type ShareLinkPublicV2 = {
   ownerName?: string | null;
   ownerWhatsappPhone?: string | null;
   catalogs: ShareLinkPublicCatalogV2[];
+};
+
+export type CreatePublicOrderIntentItemRequest = {
+  catalogId: string;
+  productBaseId: string;
+  quantity: number;
+};
+
+export type CreatePublicOrderIntentRequest = {
+  channel: OrderIntentChannel;
+  shareLinkId?: string | null;
+  items: CreatePublicOrderIntentItemRequest[];
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerWhatsapp?: string | null;
+  paymentMethod?: string | null;
+  notes?: string | null;
+};
+
+export type OrderIntentSummary = {
+  id: string;
+  brandId: string;
+  ownerUserId?: string | null;
+  shareLinkId?: string | null;
+  channel: OrderIntentChannel;
+  status: OrderIntentStatus;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerWhatsapp?: string | null;
+  paymentMethod?: string | null;
+  sellerNameSnapshot?: string | null;
+  sellerWhatsappSnapshot?: string | null;
+  subtotal?: number | null;
+  itemCount: number;
+  createdAt: Date;
+  updatedAt: Date;
 };
