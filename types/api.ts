@@ -38,6 +38,11 @@ export type IntegrationSyncResource = "FULL" | "PRODUCTS" | "CATEGORIES" | "IMAG
 export type UserRole = "ADMIN" | "SELLER" | "VIEWER";
 export type OrderIntentChannel = "SHARE_LINK" | "SITE";
 export type OrderIntentStatus = "OPEN" | "BILLED" | "CANCELED" | "EXPIRED";
+export type StockReservationStatus =
+  | "ACTIVE"
+  | "EXPIRED"
+  | "CONVERTED"
+  | "CANCELED";
 
 export type Category = {
   id: string;
@@ -557,6 +562,8 @@ export type OrderIntentSummary = {
   sellerWhatsappSnapshot?: string | null;
   subtotal?: number | null;
   itemCount: number;
+  reservationStatus?: StockReservationStatus | null;
+  reservationExpiresAt?: Date | null;
   billedAt?: Date | null;
   canceledAt?: Date | null;
   expiredAt?: Date | null;

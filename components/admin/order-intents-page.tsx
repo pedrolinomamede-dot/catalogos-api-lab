@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type { MeResponse, OrderIntentChannel, OrderIntentStatus, OrderIntentSummary } from "@/types/api";
+import type {
+  MeResponse,
+  OrderIntentChannel,
+  OrderIntentStatus,
+  OrderIntentSummary,
+  StockReservationStatus,
+} from "@/types/api";
 
 import { EmptyState } from "@/components/admin/empty-state";
 import { ListPagination } from "@/components/admin/list-pagination";
@@ -85,6 +91,36 @@ function getStatusBadgeClassName(status: OrderIntentStatus) {
       return "border-amber-200 bg-amber-50 text-amber-700";
     default:
       return "";
+  }
+}
+
+function formatReservationStatus(status?: StockReservationStatus | null) {
+  switch (status) {
+    case "ACTIVE":
+      return "Ativa";
+    case "EXPIRED":
+      return "Expirada";
+    case "CONVERTED":
+      return "Convertida";
+    case "CANCELED":
+      return "Cancelada";
+    default:
+      return "Sem reserva";
+  }
+}
+
+function getReservationBadgeClassName(status?: StockReservationStatus | null) {
+  switch (status) {
+    case "ACTIVE":
+      return "border-violet-200 bg-violet-50 text-violet-700";
+    case "EXPIRED":
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    case "CONVERTED":
+      return "border-sky-200 bg-sky-50 text-sky-700";
+    case "CANCELED":
+      return "border-zinc-200 bg-zinc-50 text-zinc-700";
+    default:
+      return "border-zinc-200 bg-zinc-50 text-zinc-500";
   }
 }
 
@@ -222,6 +258,7 @@ export function OrderIntentsPageClient() {
               <TableHead>Itens</TableHead>
               <TableHead>Subtotal</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Reserva</TableHead>
               <TableHead>Criado em</TableHead>
               {showOwner ? <TableHead className="text-right">Ações</TableHead> : null}
             </TableRow>
@@ -281,6 +318,22 @@ export function OrderIntentsPageClient() {
                     >
                       {formatStatus(orderIntent.status)}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <Badge
+                        variant="outline"
+                        className={getReservationBadgeClassName(orderIntent.reservationStatus)}
+                      >
+                        {formatReservationStatus(orderIntent.reservationStatus)}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        {orderIntent.reservationStatus === "ACTIVE" &&
+                        orderIntent.reservationExpiresAt
+                          ? `Até ${formatDate(orderIntent.reservationExpiresAt)}`
+                          : "-"}
+                      </p>
+                    </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDate(orderIntent.createdAt)}

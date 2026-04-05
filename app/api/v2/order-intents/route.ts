@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { type AuthContext, requireRoles } from "@/lib/authz";
+import { expireStaleStockReservations } from "@/lib/order-intents/stock-reservations";
 import { withBrand } from "@/lib/prisma";
 import { parsePagination } from "@/lib/utils/pagination";
 
@@ -29,16 +30,24 @@ function serializeOrderIntentListItem(
           slug: true;
         };
       };
+      stockReservation: {
+        select: {
+          status: true;
+          expiresAt: true;
+        };
+      };
     };
   }>,
 ) {
-  const { shareLink, subtotal, ...orderIntent } = item;
+  const { shareLink, stockReservation, subtotal, ...orderIntent } = item;
 
   return {
     ...orderIntent,
     subtotal: subtotal ? subtotal.toNumber() : null,
     shareLinkName: shareLink?.name ?? null,
     shareLinkSlug: shareLink?.slug ?? null,
+    reservationStatus: stockReservation?.status ?? null,
+    reservationExpiresAt: stockReservation?.expiresAt ?? null,
   };
 }
 
@@ -57,6 +66,8 @@ export async function GET(request: Request) {
   const where = buildOrderIntentWhere(auth);
 
   return withBrand(auth.brandId, async (tx) => {
+    await expireStaleStockReservations(tx, auth.brandId);
+
     const [items, total] = await Promise.all([
       tx.orderIntent.findMany({
         where,
@@ -68,6 +79,12 @@ export async function GET(request: Request) {
             select: {
               name: true,
               slug: true,
+            },
+          },
+          stockReservation: {
+            select: {
+              status: true,
+              expiresAt: true,
             },
           },
         },

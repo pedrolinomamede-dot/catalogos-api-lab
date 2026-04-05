@@ -2,6 +2,11 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole } from "@/lib/authz";
+import {
+  expireStaleStockReservations,
+  resolveOrderIntentStockQuantities,
+  StockReservationError,
+} from "@/lib/order-intents/stock-reservations";
 import { withBrand } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
 
@@ -40,16 +45,24 @@ function serializeOrderIntent(
           slug: true;
         };
       };
+      stockReservation: {
+        select: {
+          status: true;
+          expiresAt: true;
+        };
+      };
     };
   }>,
 ) {
-  const { shareLink, subtotal, ...orderIntent } = item;
+  const { shareLink, stockReservation, subtotal, ...orderIntent } = item;
 
   return {
     ...orderIntent,
     subtotal: subtotal ? subtotal.toNumber() : null,
     shareLinkName: shareLink?.name ?? null,
     shareLinkSlug: shareLink?.slug ?? null,
+    reservationStatus: stockReservation?.status ?? null,
+    reservationExpiresAt: stockReservation?.expiresAt ?? null,
   };
 }
 
@@ -76,6 +89,8 @@ export async function PATCH(
   }
 
   return withBrand(auth.brandId, async (tx) => {
+    await expireStaleStockReservations(tx, auth.brandId);
+
     const existing = await tx.orderIntent.findFirst({
       where: {
         id,
@@ -86,6 +101,13 @@ export async function PATCH(
           select: {
             name: true,
             slug: true,
+          },
+        },
+        stockReservation: {
+          select: {
+            id: true,
+            status: true,
+            expiresAt: true,
           },
         },
       },
@@ -111,6 +133,111 @@ export async function PATCH(
     }
 
     const now = new Date();
+    try {
+      if (parsed.data.status === "BILLED") {
+        const { orderIntent, items } = await resolveOrderIntentStockQuantities(tx, {
+          brandId: auth.brandId,
+          orderIntentId: existing.id,
+          now,
+        });
+
+        const productIds = items.map((item) => item.productBaseId);
+        const products = await tx.productBaseV2.findMany({
+          where: {
+            brandId: auth.brandId,
+            id: {
+              in: productIds,
+            },
+          },
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            stockQuantity: true,
+          },
+        });
+
+        const productById = new Map(products.map((product) => [product.id, product] as const));
+
+        for (const item of items) {
+          const product = productById.get(item.productBaseId);
+          if (!product) {
+            throw new StockReservationError(
+              "stock_inconsistent",
+              "Um ou mais produtos desse pedido não foram encontrados para baixa de estoque.",
+            );
+          }
+
+          if (product.stockQuantity === null) {
+            continue;
+          }
+
+          if (product.stockQuantity < item.quantity) {
+            const label = product.name?.trim() || product.sku?.trim() || "produto";
+            throw new StockReservationError(
+              "stock_inconsistent",
+              `Estoque inconsistente para ${label}. Revise a reserva antes de faturar.`,
+            );
+          }
+        }
+
+        for (const item of items) {
+          const product = productById.get(item.productBaseId);
+          if (!product || product.stockQuantity === null) {
+            continue;
+          }
+
+          await tx.productBaseV2.update({
+            where: {
+              id: product.id,
+            },
+            data: {
+              stockQuantity: {
+                decrement: item.quantity,
+              },
+            },
+          });
+        }
+
+        if (orderIntent.stockReservation?.status === "ACTIVE") {
+          await tx.stockReservation.update({
+            where: {
+              id: orderIntent.stockReservation.id,
+            },
+            data: {
+              status: "CONVERTED",
+              convertedAt: now,
+              releasedAt: now,
+            },
+          });
+        }
+      } else if (existing.stockReservation?.status === "ACTIVE") {
+        await tx.stockReservation.update({
+          where: {
+            id: existing.stockReservation.id,
+          },
+          data: {
+            status: "CANCELED",
+            releasedAt: now,
+          },
+        });
+      }
+    } catch (error) {
+      if (error instanceof StockReservationError) {
+        return jsonError(
+          error.code === "insufficient_stock" ||
+            error.code === "reservation_expired" ||
+            error.code === "stock_inconsistent"
+            ? 409
+            : 400,
+          error.code,
+          error.message,
+        );
+      }
+
+      throw error;
+    }
+
     const updated = await tx.orderIntent.update({
       where: { id: existing.id },
       data: {
@@ -123,6 +250,12 @@ export async function PATCH(
           select: {
             name: true,
             slug: true,
+          },
+        },
+        stockReservation: {
+          select: {
+            status: true,
+            expiresAt: true,
           },
         },
       },

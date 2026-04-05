@@ -78,6 +78,13 @@ enum OrderIntentStatus {
   EXPIRED
 }
 
+enum StockReservationStatus {
+  ACTIVE
+  EXPIRED
+  CONVERTED
+  CANCELED
+}
+
 model Brand {
   id                     String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                   String
@@ -91,6 +98,7 @@ model Brand {
   images                 ProductImage[]
   integrationConnections IntegrationConnectionV2[]
   orderIntents           OrderIntent[]
+  stockReservations      StockReservation[]
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
 }
@@ -212,6 +220,7 @@ model ProductBaseV2 {
   integrationConnection   IntegrationConnectionV2? @relation(fields: [integrationConnectionId], references: [id], onDelete: SetNull)
   catalogItems            CatalogItemV2[]
   images                  ProductBaseImageV2[]
+  stockReservationItems   StockReservationItem[]
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
 
@@ -381,6 +390,7 @@ model OrderIntent {
   ownerUser             User?              @relation("OrderIntentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
   shareLink             ShareLinkV2?       @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
   items                 OrderIntentItem[]
+  stockReservation      StockReservation?
   billedAt              DateTime?
   canceledAt            DateTime?
   expiredAt             DateTime?
@@ -413,6 +423,42 @@ model OrderIntentItem {
   @@index([orderIntentId])
   @@index([brandId])
   @@index([catalogId])
+  @@index([productBaseId])
+}
+
+model StockReservation {
+  id             String                @id @default(uuid()) @db.Uuid
+  brandId        String                @db.Uuid
+  orderIntentId  String                @unique @db.Uuid
+  status         StockReservationStatus @default(ACTIVE)
+  reservedAt     DateTime              @default(now())
+  expiresAt      DateTime
+  releasedAt     DateTime?
+  convertedAt    DateTime?
+  brand          Brand                 @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  orderIntent    OrderIntent           @relation(fields: [orderIntentId], references: [id], onDelete: Cascade)
+  items          StockReservationItem[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([brandId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model StockReservationItem {
+  id                 String           @id @default(uuid()) @db.Uuid
+  stockReservationId String           @db.Uuid
+  brandId            String           @db.Uuid
+  productBaseId      String           @db.Uuid
+  quantity           Int
+  stockReservation   StockReservation @relation(fields: [stockReservationId], references: [id], onDelete: Cascade)
+  productBase        ProductBaseV2    @relation(fields: [productBaseId], references: [id], onDelete: Restrict)
+  createdAt          DateTime         @default(now())
+
+  @@unique([stockReservationId, productBaseId])
+  @@index([stockReservationId])
+  @@index([brandId])
   @@index([productBaseId])
 }
 

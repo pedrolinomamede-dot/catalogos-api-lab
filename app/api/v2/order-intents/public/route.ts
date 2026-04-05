@@ -1,6 +1,10 @@
 import { Prisma, type OrderIntentChannel } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import {
+  createStockReservationForOrderIntent,
+  StockReservationError,
+} from "@/lib/order-intents/stock-reservations";
 import { withBrand } from "@/lib/prisma";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
@@ -349,12 +353,23 @@ export async function POST(request: Request) {
       },
     });
 
+    const reservation = await createStockReservationForOrderIntent(tx, {
+      brandId: shareLink.brandId,
+      orderIntentId: created.id,
+      items: parsed.data.items.map((item) => ({
+        productBaseId: item.productBaseId,
+        quantity: item.quantity,
+      })),
+    });
+
     return NextResponse.json(
       {
         ok: true,
         data: {
           ...created,
           subtotal: created.subtotal ? created.subtotal.toNumber() : null,
+          reservationStatus: reservation.status,
+          reservationExpiresAt: reservation.expiresAt,
         },
       },
       { status: 201 },
@@ -362,6 +377,14 @@ export async function POST(request: Request) {
   }).catch((error: unknown) => {
     if (error instanceof Error && error.message.startsWith("Missing catalog item")) {
       return jsonError(400, "validation_error", "Some cart items are no longer available in this share link");
+    }
+
+    if (error instanceof StockReservationError) {
+      return jsonError(
+        error.code === "insufficient_stock" ? 409 : 400,
+        error.code,
+        error.message,
+      );
     }
 
     return jsonError(500, "order_intent_create_failed", "Could not create order intent");
