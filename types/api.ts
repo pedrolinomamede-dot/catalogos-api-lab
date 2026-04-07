@@ -575,6 +575,10 @@ export type OrderIntentSummary = {
   shareLinkSlug?: string | null;
   channel: OrderIntentChannel;
   status: OrderIntentStatus;
+  customerProfileId?: string | null;
+  customerProfileName?: string | null;
+  customerProfileEmail?: string | null;
+  customerProfileWhatsapp?: string | null;
   customerName?: string | null;
   customerEmail?: string | null;
   customerWhatsapp?: string | null;

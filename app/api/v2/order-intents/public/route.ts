@@ -69,6 +69,23 @@ function normalizeOptionalEmail(value: unknown) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : undefined;
 }
 
+function normalizeOptionalWhatsapp(value: unknown) {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 0) {
+    return null;
+  }
+
+  return digits.length >= 10 && digits.length <= 15 ? digits : undefined;
+}
+
 function parseChannel(value: unknown) {
   if (typeof value !== "string") {
     return null;
@@ -165,6 +182,13 @@ function parseCreatePayload(body: unknown) {
     };
   }
 
+  const customerWhatsapp = normalizeOptionalWhatsapp(body.customerWhatsapp);
+  if (body.customerWhatsapp !== undefined && customerWhatsapp === undefined) {
+    return {
+      error: jsonError(400, "validation_error", "customerWhatsapp must be valid"),
+    };
+  }
+
   return {
     data: {
       channel,
@@ -172,12 +196,80 @@ function parseCreatePayload(body: unknown) {
       items: parsedItems.items,
       customerName: normalizeOptionalNullableString(body.customerName) ?? null,
       customerEmail: customerEmail ?? null,
-      customerWhatsapp:
-        normalizeOptionalNullableString(body.customerWhatsapp) ?? null,
+      customerWhatsapp: customerWhatsapp ?? null,
       paymentMethod: normalizeOptionalNullableString(body.paymentMethod) ?? null,
       notes: normalizeOptionalNullableString(body.notes) ?? null,
     } satisfies CreatePayload,
   };
+}
+
+async function upsertCustomerProfile(
+  tx: Prisma.TransactionClient,
+  brandId: string,
+  payload: Pick<CreatePayload, "customerEmail" | "customerName" | "customerWhatsapp">,
+) {
+  if (!payload.customerEmail && !payload.customerWhatsapp) {
+    return null;
+  }
+
+  const emailProfile = payload.customerEmail
+    ? await tx.customerProfile.findUnique({
+        where: {
+          brandId_email: {
+            brandId,
+            email: payload.customerEmail,
+          },
+        },
+      })
+    : null;
+
+  const whatsappProfile = payload.customerWhatsapp
+    ? await tx.customerProfile.findUnique({
+        where: {
+          brandId_whatsapp: {
+            brandId,
+            whatsapp: payload.customerWhatsapp,
+          },
+        },
+      })
+    : null;
+
+  const matchedProfile = emailProfile || whatsappProfile || null;
+
+  if (!matchedProfile) {
+    return tx.customerProfile.create({
+      data: {
+        brandId,
+        name: payload.customerName,
+        email: payload.customerEmail,
+        whatsapp: payload.customerWhatsapp,
+        lastSeenAt: new Date(),
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
+
+  const canSyncEmail =
+    payload.customerEmail &&
+    (!whatsappProfile || whatsappProfile.id === matchedProfile.id);
+  const canSyncWhatsapp =
+    payload.customerWhatsapp &&
+    (!emailProfile || emailProfile.id === matchedProfile.id);
+
+  return tx.customerProfile.update({
+    where: { id: matchedProfile.id },
+    data: {
+      name: payload.customerName ?? matchedProfile.name,
+      email: canSyncEmail ? payload.customerEmail : matchedProfile.email,
+      whatsapp: canSyncWhatsapp ? payload.customerWhatsapp : matchedProfile.whatsapp,
+      lastSeenAt: new Date(),
+    },
+    select: {
+      id: true,
+    },
+  });
 }
 
 export async function POST(request: Request) {
@@ -314,12 +406,19 @@ export async function POST(request: Request) {
       };
     });
 
+    const customerProfile = await upsertCustomerProfile(
+      tx,
+      shareLink.brandId,
+      parsed.data,
+    );
+
     const created = await tx.orderIntent.create({
       data: {
         brandId: shareLink.brandId,
         ownerUserId: shareLink.ownerUserId,
         shareLinkId: shareLink.id,
         channel: parsed.data.channel,
+        customerProfileId: customerProfile?.id ?? null,
         customerName: parsed.data.customerName,
         customerEmail: parsed.data.customerEmail,
         customerWhatsapp: parsed.data.customerWhatsapp,
@@ -340,6 +439,7 @@ export async function POST(request: Request) {
         shareLinkId: true,
         channel: true,
         status: true,
+        customerProfileId: true,
         customerName: true,
         customerEmail: true,
         customerWhatsapp: true,

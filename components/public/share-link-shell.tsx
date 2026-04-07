@@ -105,6 +105,11 @@ function normalizeWhatsappPhone(value?: string | null) {
   return (value ?? "").replace(/\D/g, "");
 }
 
+function normalizeOptionalInput(value: string) {
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
 const PUBLIC_SESSION_KEY_STORAGE = "catalogo-facil-public-session-key";
 
 function createPublicSessionKey() {
@@ -203,6 +208,9 @@ export function ShareLinkShell({
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutSubmitting, setIsCheckoutSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [customerWhatsapp, setCustomerWhatsapp] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [cartByProductId, setCartByProductId] = useState<CartState>({});
   const [cardTonesByProductId, setCardTonesByProductId] = useState<
     Record<string, ProductCardTone>
@@ -749,6 +757,10 @@ export function ShareLinkShell({
     setCheckoutError(null);
     setIsCheckoutSubmitting(true);
 
+    const normalizedCustomerName = normalizeOptionalInput(customerName);
+    const normalizedCustomerWhatsapp = normalizeOptionalInput(customerWhatsapp);
+    const normalizedCustomerEmail = normalizeOptionalInput(customerEmail);
+
     const greetingTarget = shareLink.ownerName?.trim() || "vendedor";
     const itemLines = cartItems.flatMap((item, index) => {
       const details = [
@@ -770,6 +782,17 @@ export function ShareLinkShell({
     const messageLines = [
       `Ola, ${greetingTarget}!`,
       `Tenho interesse nos produtos do catalogo "${shareLink.name}".`,
+      ...((normalizedCustomerName || normalizedCustomerWhatsapp || normalizedCustomerEmail)
+        ? [
+            "",
+            "Cliente:",
+            ...(normalizedCustomerName ? [`Nome: ${normalizedCustomerName}`] : []),
+            ...(normalizedCustomerWhatsapp
+              ? [`WhatsApp: ${normalizedCustomerWhatsapp}`]
+              : []),
+            ...(normalizedCustomerEmail ? [`E-mail: ${normalizedCustomerEmail}`] : []),
+          ]
+        : []),
       "",
       "Itens:",
       ...itemLines,
@@ -787,6 +810,11 @@ export function ShareLinkShell({
         itemCount: cartItemCount,
         subtotal: hasPricedItems ? subtotal : null,
         hasItemsWithoutPrice,
+        hasCustomerIdentification: Boolean(
+          normalizedCustomerName ||
+            normalizedCustomerWhatsapp ||
+            normalizedCustomerEmail,
+        ),
       },
     });
 
@@ -799,6 +827,9 @@ export function ShareLinkShell({
           productBaseId: item.product.id,
           quantity: item.quantity,
         })),
+        customerName: normalizedCustomerName,
+        customerWhatsapp: normalizedCustomerWhatsapp,
+        customerEmail: normalizedCustomerEmail,
       };
 
       const response = await fetch("/api/v2/order-intents/public", {
@@ -840,6 +871,9 @@ export function ShareLinkShell({
     hasPricedItems,
     isCheckoutSubmitting,
     normalizedWhatsappPhone,
+    customerEmail,
+    customerName,
+    customerWhatsapp,
     shareLink.id,
     shareLink.name,
     shareLink.ownerName,
@@ -1351,6 +1385,45 @@ export function ShareLinkShell({
                   </div>
                 ))
               )}
+
+              {cartItems.length > 0 ? (
+                <div className="rounded-2xl border border-rose-100 bg-white p-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-slate-900">
+                      Seus dados
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Opcional. Se preencher, o vendedor recebe sua identificacao e o sistema
+                      consegue reconhecer futuras interacoes.
+                    </p>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <Input
+                      value={customerName}
+                      onChange={(event) => setCustomerName(event.target.value)}
+                      placeholder="Seu nome"
+                      aria-label="Seu nome"
+                      className="h-11 rounded-xl border-rose-100/80 bg-white/90 px-4 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200 sm:col-span-2"
+                    />
+                    <Input
+                      value={customerWhatsapp}
+                      onChange={(event) => setCustomerWhatsapp(event.target.value)}
+                      placeholder="WhatsApp"
+                      aria-label="WhatsApp"
+                      className="h-11 rounded-xl border-rose-100/80 bg-white/90 px-4 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200"
+                    />
+                    <Input
+                      value={customerEmail}
+                      onChange={(event) => setCustomerEmail(event.target.value)}
+                      placeholder="E-mail"
+                      aria-label="E-mail"
+                      type="email"
+                      className="h-11 rounded-xl border-rose-100/80 bg-white/90 px-4 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200"
+                    />
+                  </div>
+                </div>
+              ) : null}
 
               {cartItems.length > 0 ? (
                 <div className="rounded-2xl border border-rose-100 bg-rose-50/30 p-4 text-sm text-slate-600">

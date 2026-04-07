@@ -92,6 +92,7 @@ model Brand {
   logoUrl                String?
   integrationMode        IntegrationMode           @default(MANUAL_CSV)
   users                  User[]
+  customerProfiles       CustomerProfile[]
   categories             Category[]
   products               Product[]
   variations             ProductVariation[]
@@ -371,11 +372,32 @@ model ShareLinkV2 {
   @@index([ownerUserId])
 }
 
+model CustomerProfile {
+  id          String        @id @default(uuid()) @db.Uuid
+  brandId     String        @db.Uuid
+  name        String?
+  email       String?
+  whatsapp    String?
+  lastSeenAt  DateTime      @default(now())
+  brand       Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  orderIntents OrderIntent[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([brandId, email])
+  @@unique([brandId, whatsapp])
+  @@index([brandId])
+  @@index([email])
+  @@index([whatsapp])
+  @@index([lastSeenAt])
+}
+
 model OrderIntent {
   id                    String             @id @default(uuid()) @db.Uuid
   brandId               String             @db.Uuid
   ownerUserId           String?            @db.Uuid
   shareLinkId           String?            @db.Uuid
+  customerProfileId     String?            @db.Uuid
   channel               OrderIntentChannel
   status                OrderIntentStatus  @default(OPEN)
   customerName          String?
@@ -390,6 +412,7 @@ model OrderIntent {
   brand                 Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
   ownerUser             User?              @relation("OrderIntentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
   shareLink             ShareLinkV2?       @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
+  customerProfile       CustomerProfile?   @relation(fields: [customerProfileId], references: [id], onDelete: SetNull)
   items                 OrderIntentItem[]
   stockReservation      StockReservation?
   billedAt              DateTime?
@@ -401,6 +424,7 @@ model OrderIntent {
   @@index([brandId])
   @@index([ownerUserId])
   @@index([shareLinkId])
+  @@index([customerProfileId])
   @@index([channel])
   @@index([status])
   @@index([createdAt])

@@ -126,12 +126,17 @@ function getReservationBadgeClassName(status?: StockReservationStatus | null) {
 
 function getCustomerLabel(orderIntent: OrderIntentSummary) {
   const primary =
+    orderIntent.customerProfileName?.trim() ||
     orderIntent.customerName?.trim() ||
+    orderIntent.customerProfileWhatsapp?.trim() ||
     orderIntent.customerWhatsapp?.trim() ||
+    orderIntent.customerProfileEmail?.trim() ||
     orderIntent.customerEmail?.trim() ||
     "Cliente não identificado";
   const secondary =
+    orderIntent.customerProfileWhatsapp?.trim() ||
     orderIntent.customerWhatsapp?.trim() ||
+    orderIntent.customerProfileEmail?.trim() ||
     orderIntent.customerEmail?.trim() ||
     null;
 

@@ -24,6 +24,14 @@ function buildOrderIntentWhere(
 function serializeOrderIntentListItem(
   item: Prisma.OrderIntentGetPayload<{
     include: {
+      customerProfile: {
+        select: {
+          id: true;
+          name: true;
+          email: true;
+          whatsapp: true;
+        };
+      };
       shareLink: {
         select: {
           name: true;
@@ -39,11 +47,15 @@ function serializeOrderIntentListItem(
     };
   }>,
 ) {
-  const { shareLink, stockReservation, subtotal, ...orderIntent } = item;
+  const { customerProfile, shareLink, stockReservation, subtotal, ...orderIntent } = item;
 
   return {
     ...orderIntent,
     subtotal: subtotal ? subtotal.toNumber() : null,
+    customerProfileId: customerProfile?.id ?? null,
+    customerProfileName: customerProfile?.name ?? null,
+    customerProfileEmail: customerProfile?.email ?? null,
+    customerProfileWhatsapp: customerProfile?.whatsapp ?? null,
     shareLinkName: shareLink?.name ?? null,
     shareLinkSlug: shareLink?.slug ?? null,
     reservationStatus: stockReservation?.status ?? null,
@@ -75,6 +87,14 @@ export async function GET(request: Request) {
         take,
         skip,
         include: {
+          customerProfile: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              whatsapp: true,
+            },
+          },
           shareLink: {
             select: {
               name: true,
