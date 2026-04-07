@@ -34,18 +34,23 @@ Sou o assistente de desenvolvimento do Pedro Mamede. Trabalho como engenheiro fu
 
 **Nome:** Catalogo Facil (Ipe Distribuidora)
 **Stack:** Next.js 16.1.1 (App Router), React 19, TypeScript, Tailwind CSS 3.4, Prisma 7.2, PostgreSQL
-**Funcao:** Sistema SaaS multi-tenant para distribuidoras criarem catalogos de produtos e exportarem como PDF
+**Funcao:** Sistema SaaS multi-tenant para distribuidoras criarem catalogos, compartilhar links publicos, operar carrinho assistido por WhatsApp e exportar PDFs
 **Dominio:** catalogofacil.solucaoviavel.com
 
 ### Funcionalidades principais
 1. **Dashboard** — Visao geral com contadores, acoes rapidas, busca (visual glassmorphism com purple accents)
 2. **Produtos Base V2** — CRUD com imagens otimizadas (Sharp → WebP), categorias, subcategorias
 3. **Catalogos V2** — Montar catalogos selecionando produtos, customizar visual (cores stripe, fontes, logo)
-4. **Share Links** — Links publicos com token para compartilhar catalogos
-5. **Exportacao PDF** — 3 templates (classic, dark_neon, glassmorphism) via Playwright HTML→PDF
-6. **Integracoes ERP** — VarejoOnline, OMIE, Tiny, Bling (OAuth/credentials, sync, webhooks)
-7. **Auth** — NextAuth.js com credentials (email/senha, bcrypt, JWT 7 dias)
-8. **Storage** — Dual: local (`/public/uploads`) ou S3/Supabase Storage (abstracao pronta em `lib/storage/`)
+4. **Share Links** — Links publicos com token, carrinho local e finalizacao assistida via WhatsApp do vendedor dono do link
+5. **Pedidos (Fase 0)** — `OrderIntent` criada antes do WhatsApp, status `OPEN/BILLED/CANCELED/EXPIRED` e backoffice em `/dashboard/orders`
+6. **Reservas de Estoque (Fase 0)** — `StockReservation` criada no fechamento para WhatsApp, convertida ao faturar e liberada ao cancelar
+7. **Clientes e Demanda (Fase 0)** — `CustomerProfile` opcional no checkout assistido e `ProductRequest` publico para produtos que nao estao no link
+8. **Analytics Base (Fase 0)** — `AnalyticsEvent` first-party para share link, carrinho, checkout e solicitacoes
+9. **Equipe e Permissoes** — `ADMIN`, `SELLER`, `VIEWER`, ownership de share links/pedidos/solicitacoes e tela `/dashboard/team`
+10. **Exportacao PDF** — 3 templates (classic, dark_neon, glassmorphism) via Playwright HTML→PDF
+11. **Integracoes ERP** — VarejoOnline, OMIE, Tiny, Bling (OAuth/credentials, sync, webhooks)
+12. **Auth** — NextAuth.js com credentials (email/senha, bcrypt, JWT 7 dias) + suspensao de tenant por marca
+13. **Storage** — Dual: local (`/public/uploads`) ou S3/Supabase Storage (abstracao pronta em `lib/storage/`)
 
 ### Arquitetura de PDFs (importante)
 O motor de PDF e a feature mais complexa do sistema:
@@ -124,6 +129,7 @@ Sem isso, `overflow-x: clip` e `max-width: 100vw` do globals.css criam clipping 
 - **Uploads dir:** `/var/www/catalogos-api-lab/uploads`
 - **PM2 app:** `catalogos-api-lab`
 - **Porta interna:** `3000`
+- **Branch atualmente publicada na VPS:** `codex/phase0-order-intent-foundation`
 - **Nginx:** proxy reverso ativo com SSL via Let's Encrypt
 - **Snapshot baseline:** `baseline-catalogofacil-2026-04-04`
 - **Custo:** R$79,92/mês (com desconto primeira fatura)
@@ -161,8 +167,9 @@ origin  → github.com/pedrolinomamede-dot/catalogos-api-lab.git (UNICO PERMITID
 ```
 
 ### Branches
-- **main** — branch de producao atualmente publicada na VPS Platon
-- **codex/main-updated-continuation** — branch local de continuidade para novos ajustes
+- **main** — branch de referencia/estabilidade publicada antes da Fase 0
+- **codex/main-updated-continuation** — branch de continuidade usada para seller ownership + carrinho WhatsApp
+- **codex/phase0-order-intent-foundation** — branch atual da Fase 0, publicada na VPS Platon
 - **Branches historicas preservadas:** `codex/dashboard-overview-functional`, `codex/dashboard-overview-functional-0Gl51`
 
 ### Arquivos locais fora do Git
@@ -180,13 +187,16 @@ app/
   api/
     auth/           — NextAuth ([...nextauth], signup, me)
     v2/
+      analytics-events/ — Eventos publicos first-party
       base-products/ — CRUD produtos
       catalogs/      — CRUD catalogos + items + snapshots + PDF
       categories/    — Categorias hierarquicas
       dashboard/     — Summary endpoint
       integrations/  — ERP connections, sync, webhooks, callbacks
+      order-intents/ — Intencoes de pedido + status + reserva
+      product-requests/ — Solicitacoes publicas de produtos ausentes
       share-links/   — Links publicos + PDF export
-  dashboard/         — UI pages (overview, products, catalogs, settings, share-links, integrations)
+  dashboard/         — UI pages (overview, products, catalogs, settings, share-links, integrations, orders, product-requests, team)
   pdf-render/        — Pagina interna que Playwright navega para gerar PDF
 
 components/
@@ -199,6 +209,10 @@ components/
   auth/                       — LoginForm, SignupForm
 
 lib/
+  customer-profiles/
+    upsert-customer-profile.ts — Reuso de perfil do cliente por email/whatsapp
+  order-intents/
+    stock-reservations.ts      — Criacao, expiracao e conversao de reservas
   pdf/
     html/
       pdf-page-builder.ts      — Engine de paginacao compartilhada (buildPdfPages)
@@ -225,8 +239,8 @@ lib/
   prisma.ts                    — Prisma client singleton
 
 prisma/
-  schema.prisma                — 21 models, PostgreSQL
-  migrations/                  — 19 migrations
+  schema.prisma                — 28 models, PostgreSQL
+  migrations/                  — 26 migrations
 ```
 
 ---
@@ -261,6 +275,24 @@ prisma/
 
 14. **Baseline congelada (2026-04-04)** — Backups locais criados: `.env.backup-2026-04-04`, `catalogos-api-lab.backup-2026-04-04` no Nginx, `pm2 save` executado e snapshot `baseline-catalogofacil-2026-04-04` criado na Platon.
 
+15. **Seller ownership (2026-04-05)** — Share links passaram a ter ownership por usuario vendedor (`ownerUserId`), `SELLER` ganhou permissao operacional propria e o admin ganhou gestao de equipe em `/dashboard/team`.
+
+16. **Carrinho WhatsApp no share link (2026-04-05)** — O link publico passou a ter carrinho local com persistencia e finalizacao no WhatsApp do vendedor dono do link.
+
+17. **OrderIntent foundation (2026-04-06)** — No clique para WhatsApp, o sistema passa a criar `OrderIntent` e `OrderIntentItem` antes do redirecionamento, preservando origem, itens, subtotal e forma de pagamento.
+
+18. **Pedidos no backoffice (2026-04-06)** — Dashboard ganhou `/dashboard/orders` com listagem por ownership; `ADMIN` ve todos e pode `Faturar` ou `Cancelar`, `SELLER` ve apenas leitura dos proprios.
+
+19. **StockReservation foundation (2026-04-06)** — Cada `OrderIntent` cria `StockReservation` com expiracao; `Faturar` converte a reserva e `Cancelar` libera a reserva.
+
+20. **AnalyticsEvent foundation (2026-04-07)** — Share links passaram a registrar eventos first-party como `share_link_viewed`, `share_link_add_to_cart`, `share_link_remove_from_cart`, `share_link_checkout_started` e `product_request_created`.
+
+21. **CustomerProfile foundation (2026-04-07)** — O checkout assistido e as solicitacoes de produto agora podem identificar o cliente por nome/email/whatsapp e reutilizar esse perfil no banco.
+
+22. **ProductRequest foundation (2026-04-07)** — O share link ganhou formulario "Nao encontrou o que procura?" e o backoffice ganhou `/dashboard/product-requests` para acompanhar demanda reprimida por vendedor e origem.
+
+23. **Brand suspension control (2026-04-07)** — `Brand.isActive` passou a controlar suspensao total do tenant. Quando suspensa, a marca perde acesso ao dashboard, APIs autenticadas, site publico e share links.
+
 ---
 
 ## Plano de Migracao Atual
@@ -288,6 +320,20 @@ prisma/
   - `app/api/auth/signup/route.ts` → Reescrever
   - `components/auth/LoginForm.tsx` → Supabase signIn
   - `components/auth/SignupForm.tsx` → Supabase signUp
+
+### Fase 4: Site + Dados Comerciais (EM EXPANSAO)
+- Fundacao de dados da Fase 0 ja entregue:
+  - `OrderIntent`
+  - `StockReservation`
+  - `AnalyticsEvent`
+  - `CustomerProfile`
+  - `ProductRequest`
+- Proximos blocos naturais:
+  - dashboards e metricas sobre eventos
+  - site publico alimentado pela Base Geral
+  - frete unificado entre site e share link
+  - pedidos assistidos com reserva de estoque
+  - politicas futuras de preco, atacado/varejo, descontos progressivos e nota fiscal
 
 ---
 
