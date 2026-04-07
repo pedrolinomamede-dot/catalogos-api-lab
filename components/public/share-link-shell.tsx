@@ -7,6 +7,7 @@ import { MessageCircle, Minus, Plus, ShoppingCart, X } from "lucide-react";
 import type {
   CreatePublicAnalyticsEventRequest,
   CreatePublicOrderIntentRequest,
+  CreatePublicProductRequestRequest,
   ProductImageLayout,
   PublicAnalyticsEventName,
   ShareLinkPublicCatalogV2,
@@ -15,6 +16,7 @@ import type {
 
 import { OfflineBanner } from "@/components/public/OfflineBanner";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { resolveProductImageLayout } from "@/lib/catalog/image-layout";
 import { normalizeCatalogLabel } from "@/lib/catalog/line-grouping";
 import {
@@ -211,6 +213,14 @@ export function ShareLinkShell({
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsapp, setCustomerWhatsapp] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [productRequestText, setProductRequestText] = useState("");
+  const [productRequestCategoryHint, setProductRequestCategoryHint] = useState("");
+  const [productRequestQuantityHint, setProductRequestQuantityHint] = useState("");
+  const [productRequestCity, setProductRequestCity] = useState("");
+  const [productRequestState, setProductRequestState] = useState("");
+  const [productRequestError, setProductRequestError] = useState<string | null>(null);
+  const [productRequestSuccess, setProductRequestSuccess] = useState<string | null>(null);
+  const [isProductRequestSubmitting, setIsProductRequestSubmitting] = useState(false);
   const [cartByProductId, setCartByProductId] = useState<CartState>({});
   const [cardTonesByProductId, setCardTonesByProductId] = useState<
     Record<string, ProductCardTone>
@@ -744,6 +754,106 @@ export function ShareLinkShell({
     setCheckoutError(null);
   }, []);
 
+  const handleProductRequestSubmit = useCallback(async () => {
+    if (typeof window === "undefined" || isProductRequestSubmitting) {
+      return;
+    }
+
+    setProductRequestError(null);
+    setProductRequestSuccess(null);
+
+    const normalizedRequestText = normalizeOptionalInput(productRequestText);
+    if (!normalizedRequestText) {
+      setProductRequestError("Descreva o produto que voce procura.");
+      return;
+    }
+
+    const normalizedQuantityHint = normalizeOptionalInput(productRequestQuantityHint);
+    let quantityHint: number | null = null;
+    if (normalizedQuantityHint) {
+      const parsed = Number.parseInt(normalizedQuantityHint, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        setProductRequestError("Informe uma quantidade valida.");
+        return;
+      }
+      quantityHint = parsed;
+    }
+
+    const trackingContext = getPublicTrackingContext();
+    setIsProductRequestSubmitting(true);
+
+    try {
+      const payload: CreatePublicProductRequestRequest = {
+        channel: "SHARE_LINK",
+        shareLinkId: shareLink.id,
+        requestText: normalizedRequestText,
+        categoryHint: normalizeOptionalInput(productRequestCategoryHint),
+        quantityHint,
+        city: normalizeOptionalInput(productRequestCity),
+        state: normalizeOptionalInput(productRequestState),
+        contactName: normalizeOptionalInput(customerName),
+        contactPhone: normalizeOptionalInput(customerWhatsapp),
+        contactEmail: normalizeOptionalInput(customerEmail),
+        sessionKey: trackingContext?.sessionKey ?? null,
+        utmSource: trackingContext?.utmSource ?? null,
+        utmMedium: trackingContext?.utmMedium ?? null,
+        utmCampaign: trackingContext?.utmCampaign ?? null,
+        utmContent: trackingContext?.utmContent ?? null,
+        utmTerm: trackingContext?.utmTerm ?? null,
+        referrer: trackingContext?.referrer ?? null,
+      };
+
+      const response = await fetch("/api/v2/product-requests/public", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        let message = "Nao foi possivel registrar sua solicitacao agora.";
+        try {
+          const errorPayload = (await response.json()) as {
+            error?: { message?: string };
+          };
+          if (errorPayload.error?.message) {
+            message = errorPayload.error.message;
+          }
+        } catch {
+          // Keep the generic error message.
+        }
+
+        setProductRequestError(message);
+        return;
+      }
+
+      setProductRequestText("");
+      setProductRequestCategoryHint("");
+      setProductRequestQuantityHint("");
+      setProductRequestCity("");
+      setProductRequestState("");
+      setProductRequestSuccess(
+        "Solicitacao enviada com sucesso. Nossa equipe pode entrar em contato com voce.",
+      );
+    } catch {
+      setProductRequestError("Nao foi possivel registrar sua solicitacao agora.");
+    } finally {
+      setIsProductRequestSubmitting(false);
+    }
+  }, [
+    customerEmail,
+    customerName,
+    customerWhatsapp,
+    isProductRequestSubmitting,
+    productRequestCategoryHint,
+    productRequestCity,
+    productRequestQuantityHint,
+    productRequestState,
+    productRequestText,
+    shareLink.id,
+  ]);
+
   const handleCheckout = useCallback(async () => {
     if (
       cartItems.length === 0 ||
@@ -1262,6 +1372,131 @@ export function ShareLinkShell({
               ))}
             </div>
           )}
+        </section>
+
+        <section className="rounded-2xl border border-rose-100 bg-white/95 p-5 shadow-sm">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-600/80">
+              Solicitar produto
+            </p>
+            <h2
+              className="text-2xl text-slate-900"
+              style={{ fontFamily: "var(--font-editorial), serif" }}
+            >
+              Nao encontrou o que procura?
+            </h2>
+            <p className="text-sm text-slate-500">
+              Envie uma solicitacao com o produto desejado. Isso ajuda o vendedor a
+              entender a demanda e entrar em contato com voce depois.
+            </p>
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            <Textarea
+              value={productRequestText}
+              onChange={(event) => {
+                setProductRequestText(event.target.value);
+                if (productRequestError) {
+                  setProductRequestError(null);
+                }
+                if (productRequestSuccess) {
+                  setProductRequestSuccess(null);
+                }
+              }}
+              placeholder="Descreva o produto, marca, linha, tamanho ou qualquer detalhe importante"
+              aria-label="Descreva o produto desejado"
+              className="min-h-[120px] rounded-xl border-rose-100/80 bg-white/90 px-4 py-3 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200"
+            />
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                value={productRequestCategoryHint}
+                onChange={(event) => setProductRequestCategoryHint(event.target.value)}
+                placeholder="Categoria ou tipo (opcional)"
+                aria-label="Categoria ou tipo"
+                className="h-11 rounded-xl border-rose-100/80 bg-white/90 px-4 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200"
+              />
+              <Input
+                value={productRequestQuantityHint}
+                onChange={(event) => setProductRequestQuantityHint(event.target.value)}
+                placeholder="Quantidade desejada (opcional)"
+                aria-label="Quantidade desejada"
+                inputMode="numeric"
+                className="h-11 rounded-xl border-rose-100/80 bg-white/90 px-4 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200"
+              />
+              <Input
+                value={productRequestCity}
+                onChange={(event) => setProductRequestCity(event.target.value)}
+                placeholder="Cidade (opcional)"
+                aria-label="Cidade"
+                className="h-11 rounded-xl border-rose-100/80 bg-white/90 px-4 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200"
+              />
+              <Input
+                value={productRequestState}
+                onChange={(event) => setProductRequestState(event.target.value)}
+                placeholder="Estado (opcional)"
+                aria-label="Estado"
+                className="h-11 rounded-xl border-rose-100/80 bg-white/90 px-4 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-rose-100 bg-rose-50/30 p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-slate-900">Seus dados</p>
+                <p className="text-xs text-slate-500">
+                  Opcional. Se preencher, conseguimos identificar e segmentar melhor o
+                  interesse dos clientes.
+                </p>
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <Input
+                  value={customerName}
+                  onChange={(event) => setCustomerName(event.target.value)}
+                  placeholder="Seu nome"
+                  aria-label="Seu nome na solicitacao"
+                  className="h-11 rounded-xl border-rose-100/80 bg-white/90 px-4 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200 sm:col-span-2"
+                />
+                <Input
+                  value={customerWhatsapp}
+                  onChange={(event) => setCustomerWhatsapp(event.target.value)}
+                  placeholder="WhatsApp"
+                  aria-label="WhatsApp na solicitacao"
+                  className="h-11 rounded-xl border-rose-100/80 bg-white/90 px-4 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200"
+                />
+                <Input
+                  value={customerEmail}
+                  onChange={(event) => setCustomerEmail(event.target.value)}
+                  placeholder="E-mail"
+                  aria-label="E-mail na solicitacao"
+                  type="email"
+                  className="h-11 rounded-xl border-rose-100/80 bg-white/90 px-4 text-slate-700 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-rose-200"
+                />
+              </div>
+            </div>
+
+            {productRequestError ? (
+              <p className="text-sm font-medium text-rose-600">{productRequestError}</p>
+            ) : null}
+            {productRequestSuccess ? (
+              <p className="text-sm font-medium text-emerald-700">
+                {productRequestSuccess}
+              </p>
+            ) : null}
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleProductRequestSubmit}
+                disabled={isProductRequestSubmitting}
+                className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                {isProductRequestSubmitting
+                  ? "Enviando solicitacao..."
+                  : "Solicitar produto"}
+              </button>
+            </div>
+          </div>
         </section>
       </div>
 

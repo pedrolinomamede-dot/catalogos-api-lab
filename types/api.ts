@@ -38,6 +38,12 @@ export type IntegrationSyncResource = "FULL" | "PRODUCTS" | "CATEGORIES" | "IMAG
 export type UserRole = "ADMIN" | "SELLER" | "VIEWER";
 export type OrderIntentChannel = "SHARE_LINK" | "SITE";
 export type OrderIntentStatus = "OPEN" | "BILLED" | "CANCELED" | "EXPIRED";
+export type ProductRequestStatus =
+  | "OPEN"
+  | "REVIEWED"
+  | "CONTACTED"
+  | "RESOLVED"
+  | "DISMISSED";
 export type StockReservationStatus =
   | "ACTIVE"
   | "EXPIRED"
@@ -564,6 +570,26 @@ export type CreatePublicAnalyticsEventRequest = {
   utmTerm?: string | null;
   referrer?: string | null;
   metadataJson?: Record<string, unknown> | null;
+};
+
+export type CreatePublicProductRequestRequest = {
+  channel: Extract<OrderIntentChannel, "SHARE_LINK">;
+  shareLinkId: string;
+  requestText: string;
+  categoryHint?: string | null;
+  quantityHint?: number | null;
+  city?: string | null;
+  state?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+  sessionKey?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  utmContent?: string | null;
+  utmTerm?: string | null;
+  referrer?: string | null;
 };
 
 export type OrderIntentSummary = {

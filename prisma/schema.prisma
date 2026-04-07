@@ -85,6 +85,14 @@ enum StockReservationStatus {
   CANCELED
 }
 
+enum ProductRequestStatus {
+  OPEN
+  REVIEWED
+  CONTACTED
+  RESOLVED
+  DISMISSED
+}
+
 model Brand {
   id                     String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                   String
@@ -99,6 +107,7 @@ model Brand {
   images                 ProductImage[]
   integrationConnections IntegrationConnectionV2[]
   orderIntents           OrderIntent[]
+  productRequests        ProductRequest[]
   stockReservations      StockReservation[]
   analyticsEvents        AnalyticsEvent[]
   createdAt              DateTime                  @default(now())
@@ -117,6 +126,7 @@ model User {
   brand        Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
   ownedShareLinks ShareLinkV2[] @relation("ShareLinkOwner")
   orderIntents OrderIntent[] @relation("OrderIntentOwner")
+  productRequests ProductRequest[] @relation("ProductRequestOwner")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -365,6 +375,7 @@ model ShareLinkV2 {
   ownerUser User                 @relation("ShareLinkOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
   catalogs  ShareLinkCatalogV2[]
   orderIntents OrderIntent[]
+  productRequests ProductRequest[]
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
 
@@ -381,6 +392,7 @@ model CustomerProfile {
   lastSeenAt  DateTime      @default(now())
   brand       Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
   orderIntents OrderIntent[]
+  productRequests ProductRequest[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -390,6 +402,39 @@ model CustomerProfile {
   @@index([email])
   @@index([whatsapp])
   @@index([lastSeenAt])
+}
+
+model ProductRequest {
+  id                String               @id @default(uuid()) @db.Uuid
+  brandId           String               @db.Uuid
+  ownerUserId       String?              @db.Uuid
+  shareLinkId       String?              @db.Uuid
+  customerProfileId String?              @db.Uuid
+  channel           OrderIntentChannel
+  status            ProductRequestStatus @default(OPEN)
+  requestText       String
+  categoryHint      String?
+  quantityHint      Int?
+  city              String?
+  state             String?
+  contactName       String?
+  contactPhone      String?
+  contactEmail      String?
+  brand             Brand                @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  ownerUser         User?                @relation("ProductRequestOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  shareLink         ShareLinkV2?         @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
+  customerProfile   CustomerProfile?     @relation(fields: [customerProfileId], references: [id], onDelete: SetNull)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([brandId])
+  @@index([ownerUserId])
+  @@index([shareLinkId])
+  @@index([customerProfileId])
+  @@index([channel])
+  @@index([status])
+  @@index([createdAt])
+  @@index([brandId, status, createdAt])
 }
 
 model OrderIntent {

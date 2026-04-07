@@ -5,6 +5,7 @@ import {
   createStockReservationForOrderIntent,
   StockReservationError,
 } from "@/lib/order-intents/stock-reservations";
+import { upsertCustomerProfile } from "@/lib/customer-profiles/upsert-customer-profile";
 import { withBrand } from "@/lib/prisma";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
@@ -201,75 +202,6 @@ function parseCreatePayload(body: unknown) {
       notes: normalizeOptionalNullableString(body.notes) ?? null,
     } satisfies CreatePayload,
   };
-}
-
-async function upsertCustomerProfile(
-  tx: Prisma.TransactionClient,
-  brandId: string,
-  payload: Pick<CreatePayload, "customerEmail" | "customerName" | "customerWhatsapp">,
-) {
-  if (!payload.customerEmail && !payload.customerWhatsapp) {
-    return null;
-  }
-
-  const emailProfile = payload.customerEmail
-    ? await tx.customerProfile.findUnique({
-        where: {
-          brandId_email: {
-            brandId,
-            email: payload.customerEmail,
-          },
-        },
-      })
-    : null;
-
-  const whatsappProfile = payload.customerWhatsapp
-    ? await tx.customerProfile.findUnique({
-        where: {
-          brandId_whatsapp: {
-            brandId,
-            whatsapp: payload.customerWhatsapp,
-          },
-        },
-      })
-    : null;
-
-  const matchedProfile = emailProfile || whatsappProfile || null;
-
-  if (!matchedProfile) {
-    return tx.customerProfile.create({
-      data: {
-        brandId,
-        name: payload.customerName,
-        email: payload.customerEmail,
-        whatsapp: payload.customerWhatsapp,
-        lastSeenAt: new Date(),
-      },
-      select: {
-        id: true,
-      },
-    });
-  }
-
-  const canSyncEmail =
-    payload.customerEmail &&
-    (!whatsappProfile || whatsappProfile.id === matchedProfile.id);
-  const canSyncWhatsapp =
-    payload.customerWhatsapp &&
-    (!emailProfile || emailProfile.id === matchedProfile.id);
-
-  return tx.customerProfile.update({
-    where: { id: matchedProfile.id },
-    data: {
-      name: payload.customerName ?? matchedProfile.name,
-      email: canSyncEmail ? payload.customerEmail : matchedProfile.email,
-      whatsapp: canSyncWhatsapp ? payload.customerWhatsapp : matchedProfile.whatsapp,
-      lastSeenAt: new Date(),
-    },
-    select: {
-      id: true,
-    },
-  });
 }
 
 export async function POST(request: Request) {
