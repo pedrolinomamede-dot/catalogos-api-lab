@@ -60,6 +60,11 @@ export const queryKeys = {
       list: (paramsKey?: unknown) =>
         ["v2", "order-intents", paramsKey ?? "all"] as const,
     },
+    productRequests: {
+      root: ["v2", "product-requests"] as const,
+      list: (paramsKey?: unknown) =>
+        ["v2", "product-requests", paramsKey ?? "all"] as const,
+    },
     users: {
       root: ["v2", "users"] as const,
       list: ["v2", "users", "list"] as const,
@@ -79,4 +84,3 @@ export const queryKeys = {
     },
   },
 };
-

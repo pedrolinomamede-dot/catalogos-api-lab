@@ -592,6 +592,33 @@ export type CreatePublicProductRequestRequest = {
   referrer?: string | null;
 };
 
+export type ProductRequestSummary = {
+  id: string;
+  brandId: string;
+  ownerUserId?: string | null;
+  shareLinkId?: string | null;
+  shareLinkName?: string | null;
+  shareLinkSlug?: string | null;
+  channel: OrderIntentChannel;
+  status: ProductRequestStatus;
+  customerProfileId?: string | null;
+  customerProfileName?: string | null;
+  customerProfileEmail?: string | null;
+  customerProfileWhatsapp?: string | null;
+  ownerUserName?: string | null;
+  ownerUserWhatsapp?: string | null;
+  requestText: string;
+  categoryHint?: string | null;
+  quantityHint?: number | null;
+  city?: string | null;
+  state?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type OrderIntentSummary = {
   id: string;
   brandId: string;

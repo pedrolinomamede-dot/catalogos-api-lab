@@ -14,6 +14,7 @@ import type {
   ImportBaseProductsCsvV2Item,
   MeResponse,
   OrderIntentSummary,
+  ProductRequestSummary,
   UpdateOrderIntentStatusRequest,
   CreateProductRequest,
   UpdateBrandRequest,
@@ -95,6 +96,7 @@ import {
   listOrderIntentsV2,
   updateOrderIntentStatusV2,
 } from "@/lib/api/v2/order-intents";
+import { listProductRequestsV2 } from "@/lib/api/v2/product-requests";
 import {
   createUserV2,
   listUsersV2,
@@ -157,6 +159,7 @@ type SubcategoriesV2Params = Parameters<typeof listSubcategoriesV2>[1];
 type CatalogsV2Params = Parameters<typeof listCatalogsV2>[0];
 type ShareLinksV2Params = Parameters<typeof listShareLinksV2>[0];
 type OrderIntentsV2Params = Parameters<typeof listOrderIntentsV2>[0];
+type ProductRequestsV2Params = Parameters<typeof listProductRequestsV2>[0];
 type IntegrationConnectionJobsParams = Parameters<typeof listIntegrationConnectionJobsV2>[1];
 type UpdateUserV2Input = { id: string; data: UpdateUserV2Request };
 type UpdateOrderIntentStatusInput = {
@@ -331,6 +334,16 @@ export function useOrderIntentsV2(params?: OrderIntentsV2Params) {
   return useQuery({
     queryKey: queryKeys.v2.orderIntents.list(paramsKey),
     queryFn: () => listOrderIntentsV2(params),
+  });
+}
+
+export function useProductRequestsV2(params?: ProductRequestsV2Params) {
+  const paramsKey = params ?? {};
+  return useQuery<
+    ProductRequestSummary[] | { data: ProductRequestSummary[]; meta?: { page: number; pageSize: number; total: number; totalPages: number } }
+  >({
+    queryKey: queryKeys.v2.productRequests.list(paramsKey),
+    queryFn: () => listProductRequestsV2(params),
   });
 }
 
