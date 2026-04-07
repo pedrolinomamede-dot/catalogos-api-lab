@@ -17,14 +17,16 @@ export async function middleware(request: NextRequest) {
   const isApiRoute = pathname.startsWith("/api/");
   const isAuthRoute = pathname === "/api/auth" || pathname.startsWith("/api/auth/");
   const isPublicRoute = pathname === "/api/public" || pathname.startsWith("/api/public/");
+  const isPlatformApiRoute = pathname === "/api/admin" || pathname.startsWith("/api/admin/");
   const isShareLinkByToken = pathname.startsWith("/api/v2/share-links/by-token/");
   const isLoginRoute = pathname === "/login" || pathname === "/signup";
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const isDashboardRoute = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
 
   if (!isApiRoute) {
     if (isLoginRoute) {
       const callbackUrl = searchParams.get("callbackUrl");
-      if (callbackUrl !== DASHBOARD_PATH) {
+      if (!callbackUrl) {
         const url = request.nextUrl.clone();
         url.searchParams.set("callbackUrl", DASHBOARD_PATH);
         return NextResponse.redirect(url);
@@ -32,14 +34,14 @@ export async function middleware(request: NextRequest) {
       return withNoStore();
     }
 
-    if (isDashboardRoute) {
+    if (isDashboardRoute || isAdminRoute) {
       return withNoStore();
     }
 
     return NextResponse.next();
   }
 
-  if (isAuthRoute || isPublicRoute || isShareLinkByToken) {
+  if (isAuthRoute || isPublicRoute || isPlatformApiRoute || isShareLinkByToken) {
     return NextResponse.next();
   }
 
@@ -72,5 +74,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/dashboard", "/dashboard/:path*", "/login", "/signup"],
+  matcher: [
+    "/api/:path*",
+    "/dashboard",
+    "/dashboard/:path*",
+    "/admin",
+    "/admin/:path*",
+    "/login",
+    "/signup",
+  ],
 };

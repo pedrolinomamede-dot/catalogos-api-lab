@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Suspense } from "react";
 
 import { LoginForm } from "@/components/auth/LoginForm";
@@ -18,15 +17,6 @@ export default function LoginPage() {
       <Suspense fallback={<div>Carregando...</div>}>
         <LoginForm />
       </Suspense>
-      <p className="text-sm text-muted">
-        Ainda nao tem conta?{" "}
-        <Link
-          className="font-medium text-accent-strong hover:underline"
-          href="/signup"
-        >
-          Criar conta
-        </Link>
-      </p>
     </section>
   );
 }

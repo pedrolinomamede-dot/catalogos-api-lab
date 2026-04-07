@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { getErrorMessage } from "@/lib/api/error";
 import { useMe, useOrderIntentsV2, useUpdateOrderIntentStatusV2 } from "@/lib/api/hooks";
+import { isTenantAdminRole } from "@/lib/roles";
 import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 const PAGE_SIZE = 50;
@@ -168,7 +169,7 @@ export function OrderIntentsPageClient() {
   const meta = Array.isArray(data) ? undefined : data?.meta;
   const total = meta?.total ?? orderIntents.length;
   const totalPages = Math.max(1, meta?.totalPages ?? 1);
-  const showOwner = (me as MeResponse | undefined)?.role === "ADMIN";
+  const showOwner = isTenantAdminRole((me as MeResponse | undefined)?.role);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -190,7 +191,7 @@ export function OrderIntentsPageClient() {
     );
   }
 
-  if (me?.role !== "ADMIN" && me?.role !== "SELLER") {
+  if (!isTenantAdminRole(me?.role) && me?.role !== "SELLER") {
     return (
       <EmptyState
         title="Acesso restrito"

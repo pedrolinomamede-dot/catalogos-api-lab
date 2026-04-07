@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { getErrorMessage } from "@/lib/api/error";
 import { useMe, useProductRequestsV2 } from "@/lib/api/hooks";
+import { isTenantAdminRole } from "@/lib/roles";
 
 const PAGE_SIZE = 50;
 
@@ -126,7 +127,7 @@ export function ProductRequestsPageClient() {
   const meta = Array.isArray(data) ? undefined : data?.meta;
   const total = meta?.total ?? productRequests.length;
   const totalPages = Math.max(1, meta?.totalPages ?? 1);
-  const showOwner = (me as MeResponse | undefined)?.role === "ADMIN";
+  const showOwner = isTenantAdminRole((me as MeResponse | undefined)?.role);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -148,7 +149,7 @@ export function ProductRequestsPageClient() {
     );
   }
 
-  if (me?.role !== "ADMIN" && me?.role !== "SELLER") {
+  if (!isTenantAdminRole(me?.role) && me?.role !== "SELLER") {
     return (
       <EmptyState
         title="Acesso restrito"

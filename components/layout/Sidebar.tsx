@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { useMe } from "@/lib/api/hooks";
+import { isTenantAdminRole } from "@/lib/roles";
 import { useUiStore } from "@/lib/stores/ui-store";
 import { cn } from "@/lib/utils";
 
@@ -68,7 +69,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const isMobileOpen = mobileNavOpen;
   const isDesktopOpen = sidebarOpen;
-  const visibleLinks = links.filter((link) => !link.adminOnly || me?.role === "ADMIN");
+  const visibleLinks = links.filter(
+    (link) => !link.adminOnly || isTenantAdminRole(me?.role),
+  );
 
   const handleClose = () => {
     closeMobileNav();

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isSuperAdminRole } from "@/lib/roles";
 import { getBrandScope } from "@/lib/tenant";
 import { jsonError } from "@/lib/utils/errors";
 
@@ -63,7 +64,20 @@ export async function requireRoles(
     return user;
   }
 
-  if (!roles.includes(user.role)) {
+  if (!roles.includes(user.role) && !isSuperAdminRole(user.role)) {
+    return jsonError(403, "forbidden", "Not authorized");
+  }
+
+  return user;
+}
+
+export async function requirePlatformAdmin(): Promise<AuthContext | NextResponse> {
+  const user = await requireUser();
+  if (user instanceof NextResponse) {
+    return user;
+  }
+
+  if (!isSuperAdminRole(user.role)) {
     return jsonError(403, "forbidden", "Not authorized");
   }
 

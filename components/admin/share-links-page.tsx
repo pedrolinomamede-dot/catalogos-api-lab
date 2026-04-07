@@ -25,6 +25,7 @@ import { queryKeys } from "@/lib/api/query-keys";
 import { getShareLinkDeleteImpactV2 } from "@/lib/api/v2/share-links";
 import type { ShareLinkDeleteImpact } from "@/lib/api/v2/share-links";
 import { copyTextToClipboard } from "@/lib/browser/copy-to-clipboard";
+import { isTenantAdminRole } from "@/lib/roles";
 import {
   useDeleteShareLinkV2,
   useGenerateShareLinkPdfV2,
@@ -211,7 +212,7 @@ export function ShareLinksPageClient() {
   const totalPages = Math.max(1, meta?.totalPages ?? 1);
   const currentPage = Math.min(Math.max(page, 1), totalPages);
   const selectedCount = selectedIds.size;
-  const showOwner = (me as MeResponse | undefined)?.role === "ADMIN";
+  const showOwner = isTenantAdminRole((me as MeResponse | undefined)?.role);
   const allPageSelected =
     shareLinks.length > 0 &&
     shareLinks.every((shareLink) => selectedIds.has(shareLink.id));

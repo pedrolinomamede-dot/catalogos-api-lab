@@ -36,7 +36,7 @@ export type IntegrationSyncJobStatus =
 export type IntegrationSyncJobMode = "MANUAL" | "SCHEDULED" | "WEBHOOK";
 
 export type IntegrationSyncResource = "FULL" | "PRODUCTS" | "CATEGORIES" | "IMAGES";
-export type UserRole = "ADMIN" | "SELLER" | "VIEWER";
+export type UserRole = "SUPER_ADMIN" | "ADMIN" | "SELLER" | "VIEWER";
 export type OrderIntentChannel = "SHARE_LINK" | "SITE";
 export type OrderIntentStatus = "OPEN" | "BILLED" | "CANCELED" | "EXPIRED";
 export type ProductRequestStatus =
@@ -115,6 +115,34 @@ export type CreateBrandRequest = {
 };
 
 export type UpdateBrandRequest = Partial<CreateBrandRequest>;
+
+export type PlatformTenantSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  usersCount: number;
+  shareLinksCount: number;
+  orderIntentsCount: number;
+  productRequestsCount: number;
+};
+
+export type CreatePlatformTenantRequest = {
+  brandName: string;
+  brandSlug: string;
+  logoUrl?: string | null;
+  adminName?: string | null;
+  adminEmail: string;
+  adminPassword: string;
+  adminWhatsappPhone?: string | null;
+};
+
+export type UpdatePlatformTenantStatusRequest = {
+  isActive: boolean;
+};
 
 export type CreateCategoryRequest = {
   name: string;

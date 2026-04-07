@@ -20,9 +20,12 @@ import {
 } from "@/components/ui/table";
 import { getErrorMessage } from "@/lib/api/error";
 import { useMe, useUsersV2 } from "@/lib/api/hooks";
+import { isTenantAdminRole } from "@/lib/roles";
 
 function formatRole(role: AppUserV2["role"]) {
   switch (role) {
+    case "SUPER_ADMIN":
+      return "Administrador da Plataforma";
     case "ADMIN":
       return "Administrador";
     case "SELLER":
@@ -68,7 +71,7 @@ export function UsersPageClient() {
     );
   }
 
-  if (me?.role !== "ADMIN") {
+  if (!isTenantAdminRole(me?.role)) {
     return (
       <EmptyState
         title="Acesso restrito"
@@ -151,7 +154,13 @@ export function UsersPageClient() {
                       {user.email}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.role === "ADMIN" ? "default" : "outline"}>
+                      <Badge
+                        variant={
+                          user.role === "ADMIN" || user.role === "SUPER_ADMIN"
+                            ? "default"
+                            : "outline"
+                        }
+                      >
                         {formatRole(user.role)}
                       </Badge>
                     </TableCell>

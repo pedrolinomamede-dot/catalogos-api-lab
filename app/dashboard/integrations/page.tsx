@@ -5,6 +5,7 @@ import { IntegrationsPageClient } from "@/components/admin/integrations-page";
 import { LoadingState } from "@/components/admin/loading-state";
 import { PageHeader } from "@/components/admin/page-header";
 import { getAuthSession } from "@/lib/auth";
+import { isTenantAdminRole } from "@/lib/roles";
 
 export default async function IntegrationsPage() {
   const session = await getAuthSession();
@@ -12,7 +13,7 @@ export default async function IntegrationsPage() {
     redirect("/login");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (!isTenantAdminRole(session.user.role)) {
     redirect("/dashboard");
   }
 

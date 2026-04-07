@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Database, FolderKanban, Plug, BookCopy, Network, Link as LinkIcon } from "lucide-react";
 
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
 import { DashboardStatCard } from "@/components/dashboard/dashboard-stat-card";
 import { useDashboardSummaryV2, useMe } from "@/lib/api/hooks";
+import { isSuperAdminRole, isTenantAdminRole } from "@/lib/roles";
 
 function formatRelativeDate(value?: string | Date | null) {
   if (!value) {
@@ -32,13 +35,20 @@ const quickActions = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { data: me } = useMe();
   const { data, isLoading, isError } = useDashboardSummaryV2();
   const summary = data;
-  const isAdmin = me?.role === "ADMIN";
+  const isAdmin = isTenantAdminRole(me?.role);
   const visibleQuickActions = quickActions.filter(
     (action) => !action.adminOnly || isAdmin,
   );
+
+  useEffect(() => {
+    if (isSuperAdminRole(me?.role)) {
+      router.replace("/admin/tenants");
+    }
+  }, [me?.role, router]);
 
   const baseProducts = summary?.baseProducts;
   const categories = summary?.categories;

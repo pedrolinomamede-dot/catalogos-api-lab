@@ -29,6 +29,7 @@ export function BrandSettingsPanel() {
   } = useMe();
   const me = meData as MeResponse | undefined;
   const brandId = me?.brandId ?? "";
+  const canManageBrandAccess = me?.role === "SUPER_ADMIN";
 
   const {
     data: brand,
@@ -161,25 +162,29 @@ export function BrandSettingsPanel() {
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">Status de acesso do cliente</p>
             <p className="text-xs text-muted-foreground">
-              Suspender bloqueia dashboard, site público e share links da marca.
+              {canManageBrandAccess
+                ? "Suspender bloqueia dashboard, site público e share links da marca."
+                : "O status da marca e gerenciado pelo administrador da plataforma."}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Badge variant={brandData.isActive ? "outline" : "secondary"}>
               {brandData.isActive ? "Ativa" : "Suspensa"}
             </Badge>
-            <Button
-              type="button"
-              variant={brandData.isActive ? "destructive" : "default"}
-              onClick={handleToggleAccess}
-              disabled={updateBrand.isPending}
-            >
-              {updateBrand.isPending
-                ? "Salvando..."
-                : brandData.isActive
-                  ? "Suspender acesso"
-                  : "Reativar acesso"}
-            </Button>
+            {canManageBrandAccess ? (
+              <Button
+                type="button"
+                variant={brandData.isActive ? "destructive" : "default"}
+                onClick={handleToggleAccess}
+                disabled={updateBrand.isPending}
+              >
+                {updateBrand.isPending
+                  ? "Salvando..."
+                  : brandData.isActive
+                    ? "Suspender acesso"
+                    : "Reativar acesso"}
+              </Button>
+            ) : null}
           </div>
         </div>
 

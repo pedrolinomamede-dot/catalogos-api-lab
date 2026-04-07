@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { BrandSettingsPanel } from "@/components/admin/brand-settings-panel";
 import { getAuthSession } from "@/lib/auth";
+import { isTenantAdminRole } from "@/lib/roles";
 
 export default async function SettingsPage() {
   const session = await getAuthSession();
@@ -10,7 +11,7 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (!isTenantAdminRole(session.user.role)) {
     redirect("/dashboard");
   }
 

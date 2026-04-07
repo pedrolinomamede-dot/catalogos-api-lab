@@ -25,6 +25,10 @@ export const queryKeys = {
     byId: (id: string, brandSlug?: string) =>
       ["public-product", id, brandSlug] as const,
   },
+  platformTenants: {
+    root: ["platform-tenants"] as const,
+    list: ["platform-tenants", "list"] as const,
+  },
   v2: {
     baseProducts: {
       root: ["v2", "base-products"] as const,

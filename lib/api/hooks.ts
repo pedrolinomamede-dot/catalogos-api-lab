@@ -3,6 +3,7 @@ import type {
   DashboardSummaryV2,
   BaseProductsImportResultV2,
   CreateBrandRequest,
+  CreatePlatformTenantRequest,
   CreateCatalogItemV2Request,
   CreateCatalogV2Request,
   CreateShareLinkV2Request,
@@ -14,6 +15,7 @@ import type {
   ImportBaseProductsCsvV2Item,
   MeResponse,
   OrderIntentSummary,
+  PlatformTenantSummary,
   ProductRequestSummary,
   UpdateOrderIntentStatusRequest,
   CreateProductRequest,
@@ -21,6 +23,7 @@ import type {
   UpdateCategoryRequest,
   UpdateCategoryV2Request,
   UpdateCatalogV2Request,
+  UpdatePlatformTenantStatusRequest,
   UpdateBaseProductV2Request,
   UpdateSubcategoryV2Request,
   UpdateUserV2Request,
@@ -52,6 +55,11 @@ import {
   uploadImages,
   uploadVariationImages,
 } from "@/lib/api/admin";
+import {
+  createPlatformTenant,
+  listPlatformTenants,
+  updatePlatformTenantStatus,
+} from "@/lib/api/platform-tenants";
 import {
   addBaseProductImageV2,
   deleteBaseProduct,
@@ -196,6 +204,13 @@ export function useBrand(id: string) {
     queryKey: queryKeys.brands.byId(id),
     queryFn: () => getBrand(id),
     enabled: Boolean(id),
+  });
+}
+
+export function usePlatformTenants() {
+  return useQuery<PlatformTenantSummary[]>({
+    queryKey: queryKeys.platformTenants.list,
+    queryFn: listPlatformTenants,
   });
 }
 
@@ -428,6 +443,27 @@ export function useUpdateBrand(id?: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.brands.byId(targetId),
       });
+    },
+  });
+}
+
+export function useCreatePlatformTenant() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreatePlatformTenantRequest) => createPlatformTenant(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.platformTenants.root });
+    },
+  });
+}
+
+export function useUpdatePlatformTenantStatusV2() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; data: UpdatePlatformTenantStatusRequest }) =>
+      updatePlatformTenantStatus(input.id, input.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.platformTenants.root });
     },
   });
 }
