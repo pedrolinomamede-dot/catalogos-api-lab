@@ -14,8 +14,8 @@ export async function GET(request: Request) {
     return jsonError(400, "validation_error", "Invalid query", parsed.error.flatten());
   }
 
-  const brand = await prisma.brand.findUnique({
-    where: { slug: parsed.data.brandSlug },
+  const brand = await prisma.brand.findFirst({
+    where: { slug: parsed.data.brandSlug, isActive: true },
   });
 
   if (!brand) {

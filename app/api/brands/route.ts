@@ -57,6 +57,7 @@ export async function POST(request: Request) {
           name: parsed.data.name.trim(),
           slug,
           logoUrl: parsed.data.logoUrl,
+          isActive: parsed.data.isActive ?? true,
         },
       });
 

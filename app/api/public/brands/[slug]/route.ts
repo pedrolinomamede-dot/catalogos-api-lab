@@ -20,8 +20,8 @@ export async function GET(
     );
   }
 
-  const brand = await prisma.brand.findUnique({
-    where: { slug: parsed.data.toLowerCase() },
+  const brand = await prisma.brand.findFirst({
+    where: { slug: parsed.data.toLowerCase(), isActive: true },
   });
 
   if (!brand) {

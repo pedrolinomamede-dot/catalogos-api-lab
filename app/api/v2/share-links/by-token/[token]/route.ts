@@ -35,6 +35,15 @@ export async function GET(
     return jsonError(404, "not_found", "Share link not found");
   }
 
+  const brand = await prisma.brand.findUnique({
+    where: { id: shareLink.brandId },
+    select: { isActive: true },
+  });
+
+  if (!brand?.isActive) {
+    return jsonError(404, "not_found", "Share link not found");
+  }
+
   return withBrand(shareLink.brandId, async (tx) => {
     const catalogs = await tx.shareLinkCatalogV2.findMany({
       where: {

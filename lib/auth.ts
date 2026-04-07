@@ -31,13 +31,20 @@ export const authOptions: NextAuthOptions = {
         const { email, password } = parsed.data;
         const user = await prisma.user.findUnique({
           where: { email },
+          include: {
+            brand: {
+              select: {
+                isActive: true,
+              },
+            },
+          },
         });
 
         if (!user) {
           return null;
         }
 
-        if (!user.isActive) {
+        if (!user.isActive || !user.brand.isActive) {
           return null;
         }
 

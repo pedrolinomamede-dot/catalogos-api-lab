@@ -2,18 +2,14 @@
 
 import { useMemo } from "react";
 
-import type { Brand } from "@/types/api";
+import type { Brand, MeResponse } from "@/types/api";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/error";
-import { useBrand, useMe } from "@/lib/api/hooks";
-
-type MeResponse = {
-  userId: string;
-  email: string | null;
-  role: string;
-  brandId: string;
-};
+import { useBrand, useMe, useUpdateBrand } from "@/lib/api/hooks";
+import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 const Field = ({ label, value }: { label: string; value?: string }) => (
   <div className="space-y-1">
@@ -40,6 +36,7 @@ export function BrandSettingsPanel() {
     isError: isBrandError,
     error: brandError,
   } = useBrand(brandId);
+  const updateBrand = useUpdateBrand(brandId);
 
   const errorMessage = useMemo(() => {
     if (isMeError) {
@@ -130,15 +127,68 @@ export function BrandSettingsPanel() {
 
   const brandData = brand as Brand;
 
+  async function handleToggleAccess() {
+    try {
+      const nextIsActive = !brandData.isActive;
+      await updateBrand.mutateAsync({
+        id: brandId,
+        data: { isActive: nextIsActive },
+      });
+
+      toastSuccess(
+        nextIsActive ? "Acesso do cliente reativado" : "Acesso do cliente suspenso",
+        nextIsActive
+          ? "Dashboard, site e share links voltaram a responder."
+          : "Dashboard, site e share links foram bloqueados imediatamente.",
+      );
+
+      if (!nextIsActive && typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+    } catch (error) {
+      const message = getErrorMessage(error);
+      toastError(message.title, message.description ?? "Tente novamente.");
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Marca atual</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-3">
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/50 bg-background/40 p-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">Status de acesso do cliente</p>
+            <p className="text-xs text-muted-foreground">
+              Suspender bloqueia dashboard, site público e share links da marca.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge variant={brandData.isActive ? "outline" : "secondary"}>
+              {brandData.isActive ? "Ativa" : "Suspensa"}
+            </Badge>
+            <Button
+              type="button"
+              variant={brandData.isActive ? "destructive" : "default"}
+              onClick={handleToggleAccess}
+              disabled={updateBrand.isPending}
+            >
+              {updateBrand.isPending
+                ? "Salvando..."
+                : brandData.isActive
+                  ? "Suspender acesso"
+                  : "Reativar acesso"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-4">
         <Field label="Nome" value={brandData.name} />
         <Field label="Slug" value={brandData.slug} />
         <Field label="ID" value={brandData.id} />
+        <Field label="Status" value={brandData.isActive ? "Ativa" : "Suspensa"} />
+        </div>
       </CardContent>
     </Card>
   );

@@ -98,6 +98,7 @@ model Brand {
   name                   String
   slug                   String                    @unique
   logoUrl                String?
+  isActive               Boolean                   @default(true)
   integrationMode        IntegrationMode           @default(MANUAL_CSV)
   users                  User[]
   customerProfiles       CustomerProfile[]

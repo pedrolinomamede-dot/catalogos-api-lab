@@ -30,10 +30,15 @@ export async function requireUser(): Promise<AuthContext | NextResponse> {
       brandId: true,
       role: true,
       isActive: true,
+      brand: {
+        select: {
+          isActive: true,
+        },
+      },
     },
   });
 
-  if (!user || !user.isActive) {
+  if (!user || !user.isActive || !user.brand.isActive) {
     return jsonError(401, "unauthorized", "Not authenticated");
   }
 

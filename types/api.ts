@@ -3,6 +3,7 @@ export type Brand = {
   name: string;
   slug: string;
   logoUrl?: string | null;
+  isActive: boolean;
   integrationMode: IntegrationMode;
   createdAt: Date;
   updatedAt: Date;
@@ -110,6 +111,7 @@ export type CreateBrandRequest = {
   name: string;
   slug: string;
   logoUrl?: string;
+  isActive?: boolean;
 };
 
 export type UpdateBrandRequest = Partial<CreateBrandRequest>;
@@ -399,6 +401,7 @@ export type UpdateUserV2Request = Partial<Omit<CreateUserV2Request, "password">>
 export type MeResponse = {
   userId: string;
   brandId: string;
+  brandIsActive: boolean;
   name?: string | null;
   email: string | null;
   role: UserRole;

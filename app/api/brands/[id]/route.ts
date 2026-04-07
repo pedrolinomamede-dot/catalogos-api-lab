@@ -76,6 +76,7 @@ export async function PATCH(
           name: parsed.data.name?.trim(),
           slug,
           logoUrl: parsed.data.logoUrl,
+          isActive: parsed.data.isActive,
         },
       });
     });

@@ -203,6 +203,15 @@ export async function POST(request: Request) {
     return jsonError(404, "not_found", "Share link not found");
   }
 
+  const brand = await prisma.brand.findUnique({
+    where: { id: shareLink.brandId },
+    select: { isActive: true },
+  });
+
+  if (!brand?.isActive) {
+    return jsonError(404, "not_found", "Share link not found");
+  }
+
   return withBrand(shareLink.brandId, async (tx) => {
     const customerProfile = await upsertCustomerProfile(tx, shareLink.brandId, {
       customerName: parsed.data.contactName,

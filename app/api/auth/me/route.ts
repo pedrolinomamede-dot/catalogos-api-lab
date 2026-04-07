@@ -24,16 +24,22 @@ export async function GET() {
       role: true,
       whatsappPhone: true,
       isActive: true,
+      brand: {
+        select: {
+          isActive: true,
+        },
+      },
     },
   });
 
-  if (!user || !user.isActive) {
+  if (!user || !user.isActive || !user.brand.isActive) {
     return jsonError(401, "unauthorized", "Not authenticated");
   }
 
   return NextResponse.json({
     userId: user.id,
     brandId: user.brandId,
+    brandIsActive: user.brand.isActive,
     name: user.name,
     email: user.email,
     role: user.role,

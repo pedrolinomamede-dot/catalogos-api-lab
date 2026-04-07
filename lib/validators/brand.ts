@@ -4,6 +4,7 @@ export const brandCreateSchema = z.object({
   name: z.string().min(3).max(255),
   slug: z.string().regex(/^[a-z0-9-]+$/i),
   logoUrl: z.string().url().optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const brandUpdateSchema = brandCreateSchema
