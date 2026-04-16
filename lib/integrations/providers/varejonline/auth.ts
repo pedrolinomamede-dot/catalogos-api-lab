@@ -1,18 +1,23 @@
 import type { IntegrationAuthTokens } from "@/lib/integrations/core/types";
 
-const VAREJONLINE_AUTHORIZATION_URL = "https://www.vpsa.com.br/apps/oauth/authorization";
-const VAREJONLINE_TOKEN_URL = "https://www.vpsa.com.br/apps/oauth/token";
+const VAREJONLINE_AUTHORIZATION_URL =
+  "https://integrador.varejonline.com.br/apps/oauth/authorization";
+const VAREJONLINE_TOKEN_URL = "https://erp.varejonline.com.br/apps/oauth/token";
 
 function getConfig() {
-  const appId = process.env.VAREJONLINE_APP_ID?.trim();
-  const appSecret = process.env.VAREJONLINE_APP_SECRET?.trim();
+  const clientId =
+    process.env.VAREJONLINE_CLIENT_ID?.trim() ||
+    process.env.VAREJONLINE_APP_ID?.trim();
+  const clientSecret =
+    process.env.VAREJONLINE_CLIENT_SECRET?.trim() ||
+    process.env.VAREJONLINE_APP_SECRET?.trim();
   const redirectUri = process.env.VAREJONLINE_REDIRECT_URI?.trim();
 
   return {
-    appId,
-    appSecret,
+    clientId,
+    clientSecret,
     redirectUri,
-    configured: Boolean(appId && appSecret && redirectUri),
+    configured: Boolean(clientId && clientSecret && redirectUri),
   };
 }
 
@@ -22,13 +27,13 @@ export function isVarejonlineConfigured() {
 
 export async function getVarejonlineAuthorizationUrl(state: string) {
   const config = getConfig();
-  if (!config.configured || !config.appId || !config.redirectUri) {
+  if (!config.configured || !config.clientId || !config.redirectUri) {
     throw new Error("Varejonline OAuth is not configured");
   }
 
   const url = new URL(VAREJONLINE_AUTHORIZATION_URL);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("app_id", config.appId);
+  url.searchParams.set("client_id", config.clientId);
   url.searchParams.set("redirect_uri", config.redirectUri);
   url.searchParams.set("state", state);
 
@@ -37,7 +42,12 @@ export async function getVarejonlineAuthorizationUrl(state: string) {
 
 export async function exchangeVarejonlineCode(code: string): Promise<IntegrationAuthTokens> {
   const config = getConfig();
-  if (!config.configured || !config.appId || !config.appSecret || !config.redirectUri) {
+  if (
+    !config.configured ||
+    !config.clientId ||
+    !config.clientSecret ||
+    !config.redirectUri
+  ) {
     throw new Error("Varejonline OAuth is not configured");
   }
 
@@ -49,8 +59,8 @@ export async function exchangeVarejonlineCode(code: string): Promise<Integration
     },
     body: JSON.stringify({
       grant_type: "authorization_code",
-      app_id: config.appId,
-      app_secret: config.appSecret,
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
       redirect_uri: config.redirectUri,
       code,
     }),
