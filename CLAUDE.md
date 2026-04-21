@@ -304,6 +304,8 @@ prisma/
 
 28. **Mapeamento enriquecido Varejonline (2026-04-21)** — A sync read-only passou a transformar campos ricos do payload de produto em colunas locais: niveis mercadologicos (departamento, setor, grupo, subgrupo), EANs adicionais, unidade, medidas, custo, estoque minimo/maximo, NCM, CEST, origem fiscal, FCI, beneficio fiscal, classificacao, metodo de controle, flags de venda/ecommerce/marketplace e JSONs estruturados de fiscal/comercial/logistica/fornecedores/grade. O payload bruto continua salvo em `externalMetadataJson`. Continua proibida qualquer escrita na Varejonline.
 
+29. **Categoria local por Grupo/Subgrupo Varejonline (2026-04-21)** — A organizacao local da Base Geral deve usar `Grupo` da Varejonline como `CategoryV2` e `Subgrupo` como `SubcategoryV2`. Niveis fiscais/tributarios (`Tributacao`, `Fiscal`, `NCM`, `CEST`, origem etc.) devem ficar apenas nos campos fiscais/metadata e nunca alimentar a aba Categorias. A sync tambem remove categorias fiscais locais antigas somente quando ficam vazias apos reclassificar os produtos.
+
 ---
 
 ## Plano de Migracao Atual

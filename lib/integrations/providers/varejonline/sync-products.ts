@@ -37,6 +37,91 @@ function normalizeSku(product: NormalizedExternalProduct) {
   return (product.externalCode ?? product.externalId).trim();
 }
 
+function isFiscalCategoryLevel(level: string | null) {
+  const normalized = level ?? "";
+  return ["TRIBUT", "FISCAL", "IMPOST", "ORIGEM", "NCM", "CEST"].some(
+    (candidate) => normalized.includes(candidate),
+  );
+}
+
+function collectFiscalCategoryNames(products: NormalizedExternalProduct[]) {
+  const names = new Set<string>();
+
+  products.forEach((product) => {
+    product.categories.forEach((category) => {
+      if (isFiscalCategoryLevel(category.level)) {
+        names.add(category.name);
+      }
+    });
+  });
+
+  return names;
+}
+
+async function cleanupEmptyFiscalCategories(
+  tx: Tx,
+  brandId: string,
+  names: Set<string>,
+) {
+  let cleaned = 0;
+
+  for (const name of names) {
+    const category = await tx.categoryV2.findUnique({
+      where: {
+        brandId_name: {
+          brandId,
+          name,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!category) {
+      continue;
+    }
+
+    const [directProductsCount, subcategories] = await Promise.all([
+      tx.productBaseV2.count({
+        where: {
+          brandId,
+          categoryId: category.id,
+        },
+      }),
+      tx.subcategoryV2.findMany({
+        where: {
+          brandId,
+          categoryId: category.id,
+        },
+        select: { id: true },
+      }),
+    ]);
+    const subcategoryIds = subcategories.map((subcategory) => subcategory.id);
+    const subcategoryProductsCount =
+      subcategoryIds.length > 0
+        ? await tx.productBaseV2.count({
+            where: {
+              brandId,
+              subcategoryId: { in: subcategoryIds },
+            },
+          })
+        : 0;
+
+    if (directProductsCount > 0 || subcategoryProductsCount > 0) {
+      continue;
+    }
+
+    const result = await tx.categoryV2.deleteMany({
+      where: {
+        brandId,
+        id: category.id,
+      },
+    });
+    cleaned += result.count;
+  }
+
+  return cleaned;
+}
+
 async function resolveCategoryIds(
   tx: Tx,
   brandId: string,
@@ -245,6 +330,7 @@ export async function syncVarejonlineProducts(
     skipped: 0,
     failed: 0,
     imagesCreated: 0,
+    categoriesCleaned: 0,
     pageSize,
     maxItems,
     batchSize,
@@ -314,6 +400,17 @@ export async function syncVarejonlineProducts(
           });
         }
       }
+    });
+  }
+
+  const fiscalCategoryNames = collectFiscalCategoryNames(normalizedProducts);
+  if (fiscalCategoryNames.size > 0) {
+    await withBrand(context.brandId, async (tx) => {
+      stats.categoriesCleaned = await cleanupEmptyFiscalCategories(
+        tx,
+        context.brandId,
+        fiscalCategoryNames,
+      );
     });
   }
 

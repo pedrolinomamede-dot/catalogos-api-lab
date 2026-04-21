@@ -205,6 +205,21 @@ function findGroupCategory(categories: NormalizedExternalCategory[]) {
   });
 }
 
+function isCatalogTaxonomyCategory(category: NormalizedExternalCategory) {
+  const level = category.level ?? "";
+  return ![
+    "LINHA",
+    "MARCA",
+    "FABRICANTE",
+    "TRIBUT",
+    "FISCAL",
+    "IMPOST",
+    "ORIGEM",
+    "NCM",
+    "CEST",
+  ].some((blockedLevel) => level.includes(blockedLevel));
+}
+
 function readImageUrls(payload: Record<string, unknown>) {
   const candidates = [
     payload.urlsFotosProduto,
@@ -329,14 +344,12 @@ export function mapVarejonlineProduct(payload: unknown): NormalizedExternalProdu
   const sectionCategory = findCategoryByLevel(categories, ["SETOR", "SECAO", "SEÇÃO"]);
   const groupCategory = findGroupCategory(categories);
   const subgroupCategory = findCategoryByLevel(categories, ["SUBGRUPO", "SUB GRUPO"]);
-  const catalogCategories = categories.filter(
-    (item) =>
-      !item.level?.includes("LINHA") &&
-      !item.level?.includes("MARCA") &&
-      !item.level?.includes("FABRICANTE"),
-  );
-  const category = catalogCategories[0] ?? categories[0] ?? null;
-  const subcategory = catalogCategories[1] ?? null;
+  const catalogCategories = categories.filter(isCatalogTaxonomyCategory);
+  const category = groupCategory ?? catalogCategories[0] ?? null;
+  const subcategory =
+    subgroupCategory ??
+    catalogCategories.find((item) => item.name !== category?.name) ??
+    null;
   const isActive =
     parseBoolean(payload.ativo) ??
     (parseBoolean(payload.desativado) === false ? true : null) ??

@@ -46,6 +46,7 @@ describe("Varejonline product mapper", () => {
       ],
       fornecedores: [{ cnpj: "25.348.796/0001-07", codigo: "FOR-1" }],
       categorias: [
+        { id: "0", nome: "Tributado integralmente", nivel: "TRIBUTACAO" },
         { id: "1", nome: "Roupas", nivel: "DEPARTAMENTO" },
         { id: "2", nome: "Camisetas", nivel: "SETOR" },
         { id: "3", nome: "Polo", nivel: "GRUPO" },
@@ -70,8 +71,8 @@ describe("Varejonline product mapper", () => {
     expect(product.section).toBe("Camisetas");
     expect(product.groupName).toBe("Polo");
     expect(product.subgroupName).toBe("Manga curta");
-    expect(product.categoryName).toBe("Roupas");
-    expect(product.subcategoryName).toBe("Camisetas");
+    expect(product.categoryName).toBe("Polo");
+    expect(product.subcategoryName).toBe("Manga curta");
     expect(product.price).toBe(1234.56);
     expect(product.costPrice).toBe(987.65);
     expect(product.stockQuantity).toBe(42);

@@ -110,6 +110,7 @@ export type IntegrationSyncStats = {
   skipped: number;
   failed: number;
   imagesCreated?: number;
+  categoriesCleaned?: number;
   pageSize?: number;
   maxItems?: number;
   batchSize?: number;
