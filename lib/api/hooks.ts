@@ -834,10 +834,19 @@ export function useSyncIntegrationConnectionV2() {
       body: Parameters<typeof syncIntegrationConnectionV2>[1];
     }) => syncIntegrationConnectionV2(connectionId, body),
     onSuccess: (_data, variables) => {
+      const resource = variables.body.resource ?? "FULL";
+
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connections });
       queryClient.invalidateQueries({
         queryKey: queryKeys.v2.integrations.jobs(variables.connectionId),
       });
+      if (resource === "FULL" || resource === "PRODUCTS") {
+        queryClient.invalidateQueries({ queryKey: queryKeys.v2.baseProducts.root });
+      }
+      if (resource === "FULL" || resource === "PRODUCTS" || resource === "CATEGORIES") {
+        queryClient.invalidateQueries({ queryKey: queryKeys.v2.categories.root });
+        queryClient.invalidateQueries({ queryKey: ["v2", "subcategories"] });
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
     },
   });
