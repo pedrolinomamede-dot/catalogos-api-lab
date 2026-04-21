@@ -12,6 +12,7 @@ import { mapVarejonlineProduct } from "@/lib/integrations/providers/varejonline/
 
 const DEFAULT_PAGE_SIZE = 100;
 const DEFAULT_MAX_ITEMS = 1000;
+const DEFAULT_BATCH_SIZE = 10;
 type Tx = PrismaClient;
 
 function readPositiveIntegerEnv(name: string, fallback: number) {
@@ -196,6 +197,10 @@ export async function syncVarejonlineProducts(
     "VAREJONLINE_PRODUCTS_MAX_ITEMS",
     DEFAULT_MAX_ITEMS,
   );
+  const batchSize = readPositiveIntegerEnv(
+    "VAREJONLINE_PRODUCTS_BATCH_SIZE",
+    DEFAULT_BATCH_SIZE,
+  );
   const onlyActive =
     process.env.VAREJONLINE_PRODUCTS_ONLY_ACTIVE?.trim().toLowerCase() !==
     "false";
@@ -209,6 +214,7 @@ export async function syncVarejonlineProducts(
     imagesCreated: 0,
     pageSize,
     maxItems,
+    batchSize,
     errors: [],
   };
   const normalizedProducts: NormalizedExternalProduct[] = [];
@@ -248,31 +254,35 @@ export async function syncVarejonlineProducts(
     }
   }
 
-  await withBrand(context.brandId, async (tx) => {
-    for (const product of normalizedProducts) {
-      try {
-        const result = await upsertProduct(tx, context, product);
-        stats.created += result.created;
-        stats.updated += result.updated;
-        stats.imagesCreated = (stats.imagesCreated ?? 0) + result.imagesCreated;
-      } catch (error) {
-        stats.failed += 1;
-        const message =
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === "P2002"
-            ? "SKU already exists in Base Geral for another source."
-            : error instanceof Error
-              ? error.message
-              : "Could not persist Varejonline product";
+  for (let index = 0; index < normalizedProducts.length; index += batchSize) {
+    const batch = normalizedProducts.slice(index, index + batchSize);
 
-        stats.errors?.push({
-          externalId: product.externalId,
-          externalCode: product.externalCode,
-          message,
-        });
+    await withBrand(context.brandId, async (tx) => {
+      for (const product of batch) {
+        try {
+          const result = await upsertProduct(tx, context, product);
+          stats.created += result.created;
+          stats.updated += result.updated;
+          stats.imagesCreated = (stats.imagesCreated ?? 0) + result.imagesCreated;
+        } catch (error) {
+          stats.failed += 1;
+          const message =
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === "P2002"
+              ? "SKU already exists in Base Geral for another source."
+              : error instanceof Error
+                ? error.message
+                : "Could not persist Varejonline product";
+
+          stats.errors?.push({
+            externalId: product.externalId,
+            externalCode: product.externalCode,
+            message,
+          });
+        }
       }
-    }
-  });
+    });
+  }
 
   if (stats.errors && stats.errors.length > 20) {
     stats.errors = stats.errors.slice(0, 20);

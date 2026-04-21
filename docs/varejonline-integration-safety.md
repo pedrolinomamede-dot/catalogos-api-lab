@@ -45,12 +45,14 @@ Escopo atual:
 - Dados salvos localmente: SKU, nome, descricao, linha, marca, codigo de barras, categoria, subcategoria, preco, imagens e metadata externa.
 - Origem local: `sourceType=INTEGRATION`, `sourceProvider=VAREJONLINE`.
 - Limite padrao: ate 1000 produtos por sync, ajustavel por env.
+- Gravacao local em lotes pequenos para evitar timeout de transacao do Prisma.
 
 Variaveis opcionais:
 
 - `VAREJONLINE_API_BASE_URL`
 - `VAREJONLINE_PRODUCTS_PAGE_SIZE`
 - `VAREJONLINE_PRODUCTS_MAX_ITEMS`
+- `VAREJONLINE_PRODUCTS_BATCH_SIZE`
 - `VAREJONLINE_PRODUCTS_ONLY_ACTIVE`
 
 ## Proibido sem aprovacao explicita

@@ -76,6 +76,7 @@ export type IntegrationSyncStats = {
   imagesCreated?: number;
   pageSize?: number;
   maxItems?: number;
+  batchSize?: number;
   errors?: Array<{
     externalId?: string | null;
     externalCode?: string | null;
