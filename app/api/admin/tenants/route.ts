@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { requirePlatformAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { normalizeCnpj } from "@/lib/utils/cnpj";
 import { jsonError } from "@/lib/utils/errors";
 
 const SALT_ROUNDS = 12;
@@ -34,6 +35,27 @@ function parseEmail(value: unknown) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
 }
 
+function parseOptionalCnpj(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return { value: null };
+  }
+
+  if (typeof value !== "string") {
+    return { error: "brandCnpj must be a string" };
+  }
+
+  const cnpj = normalizeCnpj(value);
+  if (!cnpj) {
+    return { value: null };
+  }
+
+  if (cnpj.length !== 14) {
+    return { error: "brandCnpj must have 14 digits" };
+  }
+
+  return { value: cnpj };
+}
+
 function parseCreatePayload(body: unknown) {
   if (!isPlainObject(body)) {
     return { error: jsonError(400, "validation_error", "Invalid payload") };
@@ -46,6 +68,7 @@ function parseCreatePayload(body: unknown) {
   const adminEmail = parseEmail(body.adminEmail);
   const adminPassword =
     typeof body.adminPassword === "string" ? body.adminPassword.trim() : "";
+  const brandCnpj = parseOptionalCnpj(body.brandCnpj);
 
   if (brandName.length < 3) {
     return { error: jsonError(400, "validation_error", "brandName is required") };
@@ -65,10 +88,15 @@ function parseCreatePayload(body: unknown) {
     };
   }
 
+  if (brandCnpj.error) {
+    return { error: jsonError(400, "validation_error", brandCnpj.error) };
+  }
+
   return {
     data: {
       brandName,
       brandSlug,
+      brandCnpj: brandCnpj.value,
       logoUrl: normalizeOptionalNullableString(body.logoUrl) ?? null,
       adminName: normalizeOptionalNullableString(body.adminName) ?? null,
       adminEmail,
@@ -93,6 +121,7 @@ async function serializeTenant(tenant: Brand) {
     name: tenant.name,
     slug: tenant.slug,
     logoUrl: tenant.logoUrl,
+    cnpj: tenant.cnpj,
     isActive: tenant.isActive,
     createdAt: tenant.createdAt,
     updatedAt: tenant.updatedAt,
@@ -161,6 +190,7 @@ export async function POST(request: Request) {
         data: {
           name: parsed.data.brandName,
           slug: parsed.data.brandSlug,
+          cnpj: parsed.data.brandCnpj,
           logoUrl: parsed.data.logoUrl,
           isActive: true,
         },
@@ -196,6 +226,13 @@ export async function POST(request: Request) {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      const target = Array.isArray(error.meta?.target)
+        ? error.meta.target.join(",")
+        : String(error.meta?.target ?? "");
+      if (target.includes("cnpj")) {
+        return jsonError(409, "brand_cnpj_taken", "Brand CNPJ already exists");
+      }
+
       return jsonError(409, "email_taken", "Admin email already exists");
     }
 

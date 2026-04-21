@@ -9,6 +9,7 @@ import {
 } from "@/lib/integrations/core/types";
 import { verifySignedIntegrationState } from "@/lib/integrations/core/secrets";
 import { withBrand } from "@/lib/prisma";
+import { cnpjMatches, normalizeCnpj } from "@/lib/utils/cnpj";
 import { jsonError } from "@/lib/utils/errors";
 
 function buildRedirectUrl(request: Request, search: Record<string, string>) {
@@ -72,10 +73,41 @@ export async function GET(
   try {
     const tokens = await provider.exchangeCode(code);
     await withBrand(auth.brandId, async (tx) => {
+      const brand = await tx.brand.findUnique({
+        where: { id: auth.brandId },
+        select: { cnpj: true },
+      });
+      const externalCompanyDocument = normalizeCnpj(
+        tokens.externalCompanyDocument,
+      );
+
+      if (providerKey === "VAREJONLINE") {
+        if (!brand?.cnpj) {
+          throw new Error(
+            "Configure o CNPJ do cliente antes de conectar a Varejonline.",
+          );
+        }
+
+        if (!externalCompanyDocument) {
+          throw new Error(
+            "A Varejonline nao retornou o CNPJ da empresa autorizada.",
+          );
+        }
+
+        if (!cnpjMatches(brand.cnpj, externalCompanyDocument)) {
+          throw new Error(
+            "O CNPJ autorizado na Varejonline nao corresponde ao CNPJ cadastrado neste cliente.",
+          );
+        }
+      }
+
       await upsertOAuthIntegrationConnection(tx, {
         brandId: auth.brandId,
         provider: providerKey,
-        tokens,
+        tokens: {
+          ...tokens,
+          externalCompanyDocument,
+        },
       });
 
       await tx.brand.update({

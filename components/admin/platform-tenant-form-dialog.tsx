@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import type { CreatePlatformTenantRequest } from "@/types/api";
 
@@ -30,25 +30,31 @@ export function PlatformTenantFormDialog({
   const createTenant = useCreatePlatformTenant();
   const [brandName, setBrandName] = useState("");
   const [brandSlug, setBrandSlug] = useState("");
+  const [brandCnpj, setBrandCnpj] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminWhatsappPhone, setAdminWhatsappPhone] = useState("");
 
-  useEffect(() => {
-    if (open) {
-      return;
-    }
-
+  function resetForm() {
     setBrandName("");
     setBrandSlug("");
+    setBrandCnpj("");
     setLogoUrl("");
     setAdminName("");
     setAdminEmail("");
     setAdminPassword("");
     setAdminWhatsappPhone("");
-  }, [open]);
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      resetForm();
+    }
+
+    onOpenChange(nextOpen);
+  }
 
   async function handleSubmit() {
     if (
@@ -68,6 +74,7 @@ export function PlatformTenantFormDialog({
       const payload: CreatePlatformTenantRequest = {
         brandName: brandName.trim(),
         brandSlug: brandSlug.trim().toLowerCase(),
+        brandCnpj: brandCnpj.trim() || null,
         logoUrl: logoUrl.trim() || null,
         adminName: adminName.trim() || null,
         adminEmail: adminEmail.trim().toLowerCase(),
@@ -77,7 +84,7 @@ export function PlatformTenantFormDialog({
 
       await createTenant.mutateAsync(payload);
       toastSuccess("Cliente criado", payload.brandName);
-      onOpenChange(false);
+      handleOpenChange(false);
     } catch (error) {
       const message = getErrorMessage(error);
       toastError(message.title, message.description ?? "Tente novamente.");
@@ -85,7 +92,7 @@ export function PlatformTenantFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Novo cliente</DialogTitle>
@@ -117,6 +124,21 @@ export function PlatformTenantFormDialog({
               onChange={(event) => setBrandSlug(event.target.value)}
               placeholder="cliente-exemplo"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="brandCnpj" className="text-sm font-medium">
+              CNPJ da empresa (opcional)
+            </label>
+            <Input
+              id="brandCnpj"
+              value={brandCnpj}
+              onChange={(event) => setBrandCnpj(event.target.value)}
+              placeholder="00.000.000/0001-00"
+            />
+            <p className="text-xs text-muted-foreground">
+              Necessário para validar a conexão OAuth com a Varejonline.
+            </p>
           </div>
 
           <div className="space-y-2">

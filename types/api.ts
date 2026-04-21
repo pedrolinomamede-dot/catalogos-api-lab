@@ -3,6 +3,7 @@ export type Brand = {
   name: string;
   slug: string;
   logoUrl?: string | null;
+  cnpj?: string | null;
   isActive: boolean;
   integrationMode: IntegrationMode;
   createdAt: Date;
@@ -110,7 +111,8 @@ export type Product = {
 export type CreateBrandRequest = {
   name: string;
   slug: string;
-  logoUrl?: string;
+  logoUrl?: string | null;
+  cnpj?: string | null;
   isActive?: boolean;
 };
 
@@ -121,6 +123,7 @@ export type PlatformTenantSummary = {
   name: string;
   slug: string;
   logoUrl?: string | null;
+  cnpj?: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -133,6 +136,7 @@ export type PlatformTenantSummary = {
 export type CreatePlatformTenantRequest = {
   brandName: string;
   brandSlug: string;
+  brandCnpj?: string | null;
   logoUrl?: string | null;
   adminName?: string | null;
   adminEmail: string;

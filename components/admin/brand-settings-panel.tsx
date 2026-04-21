@@ -1,15 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import type { Brand, MeResponse } from "@/types/api";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/error";
 import { useBrand, useMe, useUpdateBrand } from "@/lib/api/hooks";
 import { toastError, toastSuccess } from "@/lib/ui/toast";
+import { formatCnpj } from "@/lib/utils/cnpj";
 
 const Field = ({ label, value }: { label: string; value?: string }) => (
   <div className="space-y-1">
@@ -21,6 +23,7 @@ const Field = ({ label, value }: { label: string; value?: string }) => (
 );
 
 export function BrandSettingsPanel() {
+  const [cnpjDraft, setCnpjDraft] = useState<string | null>(null);
   const {
     data: meData,
     isLoading: isMeLoading,
@@ -127,6 +130,7 @@ export function BrandSettingsPanel() {
   }
 
   const brandData = brand as Brand;
+  const effectiveCnpjDraft = cnpjDraft ?? formatCnpj(brandData.cnpj) ?? "";
 
   async function handleToggleAccess() {
     try {
@@ -146,6 +150,24 @@ export function BrandSettingsPanel() {
       if (!nextIsActive && typeof window !== "undefined") {
         window.location.href = "/login";
       }
+    } catch (error) {
+      const message = getErrorMessage(error);
+      toastError(message.title, message.description ?? "Tente novamente.");
+    }
+  }
+
+  async function handleSaveCnpj() {
+    try {
+      await updateBrand.mutateAsync({
+        id: brandId,
+        data: { cnpj: effectiveCnpjDraft.trim() || null },
+      });
+      setCnpjDraft(null);
+
+      toastSuccess(
+        "CNPJ atualizado",
+        "A validacao da Varejonline usara esse CNPJ na proxima conexao.",
+      );
     } catch (error) {
       const message = getErrorMessage(error);
       toastError(message.title, message.description ?? "Tente novamente.");
@@ -189,10 +211,36 @@ export function BrandSettingsPanel() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-4">
-        <Field label="Nome" value={brandData.name} />
-        <Field label="Slug" value={brandData.slug} />
-        <Field label="ID" value={brandData.id} />
-        <Field label="Status" value={brandData.isActive ? "Ativa" : "Suspensa"} />
+          <Field label="Nome" value={brandData.name} />
+          <Field label="Slug" value={brandData.slug} />
+          <Field label="CNPJ" value={formatCnpj(brandData.cnpj) ?? undefined} />
+          <Field label="ID" value={brandData.id} />
+          <Field label="Status" value={brandData.isActive ? "Ativa" : "Suspensa"} />
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-border/50 bg-background/40 p-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              CNPJ para integração ERP
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Usado para validar se o OAuth da Varejonline pertence a esta marca.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Input
+              value={effectiveCnpjDraft}
+              onChange={(event) => setCnpjDraft(event.target.value)}
+              placeholder="00.000.000/0001-00"
+            />
+            <Button
+              type="button"
+              onClick={handleSaveCnpj}
+              disabled={updateBrand.isPending}
+            >
+              {updateBrand.isPending ? "Salvando..." : "Salvar CNPJ"}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

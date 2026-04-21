@@ -57,6 +57,7 @@ export async function POST(request: Request) {
           name: parsed.data.name.trim(),
           slug,
           logoUrl: parsed.data.logoUrl,
+          cnpj: parsed.data.cnpj,
           isActive: parsed.data.isActive ?? true,
         },
       });
@@ -82,6 +83,13 @@ export async function POST(request: Request) {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      const target = Array.isArray(error.meta?.target)
+        ? error.meta.target.join(",")
+        : String(error.meta?.target ?? "");
+      if (target.includes("cnpj")) {
+        return jsonError(409, "brand_cnpj_taken", "Brand CNPJ already exists");
+      }
+
       return jsonError(409, "brand_slug_taken", "Brand slug already exists");
     }
     return jsonError(500, "brand_create_failed", "Could not create brand");

@@ -58,6 +58,7 @@ export async function PATCH(
       name: updated.name,
       slug: updated.slug,
       logoUrl: updated.logoUrl,
+      cnpj: updated.cnpj,
       isActive: updated.isActive,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,

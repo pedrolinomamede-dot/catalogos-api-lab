@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { getErrorMessage } from "@/lib/api/error";
 import { usePlatformTenants, useUpdatePlatformTenantStatusV2 } from "@/lib/api/hooks";
+import { formatCnpj } from "@/lib/utils/cnpj";
 import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 function formatDate(value: Date | string) {
@@ -121,6 +122,9 @@ export function PlatformTenantsPageClient() {
                         <p className="text-sm font-medium text-foreground">{tenant.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {tenant.slug} · {tenant.id}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          CNPJ: {formatCnpj(tenant.cnpj) ?? "nao informado"}
                         </p>
                       </div>
                     </TableCell>

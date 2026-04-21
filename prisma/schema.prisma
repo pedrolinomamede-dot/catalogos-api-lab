@@ -99,6 +99,7 @@ model Brand {
   name                   String
   slug                   String                    @unique
   logoUrl                String?
+  cnpj                   String?                   @unique
   isActive               Boolean                   @default(true)
   integrationMode        IntegrationMode           @default(MANUAL_CSV)
   users                  User[]

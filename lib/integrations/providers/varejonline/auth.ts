@@ -1,4 +1,5 @@
 import type { IntegrationAuthTokens } from "@/lib/integrations/core/types";
+import { normalizeCnpj } from "@/lib/utils/cnpj";
 
 const VAREJONLINE_AUTHORIZATION_URL =
   "https://integrador.varejonline.com.br/apps/oauth/authorization";
@@ -76,6 +77,10 @@ export async function exchangeVarejonlineCode(code: string): Promise<Integration
 
   const accessToken =
     typeof payload.access_token === "string" ? payload.access_token : null;
+  const externalCompanyDocument =
+    typeof payload.cnpj_empresa === "string"
+      ? normalizeCnpj(payload.cnpj_empresa)
+      : null;
 
   if (!accessToken) {
     throw new Error("Varejonline token exchange returned no access token");
@@ -95,7 +100,6 @@ export async function exchangeVarejonlineCode(code: string): Promise<Integration
           : null,
     externalCompanyName:
       typeof payload.nome_terceiro === "string" ? payload.nome_terceiro : null,
-    externalCompanyDocument:
-      typeof payload.cnpj_empresa === "string" ? payload.cnpj_empresa : null,
+    externalCompanyDocument,
   };
 }

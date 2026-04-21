@@ -85,6 +85,23 @@ export async function POST(request: Request) {
     );
   }
 
+  if (providerKey === "VAREJONLINE") {
+    const brand = await withBrand(auth.brandId, (tx) =>
+      tx.brand.findUnique({
+        where: { id: auth.brandId },
+        select: { cnpj: true },
+      }),
+    );
+
+    if (!brand?.cnpj) {
+      return jsonError(
+        409,
+        "brand_cnpj_required",
+        "Configure o CNPJ do cliente antes de conectar a Varejonline.",
+      );
+    }
+  }
+
   try {
     const state = createSignedIntegrationState({
       brandId: auth.brandId,
