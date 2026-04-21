@@ -35,6 +35,62 @@ type BaseProductEditDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+function toDisplayNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatCurrency(value: number | string | null | undefined) {
+  const parsed = toDisplayNumber(value);
+  if (parsed === null) {
+    return "-";
+  }
+
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(parsed);
+}
+
+function formatDecimal(value: number | string | null | undefined) {
+  const parsed = toDisplayNumber(value);
+  if (parsed === null) {
+    return "-";
+  }
+
+  return new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: 4,
+  }).format(parsed);
+}
+
+function formatBoolean(value: boolean | null | undefined) {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+
+  return value ? "Sim" : "Nao";
+}
+
+function IntegrationField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+}) {
+  return (
+    <div className="rounded-md border border-input bg-muted/30 px-3 py-2">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-sm text-foreground">{value ?? "-"}</p>
+    </div>
+  );
+}
+
 export function BaseProductEditDialog({
   open,
   baseProduct,
@@ -89,7 +145,17 @@ export function BaseProductEditDialog({
     if (!open) {
       setSelectedFile(null);
     }
-  }, [baseProduct?.id, baseProduct?.name, baseProduct?.imageUrl, open]);
+  }, [
+    baseProduct?.id,
+    baseProduct?.name,
+    baseProduct?.line,
+    baseProduct?.imageUrl,
+    baseProduct?.imageLayoutJson?.zoom,
+    baseProduct?.imageLayoutJson?.offsetX,
+    baseProduct?.imageLayoutJson?.offsetY,
+    baseProduct?.imageLayoutJson?.trimApplied,
+    open,
+  ]);
 
   const isSaving =
     isUploading ||
@@ -401,6 +467,46 @@ export function BaseProductEditDialog({
             </div>
           </div>
 
+          {baseProduct?.sourceType === "INTEGRATION" ? (
+            <div className="grid gap-3">
+              <Label>Dados importados da integração</Label>
+              <Card className="space-y-3 p-4">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <IntegrationField label="Provider" value={baseProduct.sourceProvider ?? "-"} />
+                  <IntegrationField label="Codigo externo" value={baseProduct.sourceExternalCode ?? "-"} />
+                  <IntegrationField label="Marca" value={baseProduct.brand ?? "-"} />
+                  <IntegrationField label="Linha" value={baseProduct.line ?? "-"} />
+                  <IntegrationField label="Departamento" value={baseProduct.department ?? "-"} />
+                  <IntegrationField label="Setor" value={baseProduct.section ?? "-"} />
+                  <IntegrationField label="Grupo" value={baseProduct.groupName ?? "-"} />
+                  <IntegrationField label="Subgrupo" value={baseProduct.subgroupName ?? "-"} />
+                  <IntegrationField label="EAN" value={baseProduct.barcode ?? "-"} />
+                  <IntegrationField label="Unidade" value={baseProduct.unit ?? "-"} />
+                  <IntegrationField label="Preco" value={formatCurrency(baseProduct.price)} />
+                  <IntegrationField label="Custo" value={formatCurrency(baseProduct.costPrice)} />
+                  <IntegrationField label="Estoque atual" value={formatDecimal(baseProduct.stockQuantity)} />
+                  <IntegrationField label="Estoque minimo" value={formatDecimal(baseProduct.minStockQuantity)} />
+                  <IntegrationField label="Estoque maximo" value={formatDecimal(baseProduct.maxStockQuantity)} />
+                  <IntegrationField label="Venda permitida" value={formatBoolean(baseProduct.allowSale)} />
+                  <IntegrationField label="NCM" value={baseProduct.ncmCode ?? "-"} />
+                  <IntegrationField label="CEST" value={baseProduct.cestCode ?? "-"} />
+                  <IntegrationField label="Origem fiscal" value={baseProduct.taxOrigin ?? "-"} />
+                  <IntegrationField label="FCI" value={baseProduct.taxFci ?? "-"} />
+                  <IntegrationField label="Beneficio fiscal" value={baseProduct.taxBenefitCode ?? "-"} />
+                  <IntegrationField label="Controle estoque" value={baseProduct.stockControlMethod ?? "-"} />
+                  <IntegrationField label="Peso" value={formatDecimal(baseProduct.weight)} />
+                  <IntegrationField
+                    label="Dimensoes"
+                    value={`${formatDecimal(baseProduct.height)} x ${formatDecimal(baseProduct.width)} x ${formatDecimal(baseProduct.length)}`}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Estes dados sao copiados para o Catalogo Facil em modo somente leitura.
+                </p>
+              </Card>
+            </div>
+          ) : null}
+
           <div className="grid gap-2">
             <Label>Imagem principal</Label>
             {!mainImageUrl ? (
@@ -523,4 +629,3 @@ export function BaseProductEditDialog({
     </Dialog>
   );
 }
-

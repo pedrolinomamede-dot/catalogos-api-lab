@@ -302,6 +302,8 @@ prisma/
 
 27. **Primeira sync read-only Varejonline (2026-04-21)** — Botao "Sincronizar agora" passou a importar produtos via `GET /apps/api/produtos`, gravando apenas no banco do Catalogo Facil (`ProductBaseV2`, categorias, subcategorias, imagens e metadata externa). A implementacao nao escreve nada na Varejonline e persiste localmente em lotes pequenos para evitar timeout de transacao.
 
+28. **Mapeamento enriquecido Varejonline (2026-04-21)** — A sync read-only passou a transformar campos ricos do payload de produto em colunas locais: niveis mercadologicos (departamento, setor, grupo, subgrupo), EANs adicionais, unidade, medidas, custo, estoque minimo/maximo, NCM, CEST, origem fiscal, FCI, beneficio fiscal, classificacao, metodo de controle, flags de venda/ecommerce/marketplace e JSONs estruturados de fiscal/comercial/logistica/fornecedores/grade. O payload bruto continua salvo em `externalMetadataJson`. Continua proibida qualquer escrita na Varejonline.
+
 ---
 
 ## Plano de Migracao Atual

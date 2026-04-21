@@ -29,6 +29,10 @@ function toJsonValue(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
 }
 
+function toDecimalString(value: number | null) {
+  return value === null ? null : String(value);
+}
+
 function normalizeSku(product: NormalizedExternalProduct) {
   return (product.externalCode ?? product.externalId).trim();
 }
@@ -116,7 +120,23 @@ async function upsertProduct(
     line: product.line,
     brand: product.brand,
     barcode: product.barcode,
+    additionalBarcodesJson: toJsonValue(product.additionalBarcodes),
     size: product.size,
+    department: product.department,
+    section: product.section,
+    groupName: product.groupName,
+    subgroupName: product.subgroupName,
+    unit: product.unit,
+    ncmCode: product.ncmCode,
+    cestCode: product.cestCode,
+    taxOrigin: product.taxOrigin,
+    taxFci: product.taxFci,
+    taxBenefitCode: product.taxBenefitCode,
+    productClassification: product.productClassification,
+    stockControlMethod: product.stockControlMethod,
+    allowSale: product.allowSale,
+    ecommerceAvailable: product.ecommerceAvailable,
+    marketplaceAvailable: product.marketplaceAvailable,
     imageUrl,
     isActive: product.isActive,
     categoryId,
@@ -125,10 +145,23 @@ async function upsertProduct(
     sourceProvider: "VAREJONLINE" as const,
     sourceExternalId: product.externalId,
     sourceExternalCode: product.externalCode,
-    sourceUpdatedAt: null,
+    sourceUpdatedAt: product.sourceUpdatedAt,
     lastSyncedAt: new Date(),
     price,
+    costPrice: toDecimalString(product.costPrice),
     stockQuantity: product.stockQuantity,
+    minStockQuantity: toDecimalString(product.minStockQuantity),
+    maxStockQuantity: toDecimalString(product.maxStockQuantity),
+    weight: toDecimalString(product.weight),
+    height: toDecimalString(product.height),
+    width: toDecimalString(product.width),
+    length: toDecimalString(product.length),
+    categoryLevelsJson: toJsonValue(product.categories),
+    taxInfoJson: toJsonValue(product.taxInfo),
+    commercialInfoJson: toJsonValue(product.commercialInfo),
+    logisticsInfoJson: toJsonValue(product.logisticsInfo),
+    suppliersJson: toJsonValue(product.suppliers),
+    gradeAttributesJson: toJsonValue(product.gradeAttributes),
     externalMetadataJson: toJsonValue(product.rawPayload),
     integrationConnectionId: context.connection.id,
   };

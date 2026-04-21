@@ -42,7 +42,8 @@ Escopo atual:
 
 - Endpoint Varejonline: `GET /apps/api/produtos`.
 - Autenticacao: `token` recebido via OAuth, mantido criptografado no servidor.
-- Dados salvos localmente: SKU, nome, descricao, linha, marca, codigo de barras, categoria, subcategoria, preco, imagens e metadata externa.
+- Dados salvos localmente em campos principais: SKU, nome, descricao, linha, marca, codigo de barras/EAN, categoria, subcategoria, preco, imagens e metadata externa.
+- Dados enriquecidos transformados para consulta local: niveis mercadologicos (departamento, setor, grupo, subgrupo), EANs adicionais, unidade, medidas, custo, estoque minimo/maximo, NCM, CEST, origem fiscal, FCI, beneficio fiscal, classificacao, metodo de controle, flags de venda/ecommerce/marketplace e JSONs estruturados de fiscal/comercial/logistica/fornecedores/grade.
 - Origem local: `sourceType=INTEGRATION`, `sourceProvider=VAREJONLINE`.
 - Limite padrao: ate 1000 produtos por sync, ajustavel por env.
 - Gravacao local em lotes pequenos para evitar timeout de transacao do Prisma.

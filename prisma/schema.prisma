@@ -213,8 +213,24 @@ model ProductBaseV2 {
   description             String?
   line                    String?
   barcode                 String?
+  additionalBarcodesJson  Json?
   size                    String?
   brand                   String?
+  department              String?
+  section                 String?
+  groupName               String?
+  subgroupName            String?
+  unit                    String?
+  ncmCode                 String?
+  cestCode                String?
+  taxOrigin               Int?
+  taxFci                  String?
+  taxBenefitCode          String?
+  productClassification   String?
+  stockControlMethod      String?
+  allowSale               Boolean?
+  ecommerceAvailable      Boolean?
+  marketplaceAvailable    Boolean?
   imageUrl                String?
   imageLayoutJson         Json?
   isActive                Boolean                  @default(true)
@@ -227,7 +243,20 @@ model ProductBaseV2 {
   sourceUpdatedAt         DateTime?
   lastSyncedAt            DateTime?
   price                   Decimal?                 @db.Decimal(10, 2)
+  costPrice               Decimal?                 @db.Decimal(12, 4)
   stockQuantity           Int?
+  minStockQuantity        Decimal?                 @db.Decimal(12, 4)
+  maxStockQuantity        Decimal?                 @db.Decimal(12, 4)
+  weight                  Decimal?                 @db.Decimal(12, 4)
+  height                  Decimal?                 @db.Decimal(12, 4)
+  width                   Decimal?                 @db.Decimal(12, 4)
+  length                  Decimal?                 @db.Decimal(12, 4)
+  categoryLevelsJson      Json?
+  taxInfoJson             Json?
+  commercialInfoJson      Json?
+  logisticsInfoJson       Json?
+  suppliersJson           Json?
+  gradeAttributesJson     Json?
   externalMetadataJson    Json?
   integrationConnectionId String?                  @db.Uuid
   category                CategoryV2?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
