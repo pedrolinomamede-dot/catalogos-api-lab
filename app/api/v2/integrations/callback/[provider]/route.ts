@@ -12,8 +12,34 @@ import { withBrand } from "@/lib/prisma";
 import { cnpjMatches, normalizeCnpj } from "@/lib/utils/cnpj";
 import { jsonError } from "@/lib/utils/errors";
 
+function getCallbackRedirectBaseUrl(request: Request) {
+  const explicitBaseUrl =
+    process.env.PUBLIC_BASE_URL?.trim() || process.env.NEXTAUTH_URL?.trim();
+
+  if (explicitBaseUrl) {
+    return explicitBaseUrl.replace(/\/$/, "");
+  }
+
+  const forwardedHost =
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+
+  if (
+    forwardedHost &&
+    !forwardedHost.startsWith("0.0.0.0") &&
+    !forwardedHost.startsWith("127.0.0.1")
+  ) {
+    return `${forwardedProto}://${forwardedHost}`.replace(/\/$/, "");
+  }
+
+  return new URL(request.url).origin;
+}
+
 function buildRedirectUrl(request: Request, search: Record<string, string>) {
-  const url = new URL("/dashboard/integrations", request.url);
+  const url = new URL(
+    "/dashboard/integrations",
+    getCallbackRedirectBaseUrl(request),
+  );
   Object.entries(search).forEach(([key, value]) => {
     url.searchParams.set(key, value);
   });
