@@ -48,7 +48,7 @@ Sou o assistente de desenvolvimento do Pedro Mamede. Trabalho como engenheiro fu
 8. **Analytics Base (Fase 0)** — `AnalyticsEvent` first-party para share link, carrinho, checkout e solicitacoes
 9. **Equipe e Permissoes** — `ADMIN`, `SELLER`, `VIEWER`, ownership de share links/pedidos/solicitacoes e tela `/dashboard/team`
 10. **Exportacao PDF** — 3 templates (classic, dark_neon, glassmorphism) via Playwright HTML→PDF
-11. **Integracoes ERP** — VarejoOnline, OMIE, Tiny, Bling (OAuth/credentials, sync, webhooks)
+11. **Integracoes ERP** — Varejonline com OAuth aceito, token por tenant e validacao por CNPJ; OMIE, Tiny e Bling como placeholders futuros
 12. **Auth** — NextAuth.js com credentials (email/senha, bcrypt, JWT 7 dias) + suspensao de tenant por marca
 13. **Storage** — Dual: local (`/public/uploads`) ou S3/Supabase Storage (abstracao pronta em `lib/storage/`)
 
@@ -129,7 +129,7 @@ Sem isso, `overflow-x: clip` e `max-width: 100vw` do globals.css criam clipping 
 - **Uploads dir:** `/var/www/catalogos-api-lab/uploads`
 - **PM2 app:** `catalogos-api-lab`
 - **Porta interna:** `3000`
-- **Branch atualmente publicada na VPS:** `codex/phase0-order-intent-foundation`
+- **Branch atualmente publicada na VPS:** `codex/super-admin-platform-foundation`
 - **Nginx:** proxy reverso ativo com SSL via Let's Encrypt
 - **Snapshot baseline:** `baseline-catalogofacil-2026-04-04`
 - **Custo:** R$79,92/mês (com desconto primeira fatura)
@@ -169,7 +169,8 @@ origin  → github.com/pedrolinomamede-dot/catalogos-api-lab.git (UNICO PERMITID
 ### Branches
 - **main** — branch de referencia/estabilidade publicada antes da Fase 0
 - **codex/main-updated-continuation** — branch de continuidade usada para seller ownership + carrinho WhatsApp
-- **codex/phase0-order-intent-foundation** — branch atual da Fase 0, publicada na VPS Platon
+- **codex/phase0-order-intent-foundation** — branch da Fase 0, preservada como historico funcional
+- **codex/super-admin-platform-foundation** — branch atual publicada na VPS, com super admin, tenants zerados, Varejonline OAuth e validacao por CNPJ
 - **Branches historicas preservadas:** `codex/dashboard-overview-functional`, `codex/dashboard-overview-functional-0Gl51`
 
 ### Arquivos locais fora do Git
@@ -293,6 +294,12 @@ prisma/
 
 23. **Brand suspension control (2026-04-07)** — `Brand.isActive` passou a controlar suspensao total do tenant. Quando suspensa, a marca perde acesso ao dashboard, APIs autenticadas, site publico e share links.
 
+24. **Super Admin + tenants zerados (2026-04-07)** — Plataforma passou a ter `SUPER_ADMIN` para criar clientes/tenants isolados, cada um com admin proprio, base zerada e controle de suspensao.
+
+25. **Varejonline OAuth aceito e validado por CNPJ (2026-04-21)** — App "Catalogo Facil" foi aceito na Store Varejonline. A conexao OAuth grava token criptografado em `IntegrationConnectionV2` por `brandId + provider` e so salva a conexao quando o CNPJ retornado pela Varejonline bate com o CNPJ cadastrado no tenant.
+
+26. **Politica read-only para Varejonline (2026-04-21)** — Por seguranca operacional, qualquer integracao com a conta Varejonline do cliente deve ser tratada como leitura por padrao. Nao criar, editar, excluir, reservar, faturar, baixar estoque, alterar preco ou enviar pedido/orcamento na Varejonline sem aprovacao explicita do Pedro e sem registrar a decisao no contexto.
+
 ---
 
 ## Plano de Migracao Atual
@@ -334,6 +341,14 @@ prisma/
   - frete unificado entre site e share link
   - pedidos assistidos com reserva de estoque
   - politicas futuras de preco, atacado/varejo, descontos progressivos e nota fiscal
+
+### Fase 5: Integracao Varejonline (EM VALIDACAO CONTROLADA)
+- App Catalogo Facil aceito/publicado na Store Varejonline
+- OAuth funcionando: cliente autoriza, token e salvo no banco por tenant, e a tela de integracoes mostra "Conectado"
+- Validacao de seguranca ativa: CNPJ do tenant deve bater com o CNPJ retornado pela Varejonline
+- Correção aplicada: callback OAuth deve redirecionar usando `PUBLIC_BASE_URL`/`NEXTAUTH_URL`, nunca host interno `0.0.0.0`
+- Regra operacional: sincronizacao inicialmente deve ser **read-only** (produtos, categorias, imagens, preco e estoque)
+- Operacoes de escrita na Varejonline ficam bloqueadas por decisao ate haver aprovacao explicita
 
 ---
 
@@ -490,6 +505,13 @@ bash ./scripts/deploy-platon-vps.sh
 - ❌ Clonar de qualquer lugar que nao seja `catalogos-api-lab`
 - ❌ Mergear branches de fora
 - ❌ Commitar senhas, tokens ou chaves de API no repositorio
+- ❌ Fazer qualquer escrita na Varejonline do cliente sem autorizacao explicita: criar/editar/excluir produto, preco, estoque, pedido, orcamento, reserva ou faturamento
+
+### Varejonline — Regra de Ouro
+- A conta Varejonline da cliente e ambiente sensivel de terceiro.
+- A integracao deve operar em modo leitura por padrao.
+- Qualquer endpoint ou feature que altere dados na Varejonline exige pausa, confirmacao explicita do Pedro, logica de auditoria e documentacao previa.
+- Documento dedicado: `docs/varejonline-integration-safety.md`
 
 O LAB deve **sempre** ser isolado do principal.
 
