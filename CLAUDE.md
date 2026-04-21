@@ -300,6 +300,8 @@ prisma/
 
 26. **Politica read-only para Varejonline (2026-04-21)** — Por seguranca operacional, qualquer integracao com a conta Varejonline do cliente deve ser tratada como leitura por padrao. Nao criar, editar, excluir, reservar, faturar, baixar estoque, alterar preco ou enviar pedido/orcamento na Varejonline sem aprovacao explicita do Pedro e sem registrar a decisao no contexto.
 
+27. **Primeira sync read-only Varejonline (2026-04-21)** — Botao "Sincronizar agora" passou a importar produtos via `GET /apps/api/produtos`, gravando apenas no banco do Catalogo Facil (`ProductBaseV2`, categorias, subcategorias, imagens e metadata externa). A implementacao nao escreve nada na Varejonline.
+
 ---
 
 ## Plano de Migracao Atual
@@ -348,6 +350,7 @@ prisma/
 - Validacao de seguranca ativa: CNPJ do tenant deve bater com o CNPJ retornado pela Varejonline
 - Correção aplicada: callback OAuth deve redirecionar usando `PUBLIC_BASE_URL`/`NEXTAUTH_URL`, nunca host interno `0.0.0.0`
 - Regra operacional: sincronizacao inicialmente deve ser **read-only** (produtos, categorias, imagens, preco e estoque)
+- Primeira sync implementada: produtos via `GET /produtos`, com limite configuravel por env
 - Operacoes de escrita na Varejonline ficam bloqueadas por decisao ate haver aprovacao explicita
 
 ---

@@ -8,6 +8,7 @@ import {
   getVarejonlineAuthorizationUrl,
   isVarejonlineConfigured,
 } from "@/lib/integrations/providers/varejonline/auth";
+import { syncVarejonlineProducts } from "@/lib/integrations/providers/varejonline/sync-products";
 
 const baseDescriptors: Record<IntegrationProviderName, Omit<IntegrationProviderDescriptor, "configured">> = {
   VAREJONLINE: {
@@ -15,7 +16,7 @@ const baseDescriptors: Record<IntegrationProviderName, Omit<IntegrationProviderD
     label: "Varejonline",
     supportsOauth: true,
     supportsWebhook: false,
-    supportsSync: false,
+    supportsSync: true,
     capabilities: {
       products: true,
       categories: true,
@@ -90,6 +91,7 @@ const registry: Record<IntegrationProviderName, IntegrationProviderAdapter> = {
     },
     getAuthorizationUrl: getVarejonlineAuthorizationUrl,
     exchangeCode: exchangeVarejonlineCode,
+    syncProducts: syncVarejonlineProducts,
   },
   OMIE: {
     descriptor: { ...baseDescriptors.OMIE, configured: false },

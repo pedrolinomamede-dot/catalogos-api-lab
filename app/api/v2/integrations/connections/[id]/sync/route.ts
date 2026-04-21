@@ -5,9 +5,7 @@ import type {
 import { NextResponse } from "next/server";
 
 import { requireRole } from "@/lib/authz";
-import { getIntegrationConnectionById } from "@/lib/integrations/core/connection-service";
 import { triggerIntegrationSyncJob } from "@/lib/integrations/core/sync-jobs";
-import { withBrand } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -54,38 +52,35 @@ export async function POST(
   const resource = resourceValue as IntegrationSyncResource;
   const mode = modeValue as IntegrationSyncJobMode;
 
-  return withBrand(auth.brandId, async (tx) => {
-    const connection = await getIntegrationConnectionById(tx, auth.brandId, id);
-    if (!connection) {
-      return jsonError(404, "not_found", "Integration connection not found");
-    }
-
-    const result = await triggerIntegrationSyncJob(tx, {
-      brandId: auth.brandId,
-      connection: {
-        id: connection.id,
-        provider: connection.provider,
-        status: connection.status,
-      },
-      resource,
-      mode,
-    });
-
-    if (!result.ok) {
-      return jsonError(501, "integration_sync_not_implemented", result.message, {
-        jobId: result.jobId,
-      });
-    }
-
-    return NextResponse.json(
-      {
-        ok: true,
-        data: {
-          jobId: result.jobId,
-          status: "SUCCESS",
-        },
-      },
-      { status: 202 },
-    );
+  const result = await triggerIntegrationSyncJob({
+    brandId: auth.brandId,
+    connectionId: id,
+    resource,
+    mode,
   });
+
+  if (!result.ok) {
+    return jsonError(
+      result.statusCode ?? 500,
+      result.statusCode === 404
+        ? "not_found"
+        : "integration_sync_failed",
+      result.message,
+      {
+        jobId: result.jobId,
+      },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      ok: true,
+      data: {
+        jobId: result.jobId,
+        status: "SUCCESS",
+        stats: result.stats,
+      },
+    },
+    { status: 202 },
+  );
 }

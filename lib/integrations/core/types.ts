@@ -44,6 +44,7 @@ export type NormalizedExternalProduct = {
   externalCode: string | null;
   name: string;
   description: string | null;
+  line: string | null;
   brand: string | null;
   barcode: string | null;
   size: string | null;
@@ -58,12 +59,43 @@ export type NormalizedExternalProduct = {
   rawPayload?: unknown;
 };
 
+export type IntegrationSyncConnectionContext = {
+  id: string;
+  provider: IntegrationProvider;
+  status: IntegrationConnectionStatus;
+  accessTokenEncrypted: string | null;
+  refreshTokenEncrypted: string | null;
+};
+
+export type IntegrationSyncStats = {
+  fetched: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  imagesCreated?: number;
+  pageSize?: number;
+  maxItems?: number;
+  errors?: Array<{
+    externalId?: string | null;
+    externalCode?: string | null;
+    message: string;
+  }>;
+};
+
+export type IntegrationSyncContext = {
+  brandId: string;
+  connection: IntegrationSyncConnectionContext;
+  resource: IntegrationSyncResource;
+  mode: IntegrationSyncJobMode;
+};
+
 export type IntegrationProviderAdapter = {
   descriptor: IntegrationProviderDescriptor;
   getAuthorizationUrl?: (state: string) => Promise<string>;
   exchangeCode?: (code: string) => Promise<IntegrationAuthTokens>;
-  syncProducts?: () => Promise<void>;
-  syncCategories?: () => Promise<void>;
+  syncProducts?: (context: IntegrationSyncContext) => Promise<IntegrationSyncStats>;
+  syncCategories?: (context: IntegrationSyncContext) => Promise<IntegrationSyncStats>;
   handleWebhook?: (payload: unknown) => Promise<void>;
 };
 
@@ -72,3 +104,9 @@ export function isIntegrationProviderName(
 ): value is IntegrationProviderName {
   return (INTEGRATION_PROVIDERS as readonly string[]).includes(value);
 }
+import type {
+  IntegrationConnectionStatus,
+  IntegrationProvider,
+  IntegrationSyncJobMode,
+  IntegrationSyncResource,
+} from "@prisma/client";

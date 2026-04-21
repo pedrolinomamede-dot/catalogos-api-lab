@@ -14,6 +14,7 @@ A conta Varejonline da cliente e um ambiente de terceiro, usado na operacao real
 - A conexao fica vinculada ao tenant por `brandId + provider`.
 - A conexao com Varejonline exige CNPJ cadastrado na marca.
 - O callback OAuth so salva o token quando o CNPJ retornado pela Varejonline corresponde ao CNPJ do tenant.
+- A primeira sincronizacao de produtos e read-only e usa `GET /apps/api/produtos`.
 
 ## Regra de ouro
 
@@ -32,6 +33,25 @@ Desde que usando endpoints de leitura e mantendo logs/erros seguros, e permitido
 - Ler estoque/saldos.
 - Salvar os dados lidos no banco do Catalogo Facil.
 - Gerar relatorios internos a partir dos dados lidos.
+
+## Primeira sync implementada
+
+O botao `Sincronizar agora` na tela de integracoes executa uma importacao read-only dos produtos da Varejonline para `ProductBaseV2`.
+
+Escopo atual:
+
+- Endpoint Varejonline: `GET /apps/api/produtos`.
+- Autenticacao: `token` recebido via OAuth, mantido criptografado no servidor.
+- Dados salvos localmente: SKU, nome, descricao, linha, marca, codigo de barras, categoria, subcategoria, preco, imagens e metadata externa.
+- Origem local: `sourceType=INTEGRATION`, `sourceProvider=VAREJONLINE`.
+- Limite padrao: ate 1000 produtos por sync, ajustavel por env.
+
+Variaveis opcionais:
+
+- `VAREJONLINE_API_BASE_URL`
+- `VAREJONLINE_PRODUCTS_PAGE_SIZE`
+- `VAREJONLINE_PRODUCTS_MAX_ITEMS`
+- `VAREJONLINE_PRODUCTS_ONLY_ACTIVE`
 
 ## Proibido sem aprovacao explicita
 
