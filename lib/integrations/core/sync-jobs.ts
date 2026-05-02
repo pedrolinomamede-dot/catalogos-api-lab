@@ -56,6 +56,7 @@ export async function triggerIntegrationSyncJob(
         status: true,
         accessTokenEncrypted: true,
         refreshTokenEncrypted: true,
+        importSettingsJson: true,
       },
     });
 

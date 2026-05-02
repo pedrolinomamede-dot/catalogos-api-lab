@@ -5,6 +5,10 @@ import type {
   IntegrationSyncStats,
   NormalizedExternalProduct,
 } from "@/lib/integrations/core/types";
+import {
+  normalizeIntegrationImportSettings,
+  type IntegrationImportSettings,
+} from "@/lib/integrations/core/import-settings";
 import { decryptSecret } from "@/lib/integrations/core/secrets";
 import { withBrand } from "@/lib/prisma";
 import { createVarejonlineClient } from "@/lib/integrations/providers/varejonline/client";
@@ -35,6 +39,55 @@ function toDecimalString(value: number | null) {
 
 function normalizeSku(product: NormalizedExternalProduct) {
   return (product.externalCode ?? product.externalId).trim();
+}
+
+function resolveProductPrice(
+  product: NormalizedExternalProduct,
+  settings: IntegrationImportSettings,
+) {
+  if (settings.pricing.primarySource === "SELECTED_PRICE_TABLE") {
+    const targetTableId = settings.pricing.primaryPriceTableId;
+    if (targetTableId) {
+      const match = product.tablePrices.find(
+        (tablePrice) => tablePrice.tableId === targetTableId,
+      );
+      if (match) {
+        return match.price;
+      }
+    }
+  }
+
+  return product.price;
+}
+
+function resolveStoredTablePrices(
+  product: NormalizedExternalProduct,
+  settings: IntegrationImportSettings,
+) {
+  if (settings.pricing.priceTablesMode === "NONE") {
+    return [];
+  }
+
+  const selectedIds = new Set(settings.pricing.selectedPriceTableIds);
+  return product.tablePrices.filter((tablePrice) =>
+    selectedIds.has(tablePrice.tableId),
+  );
+}
+
+function resolveRequestedPriceTableIds(settings: IntegrationImportSettings) {
+  const ids = new Set<string>();
+
+  if (settings.pricing.primarySource === "SELECTED_PRICE_TABLE") {
+    if (settings.pricing.primaryPriceTableId) {
+      ids.add(settings.pricing.primaryPriceTableId);
+    }
+  }
+
+  if (settings.pricing.priceTablesMode === "SELECTED") {
+    settings.pricing.selectedPriceTableIds.forEach((id) => ids.add(id));
+  }
+
+  return [...ids];
 }
 
 function isFiscalCategoryLevel(level: string | null) {
@@ -126,8 +179,9 @@ async function resolveCategoryIds(
   tx: Tx,
   brandId: string,
   product: NormalizedExternalProduct,
+  settings: IntegrationImportSettings,
 ) {
-  if (!product.categoryName) {
+  if (!settings.categories.enabled || !product.categoryName) {
     return { categoryId: null, subcategoryId: null };
   }
 
@@ -178,15 +232,19 @@ async function upsertProduct(
   tx: Tx,
   context: IntegrationSyncContext,
   product: NormalizedExternalProduct,
+  settings: IntegrationImportSettings,
 ) {
   const sku = normalizeSku(product);
   const { categoryId, subcategoryId } = await resolveCategoryIds(
     tx,
     context.brandId,
     product,
+    settings,
   );
   const imageUrl = product.imageUrls[0] ?? null;
-  const price = product.price !== null ? product.price.toFixed(2) : null;
+  const resolvedPrice = resolveProductPrice(product, settings);
+  const storedTablePrices = resolveStoredTablePrices(product, settings);
+  const price = resolvedPrice !== null ? resolvedPrice.toFixed(2) : null;
 
   const existing = await tx.productBaseV2.findUnique({
     where: {
@@ -207,8 +265,6 @@ async function upsertProduct(
     barcode: product.barcode,
     additionalBarcodesJson: toJsonValue(product.additionalBarcodes),
     size: product.size,
-    department: product.department,
-    section: product.section,
     groupName: product.groupName,
     subgroupName: product.subgroupName,
     unit: product.unit,
@@ -224,16 +280,12 @@ async function upsertProduct(
     marketplaceAvailable: product.marketplaceAvailable,
     imageUrl,
     isActive: product.isActive,
-    categoryId,
-    subcategoryId,
     sourceType: "INTEGRATION" as const,
     sourceProvider: "VAREJONLINE" as const,
     sourceExternalId: product.externalId,
     sourceExternalCode: product.externalCode,
     sourceUpdatedAt: product.sourceUpdatedAt,
     lastSyncedAt: new Date(),
-    price,
-    costPrice: toDecimalString(product.costPrice),
     stockQuantity: product.stockQuantity,
     minStockQuantity: toDecimalString(product.minStockQuantity),
     maxStockQuantity: toDecimalString(product.maxStockQuantity),
@@ -243,7 +295,6 @@ async function upsertProduct(
     length: toDecimalString(product.length),
     categoryLevelsJson: toJsonValue(product.categories),
     taxInfoJson: toJsonValue(product.taxInfo),
-    commercialInfoJson: toJsonValue(product.commercialInfo),
     logisticsInfoJson: toJsonValue(product.logisticsInfo),
     suppliersJson: toJsonValue(product.suppliers),
     gradeAttributesJson: toJsonValue(product.gradeAttributes),
@@ -251,16 +302,49 @@ async function upsertProduct(
     integrationConnectionId: context.connection.id,
   };
 
+  const categoryData = settings.categories.enabled
+    ? {
+        categoryId,
+        subcategoryId,
+        ...(settings.categories.storeDepartmentAndSectionAsMetadata
+          ? {
+              department: product.department,
+              section: product.section,
+            }
+          : {}),
+      }
+    : {};
+
+  const pricingData = settings.pricing.enabled
+    ? {
+        price,
+        costPrice: settings.pricing.importCostPrice
+          ? toDecimalString(product.costPrice)
+          : undefined,
+        commercialInfoJson: toJsonValue({
+          ...product.commercialInfo,
+          price: resolvedPrice,
+          priceTables: storedTablePrices,
+        }),
+      }
+    : {};
+
   const saved = existing
     ? await tx.productBaseV2.update({
         where: { id: existing.id },
-        data,
+        data: {
+          ...data,
+          ...categoryData,
+          ...pricingData,
+        },
         select: { id: true },
       })
     : await tx.productBaseV2.create({
         data: {
           brandId: context.brandId,
           ...data,
+          ...categoryData,
+          ...pricingData,
         },
         select: { id: true },
       });
@@ -322,6 +406,10 @@ export async function syncVarejonlineProducts(
   const onlyActive =
     process.env.VAREJONLINE_PRODUCTS_ONLY_ACTIVE?.trim().toLowerCase() !==
     "false";
+  const importSettings = normalizeIntegrationImportSettings(
+    context.connection.importSettingsJson,
+  );
+  const requestedPriceTableIds = resolveRequestedPriceTableIds(importSettings);
 
   const stats: IntegrationSyncStats = {
     fetched: 0,
@@ -345,6 +433,10 @@ export async function syncVarejonlineProducts(
       inicio: start,
       quantidade: quantity,
       somenteAtivos: onlyActive,
+      idsTabelasPrecos:
+        requestedPriceTableIds.length > 0
+          ? requestedPriceTableIds.join(",")
+          : undefined,
     });
     const items = Array.isArray(payload)
       ? payload
@@ -379,7 +471,7 @@ export async function syncVarejonlineProducts(
     await withBrand(context.brandId, async (tx) => {
       for (const product of batch) {
         try {
-          const result = await upsertProduct(tx, context, product);
+          const result = await upsertProduct(tx, context, product, importSettings);
           stats.created += result.created;
           stats.updated += result.updated;
           stats.imagesCreated = (stats.imagesCreated ?? 0) + result.imagesCreated;

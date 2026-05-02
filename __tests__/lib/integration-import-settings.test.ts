@@ -24,7 +24,7 @@ describe("integration import settings", () => {
     });
 
     expect(settings.pricing.primarySource).toBe("SELECTED_PRICE_TABLE");
-    expect(settings.pricing.priceTablesMode).toBe("ALL");
+    expect(settings.pricing.priceTablesMode).toBe("SELECTED");
     expect(settings.pricing.selectedPriceTableIds).toEqual(["12", "45"]);
     expect(settings.pricing.primaryPriceTableId).toBe("45");
     expect(settings.categories.enabled).toBe(false);

@@ -312,6 +312,34 @@ function readGradeAttributes(payload: Record<string, unknown>) {
   ];
 }
 
+function readTablePrices(payload: Record<string, unknown>) {
+  return firstArray(payload, ["precosPorTabelas"])
+    .map((item) => {
+      if (!isRecord(item)) {
+        return null;
+      }
+
+      const tableId = asString(item.idTabelaPreco);
+      const price = parseNumber(item.preco);
+      if (!tableId || price === null) {
+        return null;
+      }
+
+      return {
+        tableId,
+        price,
+      };
+    })
+    .filter(
+      (
+        item,
+      ): item is {
+        tableId: string;
+        price: number;
+      } => Boolean(item),
+    );
+}
+
 export function mapVarejonlineProduct(payload: unknown): NormalizedExternalProduct {
   if (!isRecord(payload)) {
     throw new Error("Varejonline product payload is invalid");
@@ -392,6 +420,7 @@ export function mapVarejonlineProduct(payload: unknown): NormalizedExternalProdu
   const unit = pickString(payload, ["unidade"]) ?? getNestedString(payload, ["unidade"]);
   const suppliers = readSuppliers(payload);
   const gradeAttributes = readGradeAttributes(payload);
+  const tablePrices = readTablePrices(payload);
 
   return {
     externalId,
@@ -464,7 +493,7 @@ export function mapVarejonlineProduct(payload: unknown): NormalizedExternalProdu
       profitMarginPercent: pickNumber(payload, ["margemLucro"]),
       variablePrice: pickBoolean(payload, ["precoVariavel"]),
       freeSample: pickBoolean(payload, ["amostraGratis"]),
-      priceTables: firstArray(payload, ["precosPorTabelas"]),
+      priceTables: tablePrices,
       progressiveDiscounts: firstArray(payload, ["descontoProgressivo"]),
       referenceCosts: firstArray(payload, ["listCustoReferencial"]),
     }),
@@ -484,6 +513,7 @@ export function mapVarejonlineProduct(payload: unknown): NormalizedExternalProdu
     }),
     suppliers,
     gradeAttributes,
+    tablePrices,
     isActive,
     imageUrls: readImageUrls(payload),
     rawPayload: payload,

@@ -308,6 +308,8 @@ prisma/
 
 30. **Configuracao de leitura por conexao (2026-05-02)** — Cada `IntegrationConnectionV2` passa a poder guardar `importSettingsJson` com as preferencias de leitura da Varejonline por tenant: produtos, categorias, precos, estoque, imagens, fiscal e logistica. A tela de integracoes ganhou o botao `Configurar leitura` para preparar esse mapeamento local. Nesta primeira fase, a configuracao fica persistida e pronta para a proxima etapa, mas a sync atual ainda mantem o comportamento existente ate a aplicacao automatica dessas regras.
 
+31. **Sync respeitando categorias e precos configurados (2026-05-02)** — A sync read-only da Varejonline passa a obedecer `importSettingsJson` para os blocos de categorias e precos. Categorias locais podem ser desligadas ou seguir a estrategia fixa `Grupo -> Categoria / Subgrupo -> Subcategoria`, com `Departamento` e `Setor` opcionais como metadata. Para precos, o tenant pode manter `preco` padrao como principal ou escolher uma tabela especifica por ID; as tabelas lidas tambem passam a ser controladas por IDs selecionados. Como a documentacao oficial confirmada do endpoint `/produtos` so retorna `idTabelaPreco` e `preco`, a configuracao atual de tabelas de preco trabalha por ID e nao por nome de tabela.
+
 ---
 
 ## Plano de Migracao Atual

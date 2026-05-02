@@ -372,9 +372,8 @@ function IntegrationImportSettingsForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="NONE">Nao importar tabelas</SelectItem>
-              <SelectItem value="ALL">Importar todas as tabelas disponiveis</SelectItem>
               <SelectItem value="SELECTED">
-                Importar apenas tabelas selecionadas
+                Importar tabelas por IDs selecionados
               </SelectItem>
             </SelectContent>
           </Select>
@@ -452,8 +451,8 @@ function IntegrationImportSettingsForm({
             }
           />
           <p className="text-xs text-muted-foreground">
-            Use este campo para listar apenas as tabelas que o Catalogo Facil
-            deve guardar, como atacado e outras tabelas comerciais.
+            Informe um ou mais IDs de tabela que o Catalogo Facil deve solicitar
+            a Varejonline, como atacado e outras tabelas comerciais.
           </p>
           </div>
         ) : null}

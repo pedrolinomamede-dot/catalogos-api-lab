@@ -90,6 +90,10 @@ export type NormalizedExternalProduct = {
   logisticsInfo: Record<string, unknown>;
   suppliers: unknown[];
   gradeAttributes: unknown[];
+  tablePrices: Array<{
+    tableId: string;
+    price: number;
+  }>;
   isActive: boolean;
   imageUrls: string[];
   rawPayload?: unknown;
@@ -101,6 +105,7 @@ export type IntegrationSyncConnectionContext = {
   status: IntegrationConnectionStatus;
   accessTokenEncrypted: string | null;
   refreshTokenEncrypted: string | null;
+  importSettingsJson?: unknown;
 };
 
 export type IntegrationSyncStats = {

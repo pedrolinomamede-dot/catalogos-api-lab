@@ -28,7 +28,7 @@ const pricingSettingsSchema = z.object({
   primarySource: z.enum(["DEFAULT_PRICE", "SELECTED_PRICE_TABLE"]),
   importCostPrice: z.boolean(),
   importDiscountRules: z.boolean(),
-  priceTablesMode: z.enum(["NONE", "ALL", "SELECTED"]),
+  priceTablesMode: z.enum(["NONE", "SELECTED"]),
   selectedPriceTableIds: z.array(z.string()),
   primaryPriceTableId: z.string().nullable(),
 });
@@ -97,7 +97,7 @@ export const defaultIntegrationImportSettings: IntegrationImportSettings = {
     primarySource: "DEFAULT_PRICE",
     importCostPrice: true,
     importDiscountRules: true,
-    priceTablesMode: "ALL",
+    priceTablesMode: "SELECTED",
     selectedPriceTableIds: [],
     primaryPriceTableId: null,
   },
@@ -202,7 +202,7 @@ export function normalizeIntegrationImportSettings(
       priceTablesMode:
         pricing.priceTablesMode ??
         (pricing.importPriceTables === true
-          ? "ALL"
+          ? "SELECTED"
           : pricing.importPriceTables === false
             ? "NONE"
             : defaults.pricing.priceTablesMode),
