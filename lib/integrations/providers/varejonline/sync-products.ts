@@ -37,6 +37,18 @@ function toDecimalString(value: number | null) {
   return value === null ? null : String(value);
 }
 
+function pickCreateOrEnabledValue<T>(
+  value: T,
+  enabled: boolean,
+  existing: boolean,
+) {
+  if (!existing) {
+    return value;
+  }
+
+  return enabled ? value : undefined;
+}
+
 function normalizeSku(product: NormalizedExternalProduct) {
   return (product.externalCode ?? product.externalId).trim();
 }
@@ -293,30 +305,99 @@ async function upsertProduct(
     },
     select: { id: true },
   });
+  const hasExistingProduct = Boolean(existing);
+
+  const productFieldData = settings.products.enabled
+    ? {
+        name: pickCreateOrEnabledValue(
+          product.name,
+          settings.products.fields.name,
+          hasExistingProduct,
+        ),
+        description: pickCreateOrEnabledValue(
+          product.description,
+          settings.products.fields.description,
+          hasExistingProduct,
+        ),
+        line: pickCreateOrEnabledValue(
+          product.line,
+          settings.products.fields.line,
+          hasExistingProduct,
+        ),
+        brand: pickCreateOrEnabledValue(
+          product.brand,
+          settings.products.fields.brand,
+          hasExistingProduct,
+        ),
+        barcode: pickCreateOrEnabledValue(
+          product.barcode,
+          settings.products.fields.barcode,
+          hasExistingProduct,
+        ),
+        additionalBarcodesJson: pickCreateOrEnabledValue(
+          toJsonValue(product.additionalBarcodes),
+          settings.products.fields.additionalBarcodes,
+          hasExistingProduct,
+        ),
+        size: pickCreateOrEnabledValue(
+          product.size,
+          settings.products.fields.size,
+          hasExistingProduct,
+        ),
+        unit: pickCreateOrEnabledValue(
+          product.unit,
+          settings.products.fields.unit,
+          hasExistingProduct,
+        ),
+        gradeAttributesJson: pickCreateOrEnabledValue(
+          toJsonValue(product.gradeAttributes),
+          settings.products.fields.attributes,
+          hasExistingProduct,
+        ),
+      }
+    : {};
+
+  const createProductFieldData = {
+    name: product.name,
+    description:
+      settings.products.enabled && settings.products.fields.description
+        ? product.description
+        : undefined,
+    line:
+      settings.products.enabled && settings.products.fields.line
+        ? product.line
+        : undefined,
+    brand:
+      settings.products.enabled && settings.products.fields.brand
+        ? product.brand
+        : undefined,
+    barcode:
+      settings.products.enabled && settings.products.fields.barcode
+        ? product.barcode
+        : undefined,
+    additionalBarcodesJson:
+      settings.products.enabled && settings.products.fields.additionalBarcodes
+        ? toJsonValue(product.additionalBarcodes)
+        : undefined,
+    size:
+      settings.products.enabled && settings.products.fields.size
+        ? product.size
+        : undefined,
+    unit:
+      settings.products.enabled && settings.products.fields.unit
+        ? product.unit
+        : undefined,
+    gradeAttributesJson:
+      settings.products.enabled && settings.products.fields.attributes
+        ? toJsonValue(product.gradeAttributes)
+        : undefined,
+  };
 
   const data = {
     sku,
-    name: product.name,
-    description: product.description,
-    line: product.line,
-    brand: product.brand,
-    barcode: product.barcode,
-    additionalBarcodesJson: toJsonValue(product.additionalBarcodes),
-    size: product.size,
+    ...productFieldData,
     groupName: product.groupName,
     subgroupName: product.subgroupName,
-    unit: product.unit,
-    ncmCode: product.ncmCode,
-    cestCode: product.cestCode,
-    taxOrigin: product.taxOrigin,
-    taxFci: product.taxFci,
-    taxBenefitCode: product.taxBenefitCode,
-    productClassification: product.productClassification,
-    stockControlMethod: product.stockControlMethod,
-    allowSale: product.allowSale,
-    ecommerceAvailable: product.ecommerceAvailable,
-    marketplaceAvailable: product.marketplaceAvailable,
-    imageUrl,
     isActive: product.isActive,
     sourceType: "INTEGRATION" as const,
     sourceProvider: "VAREJONLINE" as const,
@@ -324,18 +405,8 @@ async function upsertProduct(
     sourceExternalCode: product.externalCode,
     sourceUpdatedAt: product.sourceUpdatedAt,
     lastSyncedAt: new Date(),
-    stockQuantity: product.stockQuantity,
-    minStockQuantity: toDecimalString(product.minStockQuantity),
-    maxStockQuantity: toDecimalString(product.maxStockQuantity),
-    weight: toDecimalString(product.weight),
-    height: toDecimalString(product.height),
-    width: toDecimalString(product.width),
-    length: toDecimalString(product.length),
     categoryLevelsJson: toJsonValue(product.categories),
-    taxInfoJson: toJsonValue(product.taxInfo),
-    logisticsInfoJson: toJsonValue(product.logisticsInfo),
     suppliersJson: toJsonValue(product.suppliers),
-    gradeAttributesJson: toJsonValue(product.gradeAttributes),
     externalMetadataJson: toJsonValue(product.rawPayload),
     integrationConnectionId: context.connection.id,
   };
@@ -353,6 +424,23 @@ async function upsertProduct(
       }
     : {};
 
+  const inventoryData = settings.inventory.enabled
+    ? {
+        stockQuantity: settings.inventory.importCurrentStock
+          ? product.stockQuantity
+          : undefined,
+        minStockQuantity: settings.inventory.importMinMax
+          ? toDecimalString(product.minStockQuantity)
+          : undefined,
+        maxStockQuantity: settings.inventory.importMinMax
+          ? toDecimalString(product.maxStockQuantity)
+          : undefined,
+        stockControlMethod: settings.inventory.importControlMethod
+          ? product.stockControlMethod
+          : undefined,
+      }
+    : {};
+
   const pricingData = settings.pricing.enabled
     ? {
         price,
@@ -367,13 +455,108 @@ async function upsertProduct(
       }
     : {};
 
+  const taxInfoJson =
+    settings.fiscal.enabled &&
+    (settings.fiscal.importTaxClassification || settings.fiscal.importTaxMetadata)
+      ? toJsonValue({
+          ...(settings.fiscal.importTaxClassification
+            ? {
+                ncmCode: product.ncmCode,
+                cestCode: product.cestCode,
+                taxOrigin: product.taxOrigin,
+                taxFci: product.taxFci,
+                productClassification: product.productClassification,
+              }
+            : {}),
+          ...(settings.fiscal.importTaxMetadata
+            ? {
+                taxBenefitCode: product.taxBenefitCode,
+                entityData:
+                  product.taxInfo.entityData ?? product.taxInfo.dadosPorEntidade,
+                taxOriginRaw: product.taxInfo.taxOriginRaw,
+              }
+            : {}),
+        })
+      : undefined;
+
+  const fiscalData = settings.fiscal.enabled
+    ? {
+        ncmCode: settings.fiscal.importTaxClassification
+          ? product.ncmCode
+          : undefined,
+        cestCode: settings.fiscal.importTaxClassification
+          ? product.cestCode
+          : undefined,
+        taxOrigin: settings.fiscal.importTaxClassification
+          ? product.taxOrigin
+          : undefined,
+        taxFci: settings.fiscal.importTaxClassification
+          ? product.taxFci
+          : undefined,
+        productClassification: settings.fiscal.importTaxClassification
+          ? product.productClassification
+          : undefined,
+        taxBenefitCode: settings.fiscal.importTaxMetadata
+          ? product.taxBenefitCode
+          : undefined,
+        taxInfoJson,
+      }
+    : {};
+
+  const logisticsInfoJson = settings.logistics.enabled
+    ? toJsonValue({
+        unit: product.unit,
+        unitProportions: product.logisticsInfo.unitProportions,
+        lotControl: product.logisticsInfo.lotControl,
+        lotValidityControl: product.logisticsInfo.lotValidityControl,
+        usedProduct: product.logisticsInfo.usedProduct,
+        ...(settings.logistics.importWeight ? { weight: product.weight } : {}),
+        ...(settings.logistics.importDimensions
+          ? {
+              height: product.height,
+              width: product.width,
+              length: product.length,
+            }
+          : {}),
+      })
+    : undefined;
+
+  const logisticsData = settings.logistics.enabled
+    ? {
+        weight: settings.logistics.importWeight
+          ? toDecimalString(product.weight)
+          : undefined,
+        height: settings.logistics.importDimensions
+          ? toDecimalString(product.height)
+          : undefined,
+        width: settings.logistics.importDimensions
+          ? toDecimalString(product.width)
+          : undefined,
+        length: settings.logistics.importDimensions
+          ? toDecimalString(product.length)
+          : undefined,
+        logisticsInfoJson,
+      }
+    : {};
+
+  const imageData =
+    settings.images.enabled && settings.images.importPrimaryImage
+      ? {
+          imageUrl,
+        }
+      : {};
+
   const saved = existing
     ? await tx.productBaseV2.update({
         where: { id: existing.id },
         data: {
           ...data,
           ...categoryData,
+          ...inventoryData,
           ...pricingData,
+          ...fiscalData,
+          ...logisticsData,
+          ...imageData,
         },
         select: { id: true },
       })
@@ -381,28 +564,35 @@ async function upsertProduct(
         data: {
           brandId: context.brandId,
           ...data,
+          ...createProductFieldData,
           ...categoryData,
+          ...inventoryData,
           ...pricingData,
+          ...fiscalData,
+          ...logisticsData,
+          ...imageData,
         },
         select: { id: true },
       });
 
-  await tx.productBaseImageV2.deleteMany({
-    where: {
-      brandId: context.brandId,
-      productBaseId: saved.id,
-    },
-  });
-
-  if (product.imageUrls.length > 0) {
-    await tx.productBaseImageV2.createMany({
-      data: product.imageUrls.map((url, index) => ({
+  if (settings.images.enabled && settings.images.importGallery) {
+    await tx.productBaseImageV2.deleteMany({
+      where: {
         brandId: context.brandId,
         productBaseId: saved.id,
-        imageUrl: url,
-        sortOrder: index,
-      })),
+      },
     });
+
+    if (product.imageUrls.length > 0) {
+      await tx.productBaseImageV2.createMany({
+        data: product.imageUrls.map((url, index) => ({
+          brandId: context.brandId,
+          productBaseId: saved.id,
+          imageUrl: url,
+          sortOrder: index,
+        })),
+      });
+    }
   }
 
   return {

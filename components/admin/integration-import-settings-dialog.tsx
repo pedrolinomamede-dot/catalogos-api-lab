@@ -178,9 +178,9 @@ function IntegrationImportSettingsForm({
   return (
     <div className="space-y-4">
       <div className="rounded-md border border-dashed border-input bg-muted/30 p-3 text-xs text-muted-foreground">
-        Fase 1: esta tela salva as preferencias de leitura por tenant para a
-        integracao. A sync atual permanece com o comportamento existente nesta
-        etapa; a aplicacao automatica dessas regras vem na proxima fase.
+        Esta tela salva as preferencias de leitura por tenant para a
+        integracao. Produtos, categorias, precos, estoque, imagens, fiscal e
+        logistica passam a obedecer estas regras na proxima sincronizacao.
       </div>
 
       <SettingsSection
@@ -445,8 +445,8 @@ function IntegrationImportSettingsForm({
           </div>
         ) : null}
         <p className="text-xs text-muted-foreground">
-          Categorias e precos ja obedecem esta configuracao na proxima
-          sincronizacao. Os demais blocos serao aplicados nas proximas etapas.
+          O preco principal e as tabelas selecionadas ja obedecem esta
+          configuracao na proxima sincronizacao.
         </p>
       </SettingsSection>
 
