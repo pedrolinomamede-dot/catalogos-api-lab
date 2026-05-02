@@ -624,6 +624,7 @@ model IntegrationConnectionV2 {
   lastSyncAt              DateTime?
   lastSuccessfulSyncAt    DateTime?
   lastSyncError           String?
+  importSettingsJson      Json?
   brand                   Brand                             @relation(fields: [brandId], references: [id], onDelete: Cascade)
   products                ProductBaseV2[]
   categoryMappings        IntegrationCategoryMappingV2[]

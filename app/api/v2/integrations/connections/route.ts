@@ -33,6 +33,7 @@ export async function GET() {
         lastSyncAt: true,
         lastSuccessfulSyncAt: true,
         lastSyncError: true,
+        importSettingsJson: true,
         createdAt: true,
         updatedAt: true,
       },

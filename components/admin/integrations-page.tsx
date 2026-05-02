@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import type {
@@ -10,6 +10,7 @@ import type {
 } from "@/types/api";
 
 import { EmptyState } from "@/components/admin/empty-state";
+import { IntegrationImportSettingsDialog } from "@/components/admin/integration-import-settings-dialog";
 import { LoadingState } from "@/components/admin/loading-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -139,6 +140,7 @@ type ProviderCardProps = {
   connection?: IntegrationConnectionV2 | null;
   onConnect: (provider: IntegrationProvider) => Promise<void>;
   onDisconnect: (connectionId: string) => Promise<void>;
+  onConfigureImportSettings: (connection: IntegrationConnectionV2) => void;
   onSync: (connectionId: string) => Promise<void>;
   isConnecting: boolean;
   isDisconnecting: boolean;
@@ -150,6 +152,7 @@ function ProviderCard({
   connection,
   onConnect,
   onDisconnect,
+  onConfigureImportSettings,
   onSync,
   isConnecting,
   isDisconnecting,
@@ -236,6 +239,15 @@ function ProviderCard({
             >
               {provider.supportsSync ? "Sincronizar agora" : "Sync indisponivel"}
             </Button>
+            {provider.provider === "VAREJONLINE" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onConfigureImportSettings(connection)}
+              >
+                Configurar leitura
+              </Button>
+            ) : null}
             <Button
               variant="destructive"
               size="sm"
@@ -269,6 +281,8 @@ function ProviderCard({
 export function IntegrationsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [settingsConnection, setSettingsConnection] =
+    useState<IntegrationConnectionV2 | null>(null);
   const {
     data: providers,
     isLoading: isLoadingProviders,
@@ -412,6 +426,7 @@ export function IntegrationsPageClient() {
             connection={providerMap.get(provider.provider) ?? null}
             onConnect={handleConnect}
             onDisconnect={handleDisconnect}
+            onConfigureImportSettings={setSettingsConnection}
             onSync={handleSync}
             isConnecting={createConnectionMutation.isPending}
             isDisconnecting={disconnectMutation.isPending}
@@ -419,6 +434,16 @@ export function IntegrationsPageClient() {
           />
         ))}
       </div>
+
+      <IntegrationImportSettingsDialog
+        connection={settingsConnection}
+        open={Boolean(settingsConnection)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSettingsConnection(null);
+          }
+        }}
+      />
     </div>
   );
 }

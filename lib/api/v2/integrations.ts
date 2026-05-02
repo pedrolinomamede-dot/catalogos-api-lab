@@ -5,9 +5,10 @@ import type {
   IntegrationProviderDescriptor,
   IntegrationSyncJobV2,
   IntegrationSyncRequest,
+  UpdateIntegrationConnectionImportSettingsRequest,
 } from "@/types/api";
 
-import { apiGet, apiPost } from "@/lib/api/client";
+import { apiGet, apiPatch, apiPost } from "@/lib/api/client";
 
 type ApiEnvelope<T, M = unknown> = {
   ok: true;
@@ -40,6 +41,17 @@ export async function getIntegrationConnectionV2(id: string): Promise<Integratio
   const res = await apiGet<ApiEnvelope<IntegrationConnectionV2>>(
     `/api/v2/integrations/connections/${id}`,
   );
+  return res.data;
+}
+
+export async function updateIntegrationConnectionImportSettingsV2(
+  id: string,
+  body: UpdateIntegrationConnectionImportSettingsRequest,
+): Promise<IntegrationConnectionV2> {
+  const res = await apiPatch<
+    UpdateIntegrationConnectionImportSettingsRequest,
+    ApiEnvelope<IntegrationConnectionV2>
+  >(`/api/v2/integrations/connections/${id}`, body);
   return res.data;
 }
 

@@ -91,6 +91,7 @@ import {
   refreshCatalogFromSourceV2,
   refreshCatalogItemFromSourceV2,
   syncIntegrationConnectionV2,
+  updateIntegrationConnectionImportSettingsV2,
 } from "@/lib/api/v2/integrations";
 import {
   createShareLinkV2,
@@ -819,6 +820,25 @@ export function useDisconnectIntegrationConnectionV2() {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connections });
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connectionById(connectionId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
+    },
+  });
+}
+
+export function useUpdateIntegrationConnectionImportSettingsV2() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      connectionId,
+      body,
+    }: {
+      connectionId: string;
+      body: Parameters<typeof updateIntegrationConnectionImportSettingsV2>[1];
+    }) => updateIntegrationConnectionImportSettingsV2(connectionId, body),
+    onSuccess: (_connection, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connections });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.v2.integrations.connectionById(variables.connectionId),
+      });
     },
   });
 }

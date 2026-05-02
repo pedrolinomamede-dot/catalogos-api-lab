@@ -306,6 +306,8 @@ prisma/
 
 29. **Categoria local por Grupo/Subgrupo Varejonline (2026-04-21)** — A organizacao local da Base Geral deve usar `Grupo` da Varejonline como `CategoryV2` e `Subgrupo` como `SubcategoryV2`. Niveis fiscais/tributarios (`Tributacao`, `Fiscal`, `NCM`, `CEST`, origem etc.) devem ficar apenas nos campos fiscais/metadata e nunca alimentar a aba Categorias. A sync tambem remove categorias fiscais locais antigas somente quando ficam vazias apos reclassificar os produtos.
 
+30. **Configuracao de leitura por conexao (2026-05-02)** — Cada `IntegrationConnectionV2` passa a poder guardar `importSettingsJson` com as preferencias de leitura da Varejonline por tenant: produtos, categorias, precos, estoque, imagens, fiscal e logistica. A tela de integracoes ganhou o botao `Configurar leitura` para preparar esse mapeamento local. Nesta primeira fase, a configuracao fica persistida e pronta para a proxima etapa, mas a sync atual ainda mantem o comportamento existente ate a aplicacao automatica dessas regras.
+
 ---
 
 ## Plano de Migracao Atual

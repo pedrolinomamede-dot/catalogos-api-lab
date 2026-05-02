@@ -1,3 +1,5 @@
+import type { IntegrationImportSettings } from "@/lib/integrations/core/import-settings";
+
 export type Brand = {
   id: string;
   name: string;
@@ -547,6 +549,7 @@ export type IntegrationConnectionV2 = {
   lastSyncAt?: Date | null;
   lastSuccessfulSyncAt?: Date | null;
   lastSyncError?: string | null;
+  importSettingsJson?: IntegrationImportSettings | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -579,6 +582,10 @@ export type IntegrationConnectionCreateResponse = {
 export type IntegrationSyncRequest = {
   resource?: IntegrationSyncResource;
   mode?: IntegrationSyncJobMode;
+};
+
+export type UpdateIntegrationConnectionImportSettingsRequest = {
+  importSettings: IntegrationImportSettings;
 };
 
 export type CreateShareLinkV2Request = {
