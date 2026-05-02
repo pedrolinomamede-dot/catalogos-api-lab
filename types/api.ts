@@ -205,6 +205,11 @@ export type ProductBaseImageV2 = {
   createdAt: Date;
 };
 
+export type DeleteBaseProductImageV2Result = {
+  deletedImageId: string;
+  nextImageUrl?: string | null;
+};
+
 export type ProductImageLayout = {
   zoom?: number | null;
   offsetX?: number | null;

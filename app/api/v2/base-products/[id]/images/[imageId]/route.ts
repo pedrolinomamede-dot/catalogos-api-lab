@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireRole } from "@/lib/authz";
+import { refreshProductCatalogSnapshots } from "@/lib/catalog-snapshots/refresh-product-catalog-snapshots";
 import { withBrand } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
 
@@ -24,11 +25,55 @@ export async function DELETE(
       return jsonError(404, "not_found", "Image not found");
     }
 
+    const productBase = await tx.productBaseV2.findFirst({
+      where: { id, brandId: auth.brandId },
+      select: {
+        id: true,
+        imageUrl: true,
+      },
+    });
+
+    if (!productBase) {
+      return jsonError(404, "not_found", "Product not found");
+    }
+
     await tx.productBaseImageV2.delete({
       where: { id: imageId },
     });
 
-    return NextResponse.json({ ok: true });
+    let nextImageUrl = productBase.imageUrl;
+    if (productBase.imageUrl === image.imageUrl) {
+      const fallbackImage = await tx.productBaseImageV2.findFirst({
+        where: {
+          brandId: auth.brandId,
+          productBaseId: id,
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: { imageUrl: true },
+      });
+
+      nextImageUrl = fallbackImage?.imageUrl ?? null;
+
+      await tx.productBaseV2.update({
+        where: { id: productBase.id },
+        data: {
+          imageUrl: nextImageUrl,
+        },
+      });
+
+      await refreshProductCatalogSnapshots(tx, {
+        brandId: auth.brandId,
+        productBaseId: productBase.id,
+      });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      data: {
+        deletedImageId: image.id,
+        nextImageUrl,
+      },
+    });
   });
 }
 

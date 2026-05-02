@@ -2,6 +2,7 @@ import type {
   BaseProductV2,
   BaseProductsImportResultV2,
   CreateBaseProductV2Request,
+  DeleteBaseProductImageV2Result,
   ImportBaseProductsCsvV2Item,
   ProductBaseImageV2,
   UpdateBaseProductV2Request,
@@ -165,13 +166,13 @@ export async function addBaseProductImageV2(
 export async function deleteBaseProductImageV2(
   productBaseId: string,
   imageId: string,
-): Promise<void> {
+): Promise<DeleteBaseProductImageV2Result> {
   const primaryPath = `/api/v2/base-products/${productBaseId}/images/${imageId}`;
   const fallbackPath = `/api/v2/produtos-base/${productBaseId}/images/${imageId}`;
 
-  await withNotFoundFallback(
-    () => apiDelete(primaryPath),
-    () => apiDelete(fallbackPath),
+  return withNotFoundFallback(
+    () => apiDelete<DeleteBaseProductImageV2Result>(primaryPath),
+    () => apiDelete<DeleteBaseProductImageV2Result>(fallbackPath),
   );
 }
 

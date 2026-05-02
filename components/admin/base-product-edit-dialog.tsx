@@ -277,7 +277,10 @@ export function BaseProductEditDialog({
 
   const handleDeleteGalleryImage = async (image: ProductBaseImageV2) => {
     try {
-      await deleteImageMutation.mutateAsync(image.id);
+      const result = await deleteImageMutation.mutateAsync(image.id);
+      if (image.imageUrl === mainImageUrl) {
+        setMainImageUrl(result.nextImageUrl ?? null);
+      }
       toastSuccess("Imagem removida da galeria");
     } catch (err) {
       const message = getErrorMessage(err);
