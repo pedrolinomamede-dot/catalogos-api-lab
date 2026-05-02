@@ -21,16 +21,16 @@ const categoriesSettingsSchema = z.object({
   enabled: z.boolean(),
   strategy: z.enum(["GROUP_SUBGROUP"]),
   storeDepartmentAndSectionAsMetadata: z.boolean(),
-  ignoreFiscalLevels: z.boolean(),
 });
 
 const pricingSettingsSchema = z.object({
   enabled: z.boolean(),
-  primarySource: z.enum(["DEFAULT_PRICE", "PRICE_TABLE"]),
+  primarySource: z.enum(["DEFAULT_PRICE", "SELECTED_PRICE_TABLE"]),
   importCostPrice: z.boolean(),
   importDiscountRules: z.boolean(),
-  importPriceTables: z.boolean(),
+  priceTablesMode: z.enum(["NONE", "ALL", "SELECTED"]),
   selectedPriceTableIds: z.array(z.string()),
+  primaryPriceTableId: z.string().nullable(),
 });
 
 const inventorySettingsSchema = z.object({
@@ -91,15 +91,15 @@ export const defaultIntegrationImportSettings: IntegrationImportSettings = {
     enabled: true,
     strategy: "GROUP_SUBGROUP",
     storeDepartmentAndSectionAsMetadata: true,
-    ignoreFiscalLevels: true,
   },
   pricing: {
     enabled: true,
     primarySource: "DEFAULT_PRICE",
     importCostPrice: true,
     importDiscountRules: true,
-    importPriceTables: true,
+    priceTablesMode: "ALL",
     selectedPriceTableIds: [],
+    primaryPriceTableId: null,
   },
   inventory: {
     enabled: true,
@@ -151,6 +151,10 @@ function normalizeStringArray(value: unknown) {
   );
 }
 
+function normalizeNullableString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 export function buildDefaultIntegrationImportSettings(): IntegrationImportSettings {
   return JSON.parse(
     JSON.stringify(defaultIntegrationImportSettings),
@@ -191,7 +195,19 @@ export function normalizeIntegrationImportSettings(
     pricing: {
       ...defaults.pricing,
       ...pricing,
+      primarySource:
+        pricing.primarySource === "PRICE_TABLE"
+          ? "SELECTED_PRICE_TABLE"
+          : pricing.primarySource,
+      priceTablesMode:
+        pricing.priceTablesMode ??
+        (pricing.importPriceTables === true
+          ? "ALL"
+          : pricing.importPriceTables === false
+            ? "NONE"
+            : defaults.pricing.priceTablesMode),
       selectedPriceTableIds: normalizeStringArray(pricing.selectedPriceTableIds),
+      primaryPriceTableId: normalizeNullableString(pricing.primaryPriceTableId),
     },
     inventory: {
       ...defaults.inventory,

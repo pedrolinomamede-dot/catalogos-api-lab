@@ -14,15 +14,19 @@ describe("integration import settings", () => {
     const settings = normalizeIntegrationImportSettings({
       pricing: {
         primarySource: "PRICE_TABLE",
+        importPriceTables: true,
         selectedPriceTableIds: [" 12 ", "45", "12", 99],
+        primaryPriceTableId: " 45 ",
       },
       categories: {
         enabled: false,
       },
     });
 
-    expect(settings.pricing.primarySource).toBe("PRICE_TABLE");
+    expect(settings.pricing.primarySource).toBe("SELECTED_PRICE_TABLE");
+    expect(settings.pricing.priceTablesMode).toBe("ALL");
     expect(settings.pricing.selectedPriceTableIds).toEqual(["12", "45"]);
+    expect(settings.pricing.primaryPriceTableId).toBe("45");
     expect(settings.categories.enabled).toBe(false);
     expect(settings.products.fields.name).toBe(true);
   });

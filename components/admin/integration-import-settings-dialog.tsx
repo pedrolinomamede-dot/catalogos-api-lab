@@ -132,12 +132,40 @@ function IntegrationImportSettingsForm({
   const handleSave = async () => {
     if (
       settings.pricing.enabled &&
-      settings.pricing.primarySource === "PRICE_TABLE" &&
-      settings.pricing.selectedPriceTableIds.length === 0
+      settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
+      !settings.pricing.primaryPriceTableId
     ) {
       toastError(
         "Tabela obrigatoria",
-        "Informe ao menos um ID de tabela de preco para usar a origem por tabela.",
+        "Informe o ID da tabela principal para usar preco por tabela.",
+      );
+      return;
+    }
+
+    if (
+      settings.pricing.enabled &&
+      settings.pricing.priceTablesMode === "SELECTED" &&
+      settings.pricing.selectedPriceTableIds.length === 0
+    ) {
+      toastError(
+        "IDs obrigatorios",
+        "Informe ao menos um ID de tabela para usar a leitura de tabelas selecionadas.",
+      );
+      return;
+    }
+
+    if (
+      settings.pricing.enabled &&
+      settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
+      settings.pricing.priceTablesMode === "SELECTED" &&
+      settings.pricing.primaryPriceTableId &&
+      !settings.pricing.selectedPriceTableIds.includes(
+        settings.pricing.primaryPriceTableId,
+      )
+    ) {
+      toastError(
+        "Tabela principal invalida",
+        "O ID da tabela principal precisa estar incluido na lista de tabelas selecionadas.",
       );
       return;
     }
@@ -269,22 +297,11 @@ function IntegrationImportSettingsForm({
               }))
             }
           />
-          <FieldToggle
-            id="categories-ignore-fiscal"
-            label="Ignorar niveis fiscais na arvore local"
-            checked={settings.categories.ignoreFiscalLevels}
-            disabled={!settings.categories.enabled}
-            onCheckedChange={(checked) =>
-              setSettings((current) => ({
-                ...current,
-                categories: {
-                  ...current.categories,
-                  ignoreFiscalLevels: checked,
-                },
-              }))
-            }
-          />
         </div>
+        <p className="text-xs text-muted-foreground">
+          Niveis fiscais e tributarios nunca entram na arvore de categorias do
+          Catalogo Facil. Esses dados ficam apenas nos campos fiscais do produto.
+        </p>
       </SettingsSection>
 
       <SettingsSection
@@ -310,7 +327,9 @@ function IntegrationImportSettingsForm({
           <Select
             value={settings.pricing.primarySource}
             disabled={!settings.pricing.enabled}
-            onValueChange={(value: IntegrationImportSettings["pricing"]["primarySource"]) =>
+            onValueChange={(
+              value: IntegrationImportSettings["pricing"]["primarySource"],
+            ) =>
               setSettings((current) => ({
                 ...current,
                 pricing: {
@@ -325,7 +344,38 @@ function IntegrationImportSettingsForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="DEFAULT_PRICE">Preco padrao do cadastro</SelectItem>
-              <SelectItem value="PRICE_TABLE">Tabela de preco por ID</SelectItem>
+              <SelectItem value="SELECTED_PRICE_TABLE">
+                Tabela de preco especifica
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="pricing-tables-mode">Leitura de tabelas de preco</Label>
+          <Select
+            value={settings.pricing.priceTablesMode}
+            disabled={!settings.pricing.enabled}
+            onValueChange={(
+              value: IntegrationImportSettings["pricing"]["priceTablesMode"],
+            ) =>
+              setSettings((current) => ({
+                ...current,
+                pricing: {
+                  ...current.pricing,
+                  priceTablesMode: value,
+                },
+              }))
+            }
+          >
+            <SelectTrigger id="pricing-tables-mode">
+              <SelectValue placeholder="Selecione o modo de leitura" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NONE">Nao importar tabelas</SelectItem>
+              <SelectItem value="ALL">Importar todas as tabelas disponiveis</SelectItem>
+              <SelectItem value="SELECTED">
+                Importar apenas tabelas selecionadas
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -360,23 +410,29 @@ function IntegrationImportSettingsForm({
               }))
             }
           />
-          <FieldToggle
-            id="pricing-tables"
-            label="Guardar precos por tabela"
-            checked={settings.pricing.importPriceTables}
-            disabled={!settings.pricing.enabled}
-            onCheckedChange={(checked) =>
-              setSettings((current) => ({
-                ...current,
-                pricing: {
-                  ...current.pricing,
-                  importPriceTables: checked,
-                },
-              }))
-            }
-          />
         </div>
-        <div className="grid gap-2">
+        {settings.pricing.primarySource === "SELECTED_PRICE_TABLE" ? (
+          <div className="grid gap-2">
+            <Label htmlFor="pricing-primary-table-id">ID da tabela principal</Label>
+            <Input
+              id="pricing-primary-table-id"
+              value={settings.pricing.primaryPriceTableId ?? ""}
+              disabled={!settings.pricing.enabled}
+              placeholder="Ex.: 45"
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  pricing: {
+                    ...current.pricing,
+                    primaryPriceTableId: event.target.value.trim() || null,
+                  },
+                }))
+              }
+            />
+          </div>
+        ) : null}
+        {settings.pricing.priceTablesMode === "SELECTED" ? (
+          <div className="grid gap-2">
           <Label htmlFor="pricing-table-ids">
             IDs de tabela de preco (separados por virgula)
           </Label>
@@ -396,10 +452,15 @@ function IntegrationImportSettingsForm({
             }
           />
           <p className="text-xs text-muted-foreground">
-            Use este campo para preparar tabelas como atacado. A selecao por
-            tabela sera conectada na proxima fase.
+            Use este campo para listar apenas as tabelas que o Catalogo Facil
+            deve guardar, como atacado e outras tabelas comerciais.
           </p>
-        </div>
+          </div>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Nesta fase, a configuracao fica persistida por tenant. A sync vai
+          passar a obedecer essas regras na proxima etapa.
+        </p>
       </SettingsSection>
 
       <SettingsSection
