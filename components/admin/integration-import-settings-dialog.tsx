@@ -184,6 +184,47 @@ function IntegrationImportSettingsForm({
       </div>
 
       <SettingsSection
+        title="Politica da sincronizacao"
+        description="Escolha se a integracao pode atualizar produtos ja importados ou apenas criar novos registros vindos da Varejonline."
+      >
+        <div className="grid gap-2">
+          <Label htmlFor="sync-policy-existing-products">
+            Produtos ja importados
+          </Label>
+          <Select
+            value={settings.syncPolicy.existingProductsMode}
+            onValueChange={(
+              value: IntegrationImportSettings["syncPolicy"]["existingProductsMode"],
+            ) =>
+              setSettings((current) => ({
+                ...current,
+                syncPolicy: {
+                  ...current.syncPolicy,
+                  existingProductsMode: value,
+                },
+              }))
+            }
+          >
+            <SelectTrigger id="sync-policy-existing-products">
+              <SelectValue placeholder="Selecione a politica" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="UPDATE_ENABLED_FIELDS">
+                Atualizar produtos existentes com os campos marcados
+              </SelectItem>
+              <SelectItem value="CREATE_ONLY">
+                Importar apenas produtos novos
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          A opcao por produto na Base Geral pode bloquear a reimportacao mesmo
+          quando a politica global permitir atualizacao.
+        </p>
+      </SettingsSection>
+
+      <SettingsSection
         title="Produtos"
         description="Escolha os campos principais do cadastro local que devem ser considerados na leitura da Varejonline."
       >

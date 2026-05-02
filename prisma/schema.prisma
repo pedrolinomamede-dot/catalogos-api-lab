@@ -258,6 +258,10 @@ model ProductBaseV2 {
   suppliersJson           Json?
   gradeAttributesJson     Json?
   externalMetadataJson    Json?
+  integrationSyncLocked   Boolean                  @default(false)
+  integrationSyncLockedAt DateTime?
+  integrationSyncLockReason String?
+  integrationSyncLockedByUserId String?            @db.Uuid
   integrationConnectionId String?                  @db.Uuid
   category                CategoryV2?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   subcategory             SubcategoryV2?           @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
@@ -276,6 +280,7 @@ model ProductBaseV2 {
   @@index([sourceType])
   @@index([sourceProvider])
   @@index([integrationConnectionId])
+  @@index([integrationSyncLocked])
 }
 
 model ProductBaseImageV2 {

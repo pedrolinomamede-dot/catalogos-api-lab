@@ -17,6 +17,10 @@ const productsSettingsSchema = z.object({
   fields: productsFieldsSchema,
 });
 
+const syncPolicySettingsSchema = z.object({
+  existingProductsMode: z.enum(["UPDATE_ENABLED_FIELDS", "CREATE_ONLY"]),
+});
+
 const categoriesSettingsSchema = z.object({
   enabled: z.boolean(),
   strategy: z.enum(["GROUP_SUBGROUP"]),
@@ -59,6 +63,7 @@ const logisticsSettingsSchema = z.object({
 });
 
 export const integrationImportSettingsSchema = z.object({
+  syncPolicy: syncPolicySettingsSchema,
   products: productsSettingsSchema,
   categories: categoriesSettingsSchema,
   pricing: pricingSettingsSchema,
@@ -73,6 +78,9 @@ export type IntegrationImportSettings = z.infer<
 >;
 
 export const defaultIntegrationImportSettings: IntegrationImportSettings = {
+  syncPolicy: {
+    existingProductsMode: "UPDATE_ENABLED_FIELDS",
+  },
   products: {
     enabled: true,
     fields: {
@@ -204,6 +212,7 @@ export function normalizeIntegrationImportSettings(
     return defaults;
   }
 
+  const syncPolicy = getNestedRecord(value, "syncPolicy");
   const products = getNestedRecord(value, "products");
   const productFields = getNestedRecord(products, "fields");
   const categories = getNestedRecord(value, "categories");
@@ -217,6 +226,10 @@ export function normalizeIntegrationImportSettings(
 
   const merged = {
     ...defaults,
+    syncPolicy: {
+      ...defaults.syncPolicy,
+      ...syncPolicy,
+    },
     products: {
       ...defaults.products,
       ...products,
@@ -235,7 +248,7 @@ export function normalizeIntegrationImportSettings(
       primarySource:
         pricing.primarySource === "PRICE_TABLE"
           ? "SELECTED_PRICE_TABLE"
-          : pricing.primarySource,
+          : pricing.primarySource ?? defaults.pricing.primarySource,
       priceTablesMode: normalizePriceTablesMode(
         pricing,
         selectedPriceTableIds,

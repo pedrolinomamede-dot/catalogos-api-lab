@@ -124,7 +124,7 @@ async function runIntegrationSyncJob(
   | {
       ok: true;
       jobId: string;
-      status: "SUCCESS";
+      status: "SUCCESS" | "PARTIAL";
       stats: IntegrationSyncStats;
     }
   | {
@@ -184,12 +184,15 @@ async function runIntegrationSyncJob(
       mode: input.mode,
     });
     const finishedAt = new Date();
+    const hasSuccessfulItems = stats.created + stats.updated + stats.skipped > 0;
+    const jobStatus =
+      stats.failed > 0 && hasSuccessfulItems ? "PARTIAL" : "SUCCESS";
 
     await withBrand(input.brandId, async (tx) => {
       await tx.integrationSyncJobV2.update({
         where: { id: job.id },
         data: {
-          status: "SUCCESS",
+          status: jobStatus,
           finishedAt,
           statsJson: stats,
         },
@@ -206,10 +209,43 @@ async function runIntegrationSyncJob(
       });
     });
 
+    if (stats.failed > 0 && !hasSuccessfulItems) {
+      const message = "All synchronized products failed during processing.";
+
+      await withBrand(input.brandId, async (tx) => {
+        await Promise.all([
+          tx.integrationSyncJobV2.update({
+            where: { id: job.id },
+            data: {
+              status: "FAILED",
+              errorJson: {
+                message,
+                provider: connection.provider,
+                resource: input.resource,
+              },
+            },
+          }),
+          tx.integrationConnectionV2.update({
+            where: { id: connection.id },
+            data: {
+              lastSyncError: message,
+            },
+          }),
+        ]);
+      });
+
+      return {
+        ok: false as const,
+        statusCode: 500,
+        message,
+        jobId: job.id,
+      };
+    }
+
     return {
       ok: true as const,
       jobId: job.id,
-      status: "SUCCESS" as const,
+      status: jobStatus,
       stats,
     };
   } catch (error) {

@@ -67,6 +67,7 @@ import {
   importBaseProductsCsvV2,
   listBaseProductImagesV2,
   listBaseProducts,
+  updateBaseProductSyncLocksV2,
   updateBaseProductV2,
   updateBaseProductImageV2,
 } from "@/lib/api/v2/base-products";
@@ -281,6 +282,17 @@ export function useUpdateBaseProductImageV2() {
   return useMutation({
     mutationFn: (input: UpdateBaseProductImageInput) =>
       updateBaseProductImageV2(input.id, input.imageUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.baseProducts.root });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
+    },
+  });
+}
+
+export function useUpdateBaseProductSyncLocksV2() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateBaseProductSyncLocksV2,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.baseProducts.root });
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });

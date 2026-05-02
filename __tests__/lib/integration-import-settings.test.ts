@@ -10,6 +10,9 @@ describe("integration import settings", () => {
       defaultIntegrationImportSettings,
     );
     expect(defaultIntegrationImportSettings.pricing.priceTablesMode).toBe("NONE");
+    expect(
+      defaultIntegrationImportSettings.syncPolicy.existingProductsMode,
+    ).toBe("UPDATE_ENABLED_FIELDS");
   });
 
   it("merges partial settings and normalizes selected price table IDs", () => {
@@ -76,5 +79,20 @@ describe("integration import settings", () => {
         },
       }),
     ).toBe("Informe o ID da tabela principal antes de sincronizar.");
+  });
+
+  it("keeps the global sync policy when partially configured", () => {
+    const settings = normalizeIntegrationImportSettings({
+      syncPolicy: {
+        existingProductsMode: "CREATE_ONLY",
+      },
+      images: {
+        enabled: false,
+      },
+    });
+
+    expect(settings.syncPolicy.existingProductsMode).toBe("CREATE_ONLY");
+    expect(settings.images.enabled).toBe(false);
+    expect(settings.products.enabled).toBe(true);
   });
 });

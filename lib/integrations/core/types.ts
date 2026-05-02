@@ -115,6 +115,11 @@ export type IntegrationSyncStats = {
   skipped: number;
   failed: number;
   imagesCreated?: number;
+  imageUrlUpdated?: number;
+  galleryRebuilt?: number;
+  imagesSkippedBySettings?: number;
+  skippedLocked?: number;
+  skippedExistingByPolicy?: number;
   categoriesCleaned?: number;
   pageSize?: number;
   maxItems?: number;

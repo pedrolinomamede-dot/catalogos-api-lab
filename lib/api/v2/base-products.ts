@@ -5,6 +5,7 @@ import type {
   DeleteBaseProductImageV2Result,
   ImportBaseProductsCsvV2Item,
   ProductBaseImageV2,
+  UpdateBaseProductSyncLocksRequest,
   UpdateBaseProductV2Request,
 } from "@/types/api";
 
@@ -106,6 +107,16 @@ export async function updateBaseProductV2(
     `/api/v2/produtos-base/${id}`,
     body,
   );
+  return res.data;
+}
+
+export async function updateBaseProductSyncLocksV2(
+  body: UpdateBaseProductSyncLocksRequest,
+): Promise<{ updatedCount: number }> {
+  const res = await apiPatch<
+    UpdateBaseProductSyncLocksRequest,
+    ApiEnvelope<{ updatedCount: number }>
+  >("/api/v2/produtos-base/sync-locks", body);
   return res.data;
 }
 

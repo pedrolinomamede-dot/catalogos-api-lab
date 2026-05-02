@@ -271,6 +271,10 @@ export type BaseProductV2 = {
   suppliersJson?: unknown;
   gradeAttributesJson?: unknown;
   externalMetadataJson?: unknown;
+  integrationSyncLocked: boolean;
+  integrationSyncLockedAt?: Date | null;
+  integrationSyncLockReason?: string | null;
+  integrationSyncLockedByUserId?: string | null;
   images?: ProductBaseImageV2[];
   createdAt: Date;
   updatedAt: Date;
@@ -299,6 +303,12 @@ export type UpdateBaseProductV2Request = Partial<{
   size: string | null;
   isActive: boolean;
 }>;
+
+export type UpdateBaseProductSyncLocksRequest = {
+  ids: string[];
+  locked: boolean;
+  reason?: string | null;
+};
 
 export type ImportBaseProductsCsvV2Item = {
   code: string;

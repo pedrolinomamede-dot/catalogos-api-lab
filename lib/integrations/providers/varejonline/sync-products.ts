@@ -285,6 +285,52 @@ async function upsertProduct(
   settings: IntegrationImportSettings,
 ) {
   const sku = normalizeSku(product);
+  const existing = await tx.productBaseV2.findUnique({
+    where: {
+      integrationConnectionId_sourceExternalId: {
+        integrationConnectionId: context.connection.id,
+        sourceExternalId: product.externalId,
+      },
+    },
+    select: {
+      id: true,
+      imageUrl: true,
+      integrationSyncLocked: true,
+    },
+  });
+  const hasExistingProduct = Boolean(existing);
+
+  if (existing?.integrationSyncLocked) {
+    return {
+      created: 0,
+      updated: 0,
+      skipped: 1,
+      skippedLocked: 1,
+      skippedExistingByPolicy: 0,
+      imagesCreated: 0,
+      imageUrlUpdated: 0,
+      galleryRebuilt: 0,
+      imagesSkippedBySettings: 0,
+    };
+  }
+
+  if (
+    hasExistingProduct &&
+    settings.syncPolicy.existingProductsMode === "CREATE_ONLY"
+  ) {
+    return {
+      created: 0,
+      updated: 0,
+      skipped: 1,
+      skippedLocked: 0,
+      skippedExistingByPolicy: 1,
+      imagesCreated: 0,
+      imageUrlUpdated: 0,
+      galleryRebuilt: 0,
+      imagesSkippedBySettings: 0,
+    };
+  }
+
   const { categoryId, subcategoryId } = await resolveCategoryIds(
     tx,
     context.brandId,
@@ -295,17 +341,6 @@ async function upsertProduct(
   const resolvedPrice = resolveProductPrice(product, settings);
   const storedTablePrices = resolveStoredTablePrices(product, settings);
   const price = resolvedPrice !== null ? resolvedPrice.toFixed(2) : null;
-
-  const existing = await tx.productBaseV2.findUnique({
-    where: {
-      integrationConnectionId_sourceExternalId: {
-        integrationConnectionId: context.connection.id,
-        sourceExternalId: product.externalId,
-      },
-    },
-    select: { id: true },
-  });
-  const hasExistingProduct = Boolean(existing);
 
   const productFieldData = settings.products.enabled
     ? {
@@ -396,8 +431,6 @@ async function upsertProduct(
   const data = {
     sku,
     ...productFieldData,
-    groupName: product.groupName,
-    subgroupName: product.subgroupName,
     isActive: product.isActive,
     sourceType: "INTEGRATION" as const,
     sourceProvider: "VAREJONLINE" as const,
@@ -415,6 +448,8 @@ async function upsertProduct(
     ? {
         categoryId,
         subcategoryId,
+        groupName: product.groupName,
+        subgroupName: product.subgroupName,
         ...(settings.categories.storeDepartmentAndSectionAsMetadata
           ? {
               department: product.department,
@@ -546,6 +581,14 @@ async function upsertProduct(
         }
       : {};
 
+  const imagesSkippedBySettings =
+    product.imageUrls.length > 0 &&
+    (!settings.images.enabled ||
+      !settings.images.importPrimaryImage ||
+      !settings.images.importGallery)
+      ? 1
+      : 0;
+
   const saved = existing
     ? await tx.productBaseV2.update({
         where: { id: existing.id },
@@ -575,6 +618,8 @@ async function upsertProduct(
         select: { id: true },
       });
 
+  let galleryRebuilt = 0;
+  let imagesCreated = 0;
   if (settings.images.enabled && settings.images.importGallery) {
     await tx.productBaseImageV2.deleteMany({
       where: {
@@ -592,13 +637,29 @@ async function upsertProduct(
           sortOrder: index,
         })),
       });
+      imagesCreated = product.imageUrls.length;
     }
+
+    galleryRebuilt = 1;
   }
 
   return {
     created: existing ? 0 : 1,
     updated: existing ? 1 : 0,
-    imagesCreated: product.imageUrls.length,
+    skipped: 0,
+    skippedLocked: 0,
+    skippedExistingByPolicy: 0,
+    imagesCreated,
+    imageUrlUpdated:
+      settings.images.enabled &&
+      settings.images.importPrimaryImage &&
+      existing?.imageUrl !== imageUrl
+        ? 1
+        : !existing && imageUrl
+          ? 1
+          : 0,
+    galleryRebuilt,
+    imagesSkippedBySettings,
   };
 }
 
@@ -647,6 +708,11 @@ export async function syncVarejonlineProducts(
     skipped: 0,
     failed: 0,
     imagesCreated: 0,
+    imageUrlUpdated: 0,
+    galleryRebuilt: 0,
+    imagesSkippedBySettings: 0,
+    skippedLocked: 0,
+    skippedExistingByPolicy: 0,
     categoriesCleaned: 0,
     pageSize,
     maxItems,
@@ -694,34 +760,41 @@ export async function syncVarejonlineProducts(
     }
   }
 
-  for (let index = 0; index < normalizedProducts.length; index += batchSize) {
-    const batch = normalizedProducts.slice(index, index + batchSize);
+  for (const product of normalizedProducts) {
+    try {
+      const result = await withBrand(context.brandId, async (tx) =>
+        upsertProduct(tx, context, product, importSettings),
+      );
+      stats.created += result.created;
+      stats.updated += result.updated;
+      stats.skipped += result.skipped;
+      stats.imagesCreated = (stats.imagesCreated ?? 0) + result.imagesCreated;
+      stats.imageUrlUpdated =
+        (stats.imageUrlUpdated ?? 0) + result.imageUrlUpdated;
+      stats.galleryRebuilt =
+        (stats.galleryRebuilt ?? 0) + result.galleryRebuilt;
+      stats.imagesSkippedBySettings =
+        (stats.imagesSkippedBySettings ?? 0) + result.imagesSkippedBySettings;
+      stats.skippedLocked =
+        (stats.skippedLocked ?? 0) + result.skippedLocked;
+      stats.skippedExistingByPolicy =
+        (stats.skippedExistingByPolicy ?? 0) + result.skippedExistingByPolicy;
+    } catch (error) {
+      stats.failed += 1;
+      const message =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+          ? "SKU already exists in Base Geral for another source."
+          : error instanceof Error
+            ? error.message
+            : "Could not persist Varejonline product";
 
-    await withBrand(context.brandId, async (tx) => {
-      for (const product of batch) {
-        try {
-          const result = await upsertProduct(tx, context, product, importSettings);
-          stats.created += result.created;
-          stats.updated += result.updated;
-          stats.imagesCreated = (stats.imagesCreated ?? 0) + result.imagesCreated;
-        } catch (error) {
-          stats.failed += 1;
-          const message =
-            error instanceof Prisma.PrismaClientKnownRequestError &&
-            error.code === "P2002"
-              ? "SKU already exists in Base Geral for another source."
-              : error instanceof Error
-                ? error.message
-                : "Could not persist Varejonline product";
-
-          stats.errors?.push({
-            externalId: product.externalId,
-            externalCode: product.externalCode,
-            message,
-          });
-        }
-      }
-    });
+      stats.errors?.push({
+        externalId: product.externalId,
+        externalCode: product.externalCode,
+        message,
+      });
+    }
   }
 
   const fiscalCategoryNames = collectFiscalCategoryNames(normalizedProducts);

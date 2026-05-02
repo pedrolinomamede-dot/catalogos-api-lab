@@ -24,7 +24,11 @@ import {
 } from "@/components/ui/table";
 import { getErrorMessage } from "@/lib/api/error";
 import { queryKeys } from "@/lib/api/query-keys";
-import { useBaseProducts, useDeleteBaseProductV2 } from "@/lib/api/hooks";
+import {
+  useBaseProducts,
+  useDeleteBaseProductV2,
+  useUpdateBaseProductSyncLocksV2,
+} from "@/lib/api/hooks";
 import { listAllBaseProductIds } from "@/lib/api/v2/base-products";
 import { toastError, toastSuccess } from "@/lib/ui/toast";
 
@@ -64,6 +68,7 @@ export function BaseProductsList() {
     pageSize: PAGE_SIZE,
   });
   const deleteMutation = useDeleteBaseProductV2();
+  const syncLocksMutation = useUpdateBaseProductSyncLocksV2();
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -86,11 +91,13 @@ export function BaseProductsList() {
   const totalPages = Math.max(1, meta?.totalPages ?? 1);
   const currentPage = Math.min(Math.max(page, 1), totalPages);
   const selectedCount = selectedIds.size;
+  const selectedIntegrationIds = Array.from(selectedIds);
   const allPageSelected =
     baseProducts.length > 0 &&
     baseProducts.every((product) => selectedIds.has(product.id));
   const isSelectingGlobal = isSelectingSearch || isSelectingAllImported;
   const isSelectionActionsDisabled = isDeleting || isSelectingGlobal || isLoading;
+  const isUpdatingSyncLocks = syncLocksMutation.isPending;
 
   useEffect(() => {
     if (page > totalPages) {
@@ -207,6 +214,43 @@ export function BaseProductsList() {
     return true;
   };
 
+  const handleUpdateSyncLocks = async (locked: boolean) => {
+    if (selectedIntegrationIds.length === 0) {
+      toastError(
+        "Nenhum produto elegivel",
+        "Selecione ao menos um produto importado por integracao para alterar a reimportacao.",
+      );
+      return;
+    }
+
+    try {
+      const result = await syncLocksMutation.mutateAsync({
+        ids: selectedIntegrationIds,
+        locked,
+      });
+
+      if (result.updatedCount === 0) {
+        toastError(
+          "Nenhum produto elegivel",
+          "A selecao atual nao contem produtos importados por integracao.",
+        );
+        return;
+      }
+
+      toastSuccess(
+        locked
+          ? `${result.updatedCount} produto(s) bloqueado(s) para reimportacao`
+          : `${result.updatedCount} produto(s) liberado(s) para reimportacao`,
+      );
+    } catch (err) {
+      const message = getErrorMessage(err);
+      toastError(
+        message.title,
+        message.description ?? "Falha ao atualizar a politica de reimportacao.",
+      );
+    }
+  };
+
   if (isLoading) {
     return <LoadingState label="Carregando Base Geral" />;
   }
@@ -251,17 +295,37 @@ export function BaseProductsList() {
                 {selectedCount} selecionado(s)
               </p>
               <p className="text-xs text-muted-foreground">
-                Acoes em lote disponiveis apenas para exclusao.
+                Produtos integrados selecionados podem ser bloqueados ou liberados para reimportacao.
               </p>
             </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setIsBulkDeleteOpen(true)}
-              disabled={isDeleting}
-            >
-              Excluir selecionados
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleUpdateSyncLocks(true)}
+                disabled={isUpdatingSyncLocks || selectedCount === 0}
+              >
+                Bloquear reimportacao
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleUpdateSyncLocks(false)}
+                disabled={isUpdatingSyncLocks || selectedCount === 0}
+              >
+                Liberar reimportacao
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsBulkDeleteOpen(true)}
+                disabled={isDeleting || isUpdatingSyncLocks}
+              >
+                Excluir selecionados
+              </Button>
+            </div>
           </div>
         </Card>
       ) : null}
@@ -353,6 +417,9 @@ export function BaseProductsList() {
                         {product.name}
                       </p>
                       <Badge variant="outline">{getSourceLabel(product)}</Badge>
+                      {product.integrationSyncLocked ? (
+                        <Badge variant="secondary">Atualizacao bloqueada</Badge>
+                      ) : null}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       SKU {product.sku}
