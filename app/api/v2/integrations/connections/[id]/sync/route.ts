@@ -57,6 +57,7 @@ export async function POST(
     connectionId: id,
     resource,
     mode,
+    background: true,
   });
 
   if (!result.ok) {
@@ -64,11 +65,11 @@ export async function POST(
       result.statusCode ?? 500,
       result.statusCode === 404
         ? "not_found"
+        : result.statusCode === 400
+          ? "validation_error"
         : "integration_sync_failed",
       result.message,
-      {
-        jobId: result.jobId,
-      },
+      "jobId" in result ? { jobId: result.jobId } : undefined,
     );
   }
 
@@ -77,8 +78,7 @@ export async function POST(
       ok: true,
       data: {
         jobId: result.jobId,
-        status: "SUCCESS",
-        stats: result.stats,
+        status: result.status,
       },
     },
     { status: 202 },

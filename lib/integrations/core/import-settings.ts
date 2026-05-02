@@ -97,7 +97,7 @@ export const defaultIntegrationImportSettings: IntegrationImportSettings = {
     primarySource: "DEFAULT_PRICE",
     importCostPrice: true,
     importDiscountRules: true,
-    priceTablesMode: "SELECTED",
+    priceTablesMode: "NONE",
     selectedPriceTableIds: [],
     primaryPriceTableId: null,
   },
@@ -155,6 +155,41 @@ function normalizeNullableString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function normalizePriceTablesMode(
+  pricing: Record<string, unknown>,
+  selectedPriceTableIds: string[],
+  primaryPriceTableId: string | null,
+): IntegrationImportSettings["pricing"]["priceTablesMode"] {
+  const rawMode = pricing.priceTablesMode;
+  const hasSelectedTables = selectedPriceTableIds.length > 0;
+  const usesSelectedPrimary =
+    (pricing.primarySource === "PRICE_TABLE" ||
+      pricing.primarySource === "SELECTED_PRICE_TABLE") &&
+    Boolean(primaryPriceTableId);
+
+  if (rawMode === "NONE") {
+    return "NONE";
+  }
+
+  if (rawMode === "ALL") {
+    return hasSelectedTables ? "SELECTED" : "NONE";
+  }
+
+  if (rawMode === "SELECTED") {
+    return hasSelectedTables || usesSelectedPrimary ? "SELECTED" : "NONE";
+  }
+
+  if (pricing.importPriceTables === true) {
+    return hasSelectedTables || usesSelectedPrimary ? "SELECTED" : "NONE";
+  }
+
+  if (pricing.importPriceTables === false) {
+    return "NONE";
+  }
+
+  return "NONE";
+}
+
 export function buildDefaultIntegrationImportSettings(): IntegrationImportSettings {
   return JSON.parse(
     JSON.stringify(defaultIntegrationImportSettings),
@@ -177,6 +212,8 @@ export function normalizeIntegrationImportSettings(
   const images = getNestedRecord(value, "images");
   const fiscal = getNestedRecord(value, "fiscal");
   const logistics = getNestedRecord(value, "logistics");
+  const selectedPriceTableIds = normalizeStringArray(pricing.selectedPriceTableIds);
+  const primaryPriceTableId = normalizeNullableString(pricing.primaryPriceTableId);
 
   const merged = {
     ...defaults,
@@ -199,17 +236,13 @@ export function normalizeIntegrationImportSettings(
         pricing.primarySource === "PRICE_TABLE"
           ? "SELECTED_PRICE_TABLE"
           : pricing.primarySource,
-      priceTablesMode:
-        pricing.priceTablesMode === "ALL"
-          ? "SELECTED"
-          : pricing.priceTablesMode ??
-            (pricing.importPriceTables === true
-              ? "SELECTED"
-              : pricing.importPriceTables === false
-                ? "NONE"
-                : defaults.pricing.priceTablesMode),
-      selectedPriceTableIds: normalizeStringArray(pricing.selectedPriceTableIds),
-      primaryPriceTableId: normalizeNullableString(pricing.primaryPriceTableId),
+      priceTablesMode: normalizePriceTablesMode(
+        pricing,
+        selectedPriceTableIds,
+        primaryPriceTableId,
+      ),
+      selectedPriceTableIds,
+      primaryPriceTableId,
     },
     inventory: {
       ...defaults.inventory,
@@ -231,4 +264,32 @@ export function normalizeIntegrationImportSettings(
 
   const parsed = integrationImportSettingsSchema.safeParse(merged);
   return parsed.success ? parsed.data : defaults;
+}
+
+export function getIntegrationImportSettingsSyncError(value: unknown) {
+  const settings = normalizeIntegrationImportSettings(value);
+
+  if (!settings.pricing.enabled) {
+    return null;
+  }
+
+  if (
+    settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
+    !settings.pricing.primaryPriceTableId
+  ) {
+    return "Informe o ID da tabela principal antes de sincronizar.";
+  }
+
+  if (
+    settings.pricing.priceTablesMode === "SELECTED" &&
+    settings.pricing.selectedPriceTableIds.length === 0 &&
+    !(
+      settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
+      settings.pricing.primaryPriceTableId
+    )
+  ) {
+    return "Informe os IDs das tabelas de preco antes de sincronizar.";
+  }
+
+  return null;
 }

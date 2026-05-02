@@ -88,12 +88,28 @@ function getProviderCapabilities(provider: IntegrationProviderDescriptor) {
 }
 
 function IntegrationJobsPreview({ connectionId }: { connectionId: string }) {
-  const { data, isLoading, isError } = useIntegrationConnectionJobs(connectionId, {
-    page: 1,
-    pageSize: 5,
-  });
+  const { data, isLoading, isError, refetch } = useIntegrationConnectionJobs(
+    connectionId,
+    {
+      page: 1,
+      pageSize: 5,
+    },
+  );
 
   const jobs = Array.isArray(data) ? data : data?.data ?? [];
+  const hasRunningJob = jobs.some((job) => job.status === "RUNNING");
+
+  useEffect(() => {
+    if (!hasRunningJob) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      refetch();
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [hasRunningJob, refetch]);
 
   if (isLoading) {
     return <p className="text-xs text-muted-foreground">Carregando historico...</p>;

@@ -1,5 +1,6 @@
 import {
   defaultIntegrationImportSettings,
+  getIntegrationImportSettingsSyncError,
   normalizeIntegrationImportSettings,
 } from "@/lib/integrations/core/import-settings";
 
@@ -8,6 +9,7 @@ describe("integration import settings", () => {
     expect(normalizeIntegrationImportSettings(null)).toEqual(
       defaultIntegrationImportSettings,
     );
+    expect(defaultIntegrationImportSettings.pricing.priceTablesMode).toBe("NONE");
   });
 
   it("merges partial settings and normalizes selected price table IDs", () => {
@@ -29,5 +31,50 @@ describe("integration import settings", () => {
     expect(settings.pricing.primaryPriceTableId).toBe("45");
     expect(settings.categories.enabled).toBe(false);
     expect(settings.products.fields.name).toBe(true);
+  });
+
+  it("normalizes legacy ALL without selected IDs to NONE", () => {
+    const settings = normalizeIntegrationImportSettings({
+      pricing: {
+        priceTablesMode: "ALL",
+        selectedPriceTableIds: [],
+      },
+    });
+
+    expect(settings.pricing.priceTablesMode).toBe("NONE");
+    expect(settings.pricing.selectedPriceTableIds).toEqual([]);
+  });
+
+  it("normalizes SELECTED without IDs to NONE unless a primary table is set", () => {
+    const withoutPrimary = normalizeIntegrationImportSettings({
+      pricing: {
+        priceTablesMode: "SELECTED",
+        selectedPriceTableIds: [],
+      },
+    });
+
+    const withPrimary = normalizeIntegrationImportSettings({
+      pricing: {
+        primarySource: "SELECTED_PRICE_TABLE",
+        priceTablesMode: "SELECTED",
+        selectedPriceTableIds: [],
+        primaryPriceTableId: "45",
+      },
+    });
+
+    expect(withoutPrimary.pricing.priceTablesMode).toBe("NONE");
+    expect(withPrimary.pricing.priceTablesMode).toBe("SELECTED");
+    expect(withPrimary.pricing.primaryPriceTableId).toBe("45");
+  });
+
+  it("reports a clear sync error for selected table pricing without a primary ID", () => {
+    expect(
+      getIntegrationImportSettingsSyncError({
+        pricing: {
+          primarySource: "SELECTED_PRICE_TABLE",
+          primaryPriceTableId: null,
+        },
+      }),
+    ).toBe("Informe o ID da tabela principal antes de sincronizar.");
   });
 });

@@ -145,27 +145,15 @@ function IntegrationImportSettingsForm({
     if (
       settings.pricing.enabled &&
       settings.pricing.priceTablesMode === "SELECTED" &&
-      settings.pricing.selectedPriceTableIds.length === 0
+      settings.pricing.selectedPriceTableIds.length === 0 &&
+      !(
+        settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
+        settings.pricing.primaryPriceTableId
+      )
     ) {
       toastError(
         "IDs obrigatorios",
         "Informe ao menos um ID de tabela para usar a leitura de tabelas selecionadas.",
-      );
-      return;
-    }
-
-    if (
-      settings.pricing.enabled &&
-      settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
-      settings.pricing.priceTablesMode === "SELECTED" &&
-      settings.pricing.primaryPriceTableId &&
-      !settings.pricing.selectedPriceTableIds.includes(
-        settings.pricing.primaryPriceTableId,
-      )
-    ) {
-      toastError(
-        "Tabela principal invalida",
-        "O ID da tabela principal precisa estar incluido na lista de tabelas selecionadas.",
       );
       return;
     }
@@ -457,8 +445,8 @@ function IntegrationImportSettingsForm({
           </div>
         ) : null}
         <p className="text-xs text-muted-foreground">
-          Nesta fase, a configuracao fica persistida por tenant. A sync vai
-          passar a obedecer essas regras na proxima etapa.
+          Categorias e precos ja obedecem esta configuracao na proxima
+          sincronizacao. Os demais blocos serao aplicados nas proximas etapas.
         </p>
       </SettingsSection>
 

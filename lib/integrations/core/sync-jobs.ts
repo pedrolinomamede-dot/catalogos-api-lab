@@ -4,9 +4,40 @@ import type {
 } from "@prisma/client";
 
 import { getIntegrationProvider } from "@/lib/integrations/core/providers";
+import type {
+  IntegrationSyncConnectionContext,
+  IntegrationSyncStats,
+} from "@/lib/integrations/core/types";
+import { getIntegrationImportSettingsSyncError } from "@/lib/integrations/core/import-settings";
 import { withBrand } from "@/lib/prisma";
 
 type Tx = Parameters<Parameters<typeof withBrand>[1]>[0];
+
+type TriggerSyncJobInput = {
+  brandId: string;
+  connectionId: string;
+  resource: IntegrationSyncResource;
+  mode: IntegrationSyncJobMode;
+  background?: boolean;
+};
+
+type SyncJobSetup = {
+  connection: IntegrationSyncConnectionContext;
+  job: {
+    id: string;
+  };
+  startedAt: Date;
+};
+
+function getErrorStatusCode(error: unknown) {
+  if (error && typeof error === "object" && "statusCode" in error) {
+    const statusCode = (error as { statusCode?: unknown }).statusCode;
+    if (typeof statusCode === "number") {
+      return statusCode;
+    }
+  }
+  return 500;
+}
 
 export async function listIntegrationJobs(
   tx: Tx,
@@ -35,14 +66,7 @@ export async function listIntegrationJobs(
   return { items, total };
 }
 
-export async function triggerIntegrationSyncJob(
-  input: {
-    brandId: string;
-    connectionId: string;
-    resource: IntegrationSyncResource;
-    mode: IntegrationSyncJobMode;
-  },
-) {
+async function createSyncJobSetup(input: TriggerSyncJobInput) {
   const startedAt = new Date();
   const setup = await withBrand(input.brandId, async (tx) => {
     const connection = await tx.integrationConnectionV2.findFirst({
@@ -76,7 +100,7 @@ export async function triggerIntegrationSyncJob(
       },
     });
 
-    return { connection, job };
+    return { connection, job: { id: job.id }, startedAt };
   });
 
   if (!setup) {
@@ -87,7 +111,30 @@ export async function triggerIntegrationSyncJob(
     };
   }
 
-  const { connection, job } = setup;
+  return {
+    ok: true as const,
+    setup,
+  };
+}
+
+async function runIntegrationSyncJob(
+  input: TriggerSyncJobInput,
+  setup: SyncJobSetup,
+): Promise<
+  | {
+      ok: true;
+      jobId: string;
+      status: "SUCCESS";
+      stats: IntegrationSyncStats;
+    }
+  | {
+      ok: false;
+      statusCode: number;
+      message: string;
+      jobId: string;
+    }
+> {
+  const { connection, job, startedAt } = setup;
   const provider = getIntegrationProvider(connection.provider);
   if (!provider || !provider.descriptor.supportsSync || !provider.syncProducts) {
     const syncUnsupportedMessage = `${connection.provider} sync is not implemented yet.`;
@@ -162,12 +209,14 @@ export async function triggerIntegrationSyncJob(
     return {
       ok: true as const,
       jobId: job.id,
+      status: "SUCCESS" as const,
       stats,
     };
   } catch (error) {
     const finishedAt = new Date();
     const message =
       error instanceof Error ? error.message : "Integration sync failed";
+    const statusCode = getErrorStatusCode(error);
     const errorJson = {
       message,
       provider: connection.provider,
@@ -197,9 +246,71 @@ export async function triggerIntegrationSyncJob(
 
     return {
       ok: false as const,
-      statusCode: 500,
+      statusCode,
       message,
       jobId: job.id,
     };
   }
+}
+
+export async function triggerIntegrationSyncJob(input: TriggerSyncJobInput) {
+  const setupResult = await createSyncJobSetup(input);
+  if (!setupResult.ok) {
+    return setupResult;
+  }
+
+  const validationMessage = getIntegrationImportSettingsSyncError(
+    setupResult.setup.connection.importSettingsJson,
+  );
+  if (validationMessage) {
+    const { connection, job, startedAt } = setupResult.setup;
+    const finishedAt = new Date();
+    const errorJson = {
+      message: validationMessage,
+      provider: connection.provider,
+      resource: input.resource,
+    };
+
+    await withBrand(input.brandId, async (tx) => {
+      await Promise.all([
+        tx.integrationSyncJobV2.update({
+          where: { id: job.id },
+          data: {
+            status: "FAILED",
+            finishedAt,
+            errorJson,
+          },
+        }),
+        tx.integrationConnectionV2.update({
+          where: { id: connection.id },
+          data: {
+            status: connection.status,
+            lastSyncAt: startedAt,
+            lastSyncError: validationMessage,
+          },
+        }),
+      ]);
+    });
+
+    return {
+      ok: false as const,
+      statusCode: 400,
+      message: validationMessage,
+      jobId: job.id,
+    };
+  }
+
+  if (input.background) {
+    void runIntegrationSyncJob(input, setupResult.setup).catch((error) => {
+      console.error("Background integration sync failed", error);
+    });
+
+    return {
+      ok: true as const,
+      jobId: setupResult.setup.job.id,
+      status: "RUNNING" as const,
+    };
+  }
+
+  return runIntegrationSyncJob(input, setupResult.setup);
 }

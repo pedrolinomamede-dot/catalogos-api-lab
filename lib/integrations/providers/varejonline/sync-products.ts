@@ -90,6 +90,44 @@ function resolveRequestedPriceTableIds(settings: IntegrationImportSettings) {
   return [...ids];
 }
 
+function createSyncConfigurationError(message: string) {
+  const error = new Error(message) as Error & {
+    statusCode: number;
+    code: string;
+  };
+  error.statusCode = 400;
+  error.code = "validation_error";
+  return error;
+}
+
+function validatePricingSettings(settings: IntegrationImportSettings) {
+  if (!settings.pricing.enabled) {
+    return;
+  }
+
+  if (
+    settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
+    !settings.pricing.primaryPriceTableId
+  ) {
+    throw createSyncConfigurationError(
+      "Informe o ID da tabela principal antes de sincronizar.",
+    );
+  }
+
+  if (
+    settings.pricing.priceTablesMode === "SELECTED" &&
+    settings.pricing.selectedPriceTableIds.length === 0 &&
+    !(
+      settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
+      settings.pricing.primaryPriceTableId
+    )
+  ) {
+    throw createSyncConfigurationError(
+      "Informe os IDs das tabelas de preco antes de sincronizar.",
+    );
+  }
+}
+
 function isFiscalCategoryLevel(level: string | null) {
   const normalized = level ?? "";
   return ["TRIBUT", "FISCAL", "IMPOST", "ORIGEM", "NCM", "CEST"].some(
@@ -409,6 +447,7 @@ export async function syncVarejonlineProducts(
   const importSettings = normalizeIntegrationImportSettings(
     context.connection.importSettingsJson,
   );
+  validatePricingSettings(importSettings);
   const requestedPriceTableIds = resolveRequestedPriceTableIds(importSettings);
 
   const stats: IntegrationSyncStats = {
