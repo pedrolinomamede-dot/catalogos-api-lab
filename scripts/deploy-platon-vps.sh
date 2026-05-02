@@ -5,7 +5,7 @@ APP_DIR="${APP_DIR:-/var/www/catalogos-api-lab/app}"
 APP_NAME="${APP_NAME:-catalogos-api-lab}"
 APP_PORT="${APP_PORT:-3000}"
 APP_DOMAIN="${APP_DOMAIN:-catalogofacil.solucaoviavel.com}"
-BRANCH="${BRANCH:-main}"
+BRANCH="${BRANCH:-codex/super-admin-platform-foundation}"
 PM2_HOME="${PM2_HOME:-${HOME}/.pm2}"
 
 export PM2_HOME
@@ -39,6 +39,7 @@ else
   git checkout -b "$BRANCH" "origin/$BRANCH"
 fi
 git pull --ff-only origin "$BRANCH"
+git log -1 --oneline
 
 echo "== Instalando dependencias =="
 npm ci --no-audit --no-fund
@@ -48,6 +49,7 @@ npx prisma migrate deploy
 npx prisma generate
 
 echo "== Build =="
+rm -rf .next
 npm run build
 
 echo "== Garantindo Chromium do Playwright =="

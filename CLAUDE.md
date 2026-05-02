@@ -20,6 +20,7 @@ Sou o assistente de desenvolvimento do Pedro Mamede. Trabalho como engenheiro fu
 - Faco commit com mensagens semanticas (feat, fix, refactor, chore) e sempre incluo Co-Authored-By
 - Nunca faco push sem confirmar com o Pedro primeiro
 - Apos commit+push, forneço o bloco de deploy pronto para o servidor
+- Em deploy na VPS, nunca assumo que `app online` significa `codigo novo publicado`; valido branch, commit e build antes de considerar o deploy concluido
 
 ### Padrao de comunicacao
 - Respostas concisas, sem emoji (a menos que o Pedro peça)
@@ -27,6 +28,30 @@ Sou o assistente de desenvolvimento do Pedro Mamede. Trabalho como engenheiro fu
 - Codigo em blocos formatados
 - Status updates curtos em marcos naturais
 - Nao repito o que o Pedro disse — apenas executo
+
+### Fluxo real de trabalho neste projeto
+- Fluxo normal: **local -> commit -> push -> deploy na VPS -> validacao visual/funcional**
+- O ambiente de desenvolvimento e o de producao usam a branch `codex/super-admin-platform-foundation` como referencia atual
+- Toda alteracao relevante deve ser validada localmente com `npm run build` antes de subir
+- Na VPS, o deploy correto exige:
+  1. confirmar branch e commit
+  2. instalar dependencias
+  3. aplicar migrations quando existirem
+  4. gerar Prisma Client
+  5. rebuildar do zero
+  6. reiniciar PM2
+  7. validar HTTP e, quando necessario, validar que o artefato novo foi mesmo gerado
+- Ja tivemos erros operacionais por:
+  - rodar deploy apontando para `main`
+  - reiniciar PM2 sem confirmar que a build nova terminou
+  - usar `npm run build 2>&1 | tail -5`, que esconde o progresso e faz parecer que o build travou
+  - tratar `curl 200/307` como prova de que o codigo novo entrou, quando isso so prova que a app esta no ar
+
+### Regra operacional para deploys
+- Nunca usar `npm run build 2>&1 | tail -5` na VPS
+- Nunca reiniciar o PM2 antes de o `npm run build` terminar e imprimir `standalone-assets-ready`
+- Quando houver duvida se a UI publicada corresponde ao commit novo, validar com `git log -1 --oneline` e `grep` dentro de `.next`
+- O `curl -fsSI http://127.0.0.1:3000/dashboard` valida disponibilidade do app, nao validade do artefato publicado
 
 ---
 
@@ -405,14 +430,40 @@ npx playwright install chromium
 ```
 
 ### Bloco de Deploy na VPS
-Apos commit+push para `origin main`, a fonte de verdade do deploy passa a ser:
+Apos commit+push para `origin codex/super-admin-platform-foundation`, a fonte de verdade do deploy passa a ser:
 
 ```bash
 cd /var/www/catalogos-api-lab/app
 bash ./scripts/deploy-platon-vps.sh
 ```
 
-Bloco equivalente (referencia operacional do script):
+### Como estamos subindo ajustes hoje
+
+Hoje a publicacao valida da VPS acontece a partir da branch:
+
+```bash
+codex/super-admin-platform-foundation
+```
+
+O deploy precisa seguir esta estrutura porque:
+
+1. **confirmar branch e commit**
+   - evita publicar acidentalmente `main` ou outra branch antiga
+2. **instalar dependencias**
+   - garante coerencia com o `package-lock.json`
+3. **aplicar migrations e gerar Prisma Client**
+   - evita erros de schema em runtime, como coluna nova inexistente
+4. **remover `.next` e rebuildar**
+   - evita PM2 servir artefatos antigos
+5. **executar o `postbuild`**
+   - o `prepare-standalone.sh` copia `public/` e `.next/static` para o runtime standalone
+6. **reiniciar PM2 somente depois do build concluir**
+   - garante que o processo novo suba com os assets corretos
+7. **validar**
+   - primeiro HTTP local, depois dominio
+   - se a UI ainda parecer antiga, usar `grep` em `.next` para confirmar que o texto novo entrou no artefato
+
+Bloco equivalente (referencia operacional do script atual):
 
 ```bash
 set -euo pipefail
@@ -421,7 +472,7 @@ export PM2_HOME=/home/ubuntu/.pm2
 APP_DIR="/var/www/catalogos-api-lab/app"
 APP_NAME="catalogos-api-lab"
 APP_PORT="3000"
-BRANCH="main"
+BRANCH="codex/super-admin-platform-foundation"
 
 cd "$APP_DIR"
 
@@ -432,6 +483,7 @@ echo "== Atualizando branch =="
 git fetch origin "$BRANCH" --prune
 git checkout "$BRANCH"
 git pull --ff-only origin "$BRANCH"
+git log -1 --oneline
 
 echo "== Instalando dependencias =="
 npm ci --no-audit --no-fund
@@ -441,14 +493,8 @@ npx prisma migrate deploy
 npx prisma generate
 
 echo "== Build =="
+rm -rf .next
 npm run build
-
-echo "== Preparando standalone =="
-mkdir -p .next/standalone/.next
-rm -rf .next/standalone/public
-rm -rf .next/standalone/.next/static
-cp -r public .next/standalone/
-cp -r .next/static .next/standalone/.next/
 
 echo "== Garantindo Chromium do Playwright =="
 npx playwright install chromium
@@ -469,6 +515,56 @@ curl -fsSI "https://catalogofacil.solucaoviavel.com/dashboard" || true
 echo "DEPLOY_OK branch=${BRANCH}"
 ```
 
+### Bloco manual seguro para incidentes / validacao forte
+
+Se houver suspeita de que a VPS puxou o commit certo mas continua servindo UI antiga, usar este bloco manual:
+
+```bash
+cd /var/www/catalogos-api-lab/app
+
+git fetch origin codex/super-admin-platform-foundation --prune
+git checkout codex/super-admin-platform-foundation
+git pull --ff-only origin codex/super-admin-platform-foundation
+
+git log -1 --oneline
+
+npm ci --no-audit --no-fund
+npx prisma migrate deploy
+npx prisma generate
+
+rm -rf .next
+npm run build
+
+pm2 restart catalogos-api-lab --update-env
+pm2 save
+
+curl -fsSI http://127.0.0.1:3000/dashboard
+```
+
+### Como diagnosticar quando a UI publicada parece velha
+
+1. Confirmar commit:
+```bash
+git log -1 --oneline
+```
+
+2. Confirmar que o texto novo existe no codigo fonte:
+```bash
+grep -n "texto novo" components/.../arquivo.tsx
+```
+
+3. Confirmar que o texto novo entrou na build:
+```bash
+grep -R "texto novo" .next -n | head
+```
+
+4. Confirmar que o texto antigo nao existe mais na build:
+```bash
+grep -R "texto antigo" .next -n | head
+```
+
+Se o texto novo nao estiver em `.next`, o deploy nao terminou corretamente, mesmo que o PM2 esteja online.
+
 ---
 
 ## Comandos Uteis (desenvolvimento)
@@ -485,11 +581,11 @@ npx prisma migrate deploy
 npx prisma generate
 npx prisma studio
 
-# Push para main (producao)
-git push origin main
+# Push para a branch atual publicada na VPS
+git push origin codex/super-admin-platform-foundation
 
-# Push para branch de ajustes atual
-git push origin codex/main-updated-continuation
+# Conferir commit atual antes do deploy
+git log -1 --oneline
 
 # Verificar remotes (deve ser APENAS origin)
 git remote -v
@@ -535,4 +631,4 @@ O LAB deve **sempre** ser isolado do principal.
 - Gosta de ver resultados visuais rapido
 - Trabalha com ambiente LAB isolado para experimentar antes de producao
 - Migrou do Windows para Zorin OS (Linux)
-- Usa Claude Code como ferramenta principal de desenvolvimento
+- Usa Codex como ferramenta principal de desenvolvimento
