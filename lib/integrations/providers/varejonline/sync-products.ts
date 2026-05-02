@@ -717,6 +717,7 @@ export async function syncVarejonlineProducts(
     pageSize,
     maxItems,
     batchSize,
+    onlyActive,
     errors: [],
   };
   const normalizedProducts: NormalizedExternalProduct[] = [];

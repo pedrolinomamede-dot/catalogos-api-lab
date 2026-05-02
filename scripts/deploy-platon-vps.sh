@@ -56,12 +56,7 @@ echo "== Garantindo Chromium do Playwright =="
 npx playwright install chromium
 
 echo "== Reiniciando app =="
-if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
-  pm2 restart "$APP_NAME" --update-env
-else
-  HOSTNAME=0.0.0.0 PORT="$APP_PORT" pm2 start .next/standalone/server.js --name "$APP_NAME"
-fi
-pm2 save
+bash ./scripts/restart-platon-pm2-with-env.sh
 
 echo "== Aguardando app subir =="
 sleep 8

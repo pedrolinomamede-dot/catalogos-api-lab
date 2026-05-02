@@ -124,6 +124,7 @@ export type IntegrationSyncStats = {
   pageSize?: number;
   maxItems?: number;
   batchSize?: number;
+  onlyActive?: boolean;
   errors?: Array<{
     externalId?: string | null;
     externalCode?: string | null;

@@ -457,9 +457,12 @@ O deploy precisa seguir esta estrutura porque:
    - evita PM2 servir artefatos antigos
 5. **executar o `postbuild`**
    - o `prepare-standalone.sh` copia `public/` e `.next/static` para o runtime standalone
-6. **reiniciar PM2 somente depois do build concluir**
+6. **carregar o `.env` antes do restart**
+   - o PM2 nao relê o `.env` sozinho
+   - o shell precisa exportar essas variaveis antes de `pm2 restart --update-env`
+7. **reiniciar PM2 somente depois do build concluir**
    - garante que o processo novo suba com os assets corretos
-7. **validar**
+8. **validar**
    - primeiro HTTP local, depois dominio
    - se a UI ainda parecer antiga, usar `grep` em `.next` para confirmar que o texto novo entrou no artefato
 
@@ -500,9 +503,7 @@ echo "== Garantindo Chromium do Playwright =="
 npx playwright install chromium
 
 echo "== Reiniciando app =="
-pm2 restart "$APP_NAME" --update-env || \
-  HOSTNAME=0.0.0.0 PORT="$APP_PORT" pm2 start .next/standalone/server.js --name "$APP_NAME"
-pm2 save
+bash ./scripts/restart-platon-pm2-with-env.sh
 
 echo "== Aguardando app subir =="
 sleep 8
@@ -535,11 +536,40 @@ npx prisma generate
 rm -rf .next
 npm run build
 
-pm2 restart catalogos-api-lab --update-env
-pm2 save
+bash ./scripts/restart-platon-pm2-with-env.sh
 
 curl -fsSI http://127.0.0.1:3000/dashboard
 ```
+
+### Quando alterar variaveis da Varejonline no `.env`
+
+Se mudar:
+
+- `VAREJONLINE_PRODUCTS_MAX_ITEMS`
+- `VAREJONLINE_PRODUCTS_PAGE_SIZE`
+- `VAREJONLINE_PRODUCTS_BATCH_SIZE`
+- `VAREJONLINE_PRODUCTS_ONLY_ACTIVE`
+
+nao basta editar o `.env` e reiniciar o PM2 manualmente. Rode:
+
+```bash
+cd /var/www/catalogos-api-lab/app
+bash ./scripts/restart-platon-pm2-with-env.sh
+```
+
+Esse script:
+
+- carrega o `.env`
+- mostra os valores efetivos que serao enviados ao runtime
+- reinicia o PM2 com `--update-env`
+- salva o estado do PM2
+
+Para confirmar o que a sync realmente usou, veja o `statsJson` do ultimo job. Ele registra:
+
+- `maxItems`
+- `pageSize`
+- `batchSize`
+- `onlyActive`
 
 ### Como diagnosticar quando a UI publicada parece velha
 

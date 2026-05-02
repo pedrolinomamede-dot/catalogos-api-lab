@@ -39,7 +39,7 @@ bash ./scripts/deploy-platon-vps.sh
 5. roda `npm run build`
 6. prepara os assets do standalone
 7. garante o Chromium do Playwright
-8. reinicia o PM2
+8. carrega o `.env` e reinicia o PM2
 9. valida `/dashboard` interna e externamente
 
 ## Variaveis opcionais
@@ -61,3 +61,12 @@ bash ./scripts/deploy-platon-vps.sh
 - O `postbuild` copia `public/` e `.next/static` para dentro de `.next/standalone`
 - `next start` nao deve ser usado na VPS atual
 - Se o PDF falhar por browser ausente, validar `npx playwright install chromium`
+- Se alterar variaveis da Varejonline no `.env`, rode:
+
+```bash
+cd /var/www/catalogos-api-lab/app
+bash ./scripts/restart-platon-pm2-with-env.sh
+```
+
+- O ultimo `statsJson` da sync Varejonline registra os valores efetivos de:
+  `maxItems`, `pageSize`, `batchSize` e `onlyActive`
