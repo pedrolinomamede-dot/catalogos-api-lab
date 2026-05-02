@@ -200,12 +200,14 @@ export function normalizeIntegrationImportSettings(
           ? "SELECTED_PRICE_TABLE"
           : pricing.primarySource,
       priceTablesMode:
-        pricing.priceTablesMode ??
-        (pricing.importPriceTables === true
+        pricing.priceTablesMode === "ALL"
           ? "SELECTED"
-          : pricing.importPriceTables === false
-            ? "NONE"
-            : defaults.pricing.priceTablesMode),
+          : pricing.priceTablesMode ??
+            (pricing.importPriceTables === true
+              ? "SELECTED"
+              : pricing.importPriceTables === false
+                ? "NONE"
+                : defaults.pricing.priceTablesMode),
       selectedPriceTableIds: normalizeStringArray(pricing.selectedPriceTableIds),
       primaryPriceTableId: normalizeNullableString(pricing.primaryPriceTableId),
     },
