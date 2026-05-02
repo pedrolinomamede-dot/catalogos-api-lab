@@ -262,11 +262,7 @@ export function BaseProductEditDialog({
         imageUrl: null,
       });
       setMainImageUrl(updated.imageUrl ?? null);
-      toastSuccess(
-        updated.imageUrl
-          ? "Imagem principal atualizada com a galeria"
-          : "Imagem principal removida",
-      );
+      toastSuccess("Imagem principal removida");
     } catch (err) {
       const message = getErrorMessage(err);
       toastError(message.title, message.description);

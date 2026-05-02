@@ -43,16 +43,7 @@ export async function DELETE(
 
     let nextImageUrl = productBase.imageUrl;
     if (productBase.imageUrl === image.imageUrl) {
-      const fallbackImage = await tx.productBaseImageV2.findFirst({
-        where: {
-          brandId: auth.brandId,
-          productBaseId: id,
-        },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-        select: { imageUrl: true },
-      });
-
-      nextImageUrl = fallbackImage?.imageUrl ?? null;
+      nextImageUrl = null;
 
       await tx.productBaseV2.update({
         where: { id: productBase.id },
@@ -60,12 +51,12 @@ export async function DELETE(
           imageUrl: nextImageUrl,
         },
       });
-
-      await refreshProductCatalogSnapshots(tx, {
-        brandId: auth.brandId,
-        productBaseId: productBase.id,
-      });
     }
+
+    await refreshProductCatalogSnapshots(tx, {
+      brandId: auth.brandId,
+      productBaseId: productBase.id,
+    });
 
     return NextResponse.json({
       ok: true,

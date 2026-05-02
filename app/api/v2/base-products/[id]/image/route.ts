@@ -88,6 +88,7 @@ export async function PATCH(
         },
         select: {
           id: true,
+          imageUrl: true,
         },
       });
 
@@ -95,18 +96,15 @@ export async function PATCH(
         return null;
       }
 
-      let nextImageUrl = parsed.data.imageUrl;
-      if (nextImageUrl === null) {
-        const fallbackImages = await tx.$queryRaw<Array<{ imageUrl: string }>>`
-          SELECT "imageUrl"
-          FROM "ProductBaseImageV2"
-          WHERE
-            "brandId" = ${auth.brandId}::uuid
-            AND "productBaseId" = ${id}::uuid
-          ORDER BY "sortOrder" ASC, "createdAt" ASC
-          LIMIT 1
-        `;
-        nextImageUrl = fallbackImages[0]?.imageUrl ?? null;
+      const nextImageUrl = parsed.data.imageUrl;
+      if (nextImageUrl === null && baseProduct.imageUrl) {
+        await tx.productBaseImageV2.deleteMany({
+          where: {
+            brandId: auth.brandId,
+            productBaseId: id,
+            imageUrl: baseProduct.imageUrl,
+          },
+        });
       }
 
       await tx.productBaseV2.update({
