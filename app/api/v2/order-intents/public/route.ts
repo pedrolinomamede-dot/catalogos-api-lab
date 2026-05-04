@@ -6,6 +6,7 @@ import {
   StockReservationError,
 } from "@/lib/order-intents/stock-reservations";
 import { upsertCustomerProfile } from "@/lib/customer-profiles/upsert-customer-profile";
+import { resolveApplicableProgressiveDiscount } from "@/lib/pricing/progressive-discounts";
 import { withBrand } from "@/lib/prisma";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/utils/errors";
@@ -298,6 +299,7 @@ export async function POST(request: Request) {
             name: true,
             sku: true,
             price: true,
+            commercialInfoJson: true,
           },
         },
       },
@@ -325,10 +327,27 @@ export async function POST(request: Request) {
         throw new Error(`Missing catalog item for ${item.catalogId}:${item.productBaseId}`);
       }
 
-      const unitPrice =
+      const baseUnitPrice =
         catalogItem.snapshot?.price ?? catalogItem.productBase?.price ?? null;
-      const lineTotal = unitPrice ? unitPrice.mul(item.quantity) : null;
-      if (lineTotal) {
+      const commercialInfo =
+        catalogItem.productBase?.commercialInfoJson &&
+        typeof catalogItem.productBase.commercialInfoJson === "object" &&
+        !Array.isArray(catalogItem.productBase.commercialInfoJson)
+          ? catalogItem.productBase.commercialInfoJson
+          : null;
+      const { appliedTier } = resolveApplicableProgressiveDiscount(
+        commercialInfo?.progressiveDiscounts,
+        item.quantity,
+      );
+      const unitPrice =
+        baseUnitPrice !== null && appliedTier
+          ? baseUnitPrice
+              .mul(new Prisma.Decimal(100 - appliedTier.discountPercent))
+              .div(100)
+              .toDecimalPlaces(2)
+          : baseUnitPrice;
+      const lineTotal = unitPrice !== null ? unitPrice.mul(item.quantity) : null;
+      if (lineTotal !== null) {
         subtotal = subtotal ? subtotal.add(lineTotal) : lineTotal;
       }
       itemCount += item.quantity;

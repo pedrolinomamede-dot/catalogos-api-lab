@@ -20,6 +20,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { resolveProductImageLayout } from "@/lib/catalog/image-layout";
 import { normalizeCatalogLabel } from "@/lib/catalog/line-grouping";
 import {
+  applyProgressiveDiscountToNumber,
+  type ProgressiveDiscountTier,
+} from "@/lib/pricing/progressive-discounts";
+import {
   getDefaultProductCardTone,
   resolveProductCardTone,
   type ProductCardTone,
@@ -47,6 +51,8 @@ export type PublicSubcategoryInfo = {
   categoryId: string;
 };
 
+export type PublicProgressiveDiscountTier = ProgressiveDiscountTier;
+
 export type ShareLinkProduct = {
   id: string;
   name: string;
@@ -61,6 +67,7 @@ export type ShareLinkProduct = {
   galleryImageUrls?: string[];
   categoryId?: string | null;
   subcategoryId?: string | null;
+  progressiveDiscountTiers: PublicProgressiveDiscountTier[];
   catalogId: string;
 };
 
@@ -83,8 +90,12 @@ type CartItem = {
   product: ShareLinkProduct;
   quantity: number;
   catalogName: string;
-  unitPrice: number | null;
-  lineTotal: number | null;
+  originalUnitPrice: number | null;
+  discountedUnitPrice: number | null;
+  originalLineTotal: number | null;
+  discountedLineTotal: number | null;
+  appliedDiscountPercent: number | null;
+  appliedDiscountMinQuantity: number | null;
 };
 
 const normalize = (value: string | null | undefined) =>
@@ -650,14 +661,23 @@ export function ShareLinkShell({
           return null;
         }
 
-        const unitPrice = typeof product.price === "number" ? product.price : null;
+        const baseUnitPrice = typeof product.price === "number" ? product.price : null;
+        const pricing = applyProgressiveDiscountToNumber(
+          baseUnitPrice,
+          quantity,
+          product.progressiveDiscountTiers,
+        );
 
         return {
           product,
           quantity,
           catalogName: catalogsById.get(product.catalogId)?.name ?? "Catalogo",
-          unitPrice,
-          lineTotal: unitPrice !== null ? unitPrice * quantity : null,
+          originalUnitPrice: pricing.originalUnitPrice,
+          discountedUnitPrice: pricing.discountedUnitPrice,
+          originalLineTotal: pricing.originalLineTotal,
+          discountedLineTotal: pricing.discountedLineTotal,
+          appliedDiscountPercent: pricing.discountPercent,
+          appliedDiscountMinQuantity: pricing.appliedTier?.minQuantity ?? null,
         } satisfies CartItem;
       })
       .filter((item): item is CartItem => Boolean(item));
@@ -669,12 +689,20 @@ export function ShareLinkShell({
   );
 
   const subtotal = useMemo(
-    () => cartItems.reduce((total, item) => total + (item.lineTotal ?? 0), 0),
+    () =>
+      cartItems.reduce(
+        (total, item) => total + (item.discountedLineTotal ?? 0),
+        0,
+      ),
     [cartItems],
   );
 
-  const hasPricedItems = cartItems.some((item) => item.unitPrice !== null);
-  const hasItemsWithoutPrice = cartItems.some((item) => item.unitPrice === null);
+  const hasPricedItems = cartItems.some(
+    (item) => item.discountedUnitPrice !== null,
+  );
+  const hasItemsWithoutPrice = cartItems.some(
+    (item) => item.discountedUnitPrice === null,
+  );
 
   const updateCartQuantity = useCallback(
     (productId: string, nextQuantity: number) => {
@@ -873,11 +901,20 @@ export function ShareLinkShell({
 
     const greetingTarget = shareLink.ownerName?.trim() || "vendedor";
     const itemLines = cartItems.flatMap((item, index) => {
-      const details = [
+        const details = [
         item.product.sku ? `SKU: ${item.product.sku}` : null,
         `Quantidade: ${item.quantity}`,
         item.catalogName ? `Catalogo: ${item.catalogName}` : null,
-        item.unitPrice !== null ? `Valor unitario: ${formatCurrency(item.unitPrice)}` : null,
+        item.originalUnitPrice !== null
+          ? item.appliedDiscountPercent !== null &&
+            item.discountedUnitPrice !== null &&
+            item.discountedUnitPrice !== item.originalUnitPrice
+            ? `Valor unitario: ${formatCurrency(item.discountedUnitPrice)} (de ${formatCurrency(item.originalUnitPrice)})`
+            : `Valor unitario: ${formatCurrency(item.originalUnitPrice)}`
+          : null,
+        item.appliedDiscountPercent !== null && item.appliedDiscountMinQuantity !== null
+          ? `Desconto progressivo: ${item.appliedDiscountPercent}% a partir de ${item.appliedDiscountMinQuantity} unidades`
+          : null,
       ].filter(Boolean) as string[];
 
       return [`${index + 1}. ${item.product.name}`, ...details.map((detail) => `   ${detail}`)];
@@ -1319,12 +1356,17 @@ export function ShareLinkShell({
                             ) : null}
 
                             <div className="flex items-center justify-between gap-3 pt-2">
-                              <div>
+                          <div>
                                 <p className="text-sm font-semibold text-slate-900">
                                   {typeof product.price === "number"
                                     ? formatCurrency(product.price)
                                     : "Consultar valor"}
                                 </p>
+                                {product.progressiveDiscountTiers.length > 0 ? (
+                                  <p className="text-[11px] text-emerald-700">
+                                    {`${product.progressiveDiscountTiers[0]?.discountPercent}% off a partir de ${product.progressiveDiscountTiers[0]?.minQuantity} un.`}
+                                  </p>
+                                ) : null}
                                 <p className="text-[11px] text-slate-400">
                                   Pedido enviado por WhatsApp
                                 </p>
@@ -1583,10 +1625,20 @@ export function ShareLinkShell({
                         {item.product.sku ?? "Sem SKU"} · {item.catalogName}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {item.unitPrice !== null
-                          ? `${formatCurrency(item.unitPrice)} por unidade`
+                        {item.discountedUnitPrice !== null
+                          ? item.appliedDiscountPercent !== null &&
+                            item.originalUnitPrice !== null &&
+                            item.discountedUnitPrice !== item.originalUnitPrice
+                            ? `${formatCurrency(item.discountedUnitPrice)} por unidade com desconto`
+                            : `${formatCurrency(item.discountedUnitPrice)} por unidade`
                           : "Preco nao exibido neste catalogo"}
                       </p>
+                      {item.appliedDiscountPercent !== null &&
+                      item.appliedDiscountMinQuantity !== null ? (
+                        <p className="text-xs font-medium text-emerald-700">
+                          {`${item.appliedDiscountPercent}% off por atingir ${item.appliedDiscountMinQuantity} unidades`}
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="flex flex-col items-end gap-2">
@@ -1611,10 +1663,19 @@ export function ShareLinkShell({
                           <Plus className="h-4 w-4" />
                         </button>
                       </div>
-                      {item.lineTotal !== null ? (
-                        <p className="text-sm font-semibold text-slate-900">
-                          {formatCurrency(item.lineTotal)}
-                        </p>
+                      {item.discountedLineTotal !== null ? (
+                        <div className="text-right">
+                          {item.originalLineTotal !== null &&
+                          item.appliedDiscountPercent !== null &&
+                          item.originalLineTotal !== item.discountedLineTotal ? (
+                            <p className="text-xs text-slate-400 line-through">
+                              {formatCurrency(item.originalLineTotal)}
+                            </p>
+                          ) : null}
+                          <p className="text-sm font-semibold text-slate-900">
+                            {formatCurrency(item.discountedLineTotal)}
+                          </p>
+                        </div>
                       ) : null}
                     </div>
                   </div>

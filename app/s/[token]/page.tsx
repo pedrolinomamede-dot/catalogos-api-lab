@@ -8,12 +8,14 @@ import {
   ShareLinkShell,
   type PublicBrandInfo,
   type PublicCategoryInfo,
+  type PublicProgressiveDiscountTier,
   type PublicSubcategoryInfo,
   type ShareLinkProduct,
 } from "@/components/public/share-link-shell";
 import { compareProductsByLineCategoryMeasure, normalizeCatalogLabel } from "@/lib/catalog/line-grouping";
 import { parseCatalogSnapshotGallery } from "@/lib/catalog-snapshots/snapshot-types";
 import { parseCatalogSnapshotAttributes } from "@/lib/catalog-snapshots/snapshot-types";
+import { normalizeProgressiveDiscountTiers } from "@/lib/pricing/progressive-discounts";
 import { withBrand } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +45,7 @@ type CatalogItemResponse = {
     imageUrl?: string | null;
     categoryId?: string | null;
     subcategoryId?: string | null;
+    commercialInfoJson?: unknown;
   } | null;
 };
 
@@ -239,6 +242,7 @@ export default async function ShareLinkPage({
                     imageUrl: true,
                     categoryId: true,
                     subcategoryId: true,
+                    commercialInfoJson: true,
                   },
                 },
               },
@@ -323,6 +327,10 @@ export default async function ShareLinkPage({
       categoryId: item.snapshot?.categoryId ?? item.productBase?.categoryId ?? null,
       subcategoryId:
         item.snapshot?.subcategoryId ?? item.productBase?.subcategoryId ?? null,
+      progressiveDiscountTiers: normalizeProgressiveDiscountTiers(
+        (item.productBase?.commercialInfoJson as { progressiveDiscounts?: unknown } | null)
+          ?.progressiveDiscounts,
+      ) as PublicProgressiveDiscountTier[],
       catalogId: item.catalogId,
     });
     productsByCatalog[item.catalogId] = list;
