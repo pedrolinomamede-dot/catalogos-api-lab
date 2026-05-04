@@ -91,6 +91,7 @@ describe("integration import settings", () => {
         primaryPriceTableRef: " TABELA ATACADO ",
         priceTablesMode: "SELECTED",
         selectedPriceTableRefs: [" PADRAO ", "2", "PADRAO"],
+        importProgressiveDiscounts: false,
       },
       inventory: {
         currentStockSource: "SELECTED_ENTITY",
@@ -100,6 +101,7 @@ describe("integration import settings", () => {
 
     expect(settings.pricing.primaryPriceTableRef).toBe("TABELA ATACADO");
     expect(settings.pricing.selectedPriceTableRefs).toEqual(["PADRAO", "2"]);
+    expect(settings.pricing.importProgressiveDiscounts).toBe(false);
     expect(settings.inventory.currentStockSource).toBe("SELECTED_ENTITY");
     expect(settings.inventory.stockEntityRef).toBe("MAQUIADA MATRIZ");
     expect(settings.inventory.stockBalanceType).toBe("LIQUID");

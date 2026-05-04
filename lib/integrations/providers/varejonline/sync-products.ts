@@ -170,6 +170,31 @@ function createResolvedPricingSettings(
   };
 }
 
+function buildStoredCommercialInfo(
+  product: NormalizedExternalProduct,
+  resolvedPrice: number | null,
+  storedTablePrices: Array<{ tableId: string; price: number }>,
+  settings: IntegrationImportSettings,
+) {
+  const commercialInfo = {
+    ...product.commercialInfo,
+    price: resolvedPrice,
+    priceTables: storedTablePrices,
+  } as Record<string, unknown>;
+
+  if (!settings.pricing.importDiscountRules) {
+    delete commercialInfo.maxDiscountPercent;
+    delete commercialInfo.commissionPercent;
+    delete commercialInfo.profitMarginPercent;
+  }
+
+  if (!settings.pricing.importProgressiveDiscounts) {
+    delete commercialInfo.progressiveDiscounts;
+  }
+
+  return commercialInfo;
+}
+
 function createSyncConfigurationError(message: string) {
   const error = new Error(message) as Error & {
     statusCode: number;
@@ -663,11 +688,14 @@ async function upsertProduct(
         costPrice: settings.pricing.importCostPrice
           ? toDecimalString(product.costPrice)
           : undefined,
-        commercialInfoJson: toJsonValue({
-          ...product.commercialInfo,
-          price: resolvedPrice,
-          priceTables: storedTablePrices,
-        }),
+        commercialInfoJson: toJsonValue(
+          buildStoredCommercialInfo(
+            product,
+            resolvedPrice,
+            storedTablePrices,
+            settings,
+          ),
+        ),
       }
     : {};
 

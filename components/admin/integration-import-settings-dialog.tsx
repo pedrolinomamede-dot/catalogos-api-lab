@@ -459,7 +459,7 @@ function IntegrationImportSettingsForm({
           />
           <FieldToggle
             id="pricing-discount"
-            label="Importar markup/comissao/desconto"
+            label="Importar markup/comissao/desconto maximo"
             checked={settings.pricing.importDiscountRules}
             disabled={!settings.pricing.enabled}
             onCheckedChange={(checked) =>
@@ -468,6 +468,21 @@ function IntegrationImportSettingsForm({
                 pricing: {
                   ...current.pricing,
                   importDiscountRules: checked,
+                },
+              }))
+            }
+          />
+          <FieldToggle
+            id="pricing-progressive-discount"
+            label="Importar desconto progressivo"
+            checked={settings.pricing.importProgressiveDiscounts}
+            disabled={!settings.pricing.enabled}
+            onCheckedChange={(checked) =>
+              setSettings((current) => ({
+                ...current,
+                pricing: {
+                  ...current.pricing,
+                  importProgressiveDiscounts: checked,
                 },
               }))
             }
