@@ -15,6 +15,7 @@ export const DATA_QUALITY_ISSUE_TYPES = [
   "missing_description",
   "possible_duplicate_category",
   "possible_duplicate_subcategory",
+  "sync_error",
 ] as const;
 
 export type DataQualityIssueType = (typeof DATA_QUALITY_ISSUE_TYPES)[number];
@@ -61,6 +62,46 @@ type NamedRow = {
 };
 
 type Tx = Prisma.TransactionClient | PrismaClient;
+
+async function loadSyncErrors(tx: Tx, brandId: string): Promise<DataQualityIssueRow[]> {
+  const jobs = await tx.integrationSyncJobV2.findMany({
+    where: { brandId, status: { in: ["PARTIAL", "FAILED"] } },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: { id: true, provider: true, startedAt: true, statsJson: true },
+  });
+
+  for (const job of jobs) {
+    if (!job.statsJson || typeof job.statsJson !== "object" || Array.isArray(job.statsJson)) {
+      continue;
+    }
+    const stats = job.statsJson as Record<string, unknown>;
+    const errors = Array.isArray(stats.errors) ? stats.errors : [];
+    if (errors.length === 0) continue;
+
+    return errors.map((error, index): DataQualityIssueRow => {
+      const e =
+        error != null && typeof error === "object" && !Array.isArray(error)
+          ? (error as Record<string, unknown>)
+          : {};
+      const externalCode = typeof e.externalCode === "string" ? e.externalCode : null;
+      const externalId = typeof e.externalId === "string" ? e.externalId : null;
+      return {
+        id: `${job.id}-${index}`,
+        issueType: "sync_error",
+        entityType: "product",
+        name: externalCode ?? externalId ?? "Produto desconhecido",
+        sku: externalCode,
+        sourceType: "INTEGRATION" as ProductSourceType,
+        sourceProvider: job.provider,
+        details: typeof e.message === "string" ? e.message : "Erro desconhecido",
+        updatedAt: job.startedAt ?? null,
+      };
+    });
+  }
+
+  return [];
+}
 
 function normalizeSpaces(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -321,29 +362,33 @@ export function buildDataQualityIssueRows(input: {
       "subcategory",
       input.subcategories,
     ),
+    sync_error: [],
   };
 }
 
 export async function getDataQualitySummary(tx: Tx, brandId: string) {
-  const [products, categories, subcategories] = await Promise.all([
+  const [products, categories, subcategories, syncErrors] = await Promise.all([
     loadProducts(tx, brandId),
     loadCategories(tx, brandId),
     loadSubcategories(tx, brandId),
+    loadSyncErrors(tx, brandId),
   ]);
 
-  const issueRows = buildDataQualityIssueRows({
-    products,
-    categories,
-    subcategories,
-  });
+  const issueRows = buildDataQualityIssueRows({ products, categories, subcategories });
 
   return {
     totalProducts: products.length,
     totalCategories: categories.length,
     totalSubcategories: subcategories.length,
-    issueCounts: Object.fromEntries(
-      DATA_QUALITY_ISSUE_TYPES.map((type) => [type, issueRows[type].length]),
-    ) as Record<DataQualityIssueType, number>,
+    issueCounts: {
+      ...Object.fromEntries(
+        DATA_QUALITY_ISSUE_TYPES.filter((t) => t !== "sync_error").map((type) => [
+          type,
+          issueRows[type as keyof typeof issueRows].length,
+        ]),
+      ),
+      sync_error: syncErrors.length,
+    } as Record<DataQualityIssueType, number>,
   } satisfies DataQualitySummary;
 }
 
@@ -356,32 +401,29 @@ export async function listDataQualityIssues(
     pageSize: number;
   },
 ) {
-  const [products, categories, subcategories] = await Promise.all([
-    loadProducts(tx, input.brandId),
-    loadCategories(tx, input.brandId),
-    loadSubcategories(tx, input.brandId),
-  ]);
+  const allRows =
+    input.issueType === "sync_error"
+      ? await loadSyncErrors(tx, input.brandId)
+      : buildDataQualityIssueRows(
+          await Promise.all([
+            loadProducts(tx, input.brandId),
+            loadCategories(tx, input.brandId),
+            loadSubcategories(tx, input.brandId),
+          ]).then(([products, categories, subcategories]) => ({
+            products,
+            categories,
+            subcategories,
+          })),
+        )[input.issueType];
 
-  const issueRows = buildDataQualityIssueRows({
-    products,
-    categories,
-    subcategories,
-  })[input.issueType];
-
-  const total = issueRows.length;
+  const total = allRows.length;
   const totalPages = Math.max(1, Math.ceil(total / input.pageSize));
   const page = Math.min(Math.max(input.page, 1), totalPages);
   const start = (page - 1) * input.pageSize;
-  const end = start + input.pageSize;
 
   return {
-    data: issueRows.slice(start, end),
-    meta: {
-      page,
-      pageSize: input.pageSize,
-      total,
-      totalPages,
-    },
+    data: allRows.slice(start, start + input.pageSize),
+    meta: { page, pageSize: input.pageSize, total, totalPages },
   };
 }
 
@@ -392,15 +434,15 @@ export async function exportDataQualityIssues(
     issueType: DataQualityIssueType;
   },
 ) {
+  if (input.issueType === "sync_error") {
+    return loadSyncErrors(tx, input.brandId);
+  }
+
   const [products, categories, subcategories] = await Promise.all([
     loadProducts(tx, input.brandId),
     loadCategories(tx, input.brandId),
     loadSubcategories(tx, input.brandId),
   ]);
 
-  return buildDataQualityIssueRows({
-    products,
-    categories,
-    subcategories,
-  })[input.issueType];
+  return buildDataQualityIssueRows({ products, categories, subcategories })[input.issueType];
 }

@@ -41,41 +41,52 @@ export async function GET(request: Request) {
       issueType: type,
     });
 
-    const header = [
-      "id",
-      "issueType",
-      "entityType",
-      "name",
-      "sku",
-      "sourceType",
-      "sourceProvider",
-      "normalizedName",
-      "duplicateCount",
-      "relatedIds",
-      "details",
-      "updatedAt",
-    ];
+    let header: string[];
+    let mapRow: (row: (typeof rows)[number]) => unknown[];
+
+    if (type === "sync_error") {
+      header = ["sku_varejonline", "id_externo", "motivo", "data_sync", "provider"];
+      mapRow = (row) => [
+        row.sku ?? "",
+        row.name,
+        row.details ?? "",
+        row.updatedAt instanceof Date ? row.updatedAt.toISOString() : (row.updatedAt ?? ""),
+        row.sourceProvider ?? "",
+      ];
+    } else {
+      header = [
+        "id",
+        "issueType",
+        "entityType",
+        "name",
+        "sku",
+        "sourceType",
+        "sourceProvider",
+        "normalizedName",
+        "duplicateCount",
+        "relatedIds",
+        "details",
+        "updatedAt",
+      ];
+      mapRow = (row) => [
+        row.id,
+        row.issueType,
+        row.entityType,
+        row.name,
+        row.sku ?? "",
+        row.sourceType ?? "",
+        row.sourceProvider ?? "",
+        row.normalizedName ?? "",
+        row.duplicateCount ?? "",
+        row.relatedIds?.join(" | ") ?? "",
+        row.details ?? "",
+        row.updatedAt instanceof Date ? row.updatedAt.toISOString() : (row.updatedAt ?? ""),
+      ];
+    }
 
     const lines = [
       header.join(","),
-      ...rows.map((row) =>
-        [
-          row.id,
-          row.issueType,
-          row.entityType,
-          row.name,
-          row.sku ?? "",
-          row.sourceType ?? "",
-          row.sourceProvider ?? "",
-          row.normalizedName ?? "",
-          row.duplicateCount ?? "",
-          row.relatedIds?.join(" | ") ?? "",
-          row.details ?? "",
-          row.updatedAt?.toISOString() ?? "",
-        ]
-          .map(escapeCsv)
-          .join(","),
-      ),
+      ...rows.map((row) => mapRow(row).map(escapeCsv).join(",")),
     ];
 
     return new NextResponse(lines.join("\n"), {

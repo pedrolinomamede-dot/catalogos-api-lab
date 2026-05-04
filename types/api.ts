@@ -346,7 +346,8 @@ export type DataQualityIssueType =
   | "missing_subcategory"
   | "missing_description"
   | "possible_duplicate_category"
-  | "possible_duplicate_subcategory";
+  | "possible_duplicate_subcategory"
+  | "sync_error";
 
 export type DataQualityIssueRow = {
   id: string;

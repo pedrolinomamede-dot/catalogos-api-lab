@@ -39,6 +39,7 @@ const ISSUE_LABELS: Record<DataQualityIssueType, string> = {
   missing_description: "Sem descricao",
   possible_duplicate_category: "Possivel duplicidade de categoria",
   possible_duplicate_subcategory: "Possivel duplicidade de subcategoria",
+  sync_error: "Erros na ultima sync",
 };
 
 const ISSUE_ORDER = Object.keys(ISSUE_LABELS) as DataQualityIssueType[];

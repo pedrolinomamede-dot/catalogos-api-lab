@@ -1100,8 +1100,8 @@ export async function syncVarejonlineProducts(
     });
   }
 
-  if (stats.errors && stats.errors.length > 20) {
-    stats.errors = stats.errors.slice(0, 20);
+  if (stats.errors && stats.errors.length > 500) {
+    stats.errors = stats.errors.slice(0, 500);
   }
 
   return stats;
