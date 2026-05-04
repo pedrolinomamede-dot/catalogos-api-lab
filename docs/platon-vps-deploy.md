@@ -7,21 +7,20 @@
 - PM2 app: `catalogos-api-lab`
 - Porta interna: `3000`
 - Runtime: `node .next/standalone/server.js`
+- Branch oficial da VPS: `main`
 
-## Primeiro setup
-
-O setup inicial da VPS ja foi feito manualmente:
+## Setup base ja realizado
 
 - Ubuntu 24.04
 - Node.js 20
 - Nginx + Certbot
 - PM2
-- Dependencias Linux do Playwright/Chromium
+- dependencias Linux do Playwright/Chromium
 - `npx playwright install chromium`
 - `.env` configurado
 - Nginx apontando para `127.0.0.1:3000`
 
-## Update rotineiro
+## Deploy rotineiro
 
 Entrar na VPS como `ubuntu`, ir para o diretorio da aplicacao e rodar:
 
@@ -32,15 +31,14 @@ bash ./scripts/deploy-platon-vps.sh
 
 ## O que o script faz
 
-1. valida que so existe o remote `origin`
+1. valida que existe apenas o remote `origin`
 2. atualiza a branch alvo
 3. roda `npm ci`
 4. roda `prisma migrate deploy` e `prisma generate`
-5. roda `npm run build`
-6. prepara os assets do standalone
-7. garante o Chromium do Playwright
-8. carrega o `.env` e reinicia o PM2
-9. valida `/dashboard` interna e externamente
+5. limpa `.next` e roda `npm run build`
+6. garante Chromium do Playwright
+7. reinicia a app com `.env` carregado
+8. valida `/dashboard` interna e externamente
 
 ## Variaveis opcionais
 
@@ -55,18 +53,30 @@ BRANCH=main \
 bash ./scripts/deploy-platon-vps.sh
 ```
 
-## Observacoes importantes
+## Restart de env
 
-- O build usa `output: "standalone"`
-- O `postbuild` copia `public/` e `.next/static` para dentro de `.next/standalone`
-- `next start` nao deve ser usado na VPS atual
-- Se o PDF falhar por browser ausente, validar `npx playwright install chromium`
-- Se alterar variaveis da Varejonline no `.env`, rode:
+Se alterar variaveis no `.env`, rode:
 
 ```bash
 cd /var/www/catalogos-api-lab/app
 bash ./scripts/restart-platon-pm2-with-env.sh
 ```
 
-- O ultimo `statsJson` da sync Varejonline registra os valores efetivos de:
-  `maxItems`, `pageSize`, `batchSize` e `onlyActive`
+## Checklist pos-deploy
+
+- confirmar `git branch --show-current` em `main`
+- conferir `git log -1 --oneline`
+- conferir `pm2 status`
+- testar `curl -fsSI http://127.0.0.1:3000/dashboard`
+- validar acesso externo em `/dashboard`
+- validar login
+- validar tela de integracoes
+- validar exportacao PDF se a entrega mexer nisso
+
+## Observacoes importantes
+
+- o build usa `output: "standalone"`
+- o `postbuild` prepara os assets do standalone
+- `next start` nao deve ser usado nesta VPS
+- se o PDF falhar por browser ausente, validar `npx playwright install chromium`
+- o ultimo `statsJson` da sync Varejonline registra `maxItems`, `pageSize`, `batchSize` e `onlyActive`

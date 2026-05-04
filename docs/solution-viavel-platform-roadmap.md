@@ -1,69 +1,30 @@
-# Roadmap da Plataforma Solucao Viavel
+# Contexto da Solucao Viavel
 
-## Objetivo
+## O que e a Solucao Viavel
 
-Usar o Catalogo Facil como primeira base real da plataforma Solucao Viavel, evitando criar cada novo projeto do zero.
+A Solucao Viavel e a empresa e proposta mais ampla por tras do Catalogo Facil.
+Ela existe para desenvolver sistemas e produtos sob medida para clientes reais, com possibilidade de reaproveitar partes tecnicas entre projetos quando isso fizer sentido.
 
-## Principio
+## Relacao com o Catalogo Facil
 
-Separar:
+O Catalogo Facil e um produto/projeto dentro desse contexto.
 
-- base comum reutilizavel
-- modulos de produto por cliente
+Isso significa que:
 
-## Base comum da plataforma
+- o Catalogo Facil foi pensado para crescer com organizacao
+- algumas decisoes arquiteturais favorecem evolucao e reaproveitamento futuro
+- o projeto nao deve ser tratado como experimento descartavel
 
-- autenticacao
-- tenants
-- usuarios
-- permissoes
-- dashboard
-- auditoria
-- integracoes
-- storage
-- deploy
-- backup
-- componentes de UI
-- padroes de API
+## Limite deste repositório
 
-## Modulos por produto
+Este repositorio documenta apenas o Catalogo Facil.
 
-- Catalogo Facil
-- e-commerce assistido
-- ERP comercial
-- fiscal
-- pedidos
-- vendedores
-- financeiro futuro
+Portanto:
 
-## Proximo projeto atacadista
+- documentacao operacional deste repo e exclusiva do Catalogo Facil
+- roadmap deste repo e exclusivo do Catalogo Facil
+- detalhes de plataforma, outros produtos e outros projetos nao sao foco aqui
 
-Nao comecar do zero.
+## Documentacao futura
 
-Reaproveitar da base:
-
-- auth
-- tenants
-- usuarios
-- permissoes
-- produtos
-- dashboard
-- pedidos
-- integracoes
-- deploy
-- backup
-
-Construir como modulos novos:
-
-- forca de vendas estilo Mercos
-- carteira de clientes
-- metas e metricas de vendedor
-- camadas operacionais que hoje ficam no Bling
-
-## Ordem recomendada
-
-1. estabilizar a base atual
-2. criar permissoes granulares
-3. criar auditoria
-4. criar padroes de arquitetura e restore
-5. iniciar novos produtos a partir dessa base
+A documentacao detalhada da plataforma Solucao Viavel e de outros projetos deve viver em repositorio proprio no futuro.

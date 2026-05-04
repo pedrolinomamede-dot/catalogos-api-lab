@@ -6,6 +6,8 @@ import type {
   IntegrationSyncJobV2,
   IntegrationSyncRequest,
   UpdateIntegrationConnectionImportSettingsRequest,
+  VarejonlineEntityReference,
+  VarejonlinePriceTableReference,
 } from "@/types/api";
 
 import { apiGet, apiPatch, apiPost } from "@/lib/api/client";
@@ -52,6 +54,26 @@ export async function updateIntegrationConnectionImportSettingsV2(
     UpdateIntegrationConnectionImportSettingsRequest,
     ApiEnvelope<IntegrationConnectionV2>
   >(`/api/v2/integrations/connections/${id}`, body);
+  return res.data;
+}
+
+export async function listVarejonlineReferenceDataV2(
+  id: string,
+  resource: "price-tables",
+): Promise<VarejonlinePriceTableReference[]>;
+export async function listVarejonlineReferenceDataV2(
+  id: string,
+  resource: "entities",
+): Promise<VarejonlineEntityReference[]>;
+export async function listVarejonlineReferenceDataV2(
+  id: string,
+  resource: "price-tables" | "entities",
+) {
+  const res = await apiGet<
+    ApiEnvelope<VarejonlinePriceTableReference[] | VarejonlineEntityReference[]>
+  >(`/api/v2/integrations/connections/${id}/reference-data`, {
+    resource,
+  });
   return res.data;
 }
 

@@ -121,6 +121,10 @@ export type IntegrationSyncStats = {
   skippedLocked?: number;
   skippedExistingByPolicy?: number;
   categoriesCleaned?: number;
+  priceTablesResolved?: number;
+  stockBalancesFetched?: number;
+  stockEntityResolved?: boolean;
+  stockBalancesMissing?: number;
   pageSize?: number;
   maxItems?: number;
   batchSize?: number;

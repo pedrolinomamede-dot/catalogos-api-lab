@@ -2,33 +2,36 @@
 
 ## Objetivo
 
-Garantir restauracao do Catalogo Facil em caso de falha de VPS, bloqueio da conta, erro humano ou corrupcao operacional.
+Garantir restauracao do Catalogo Facil em caso de falha de VPS, bloqueio de conta, erro humano ou corrupcao operacional.
 
-## Camadas de backup
+## O que precisa ser salvo
 
 ### Codigo
 
-- fonte principal: GitHub
-- branch operacional atual deve estar sempre pushada
+- repositório GitHub do Catalogo Facil
+- branch oficial `main`
 
 ### VPS
 
-- snapshot na Platon antes de mudancas importantes
-- backup compactado de arquivos criticos:
-  - `.env`
-  - configuracao do Nginx
-  - `pm2 dump`
-  - uploads locais, se existirem
+- arquivo `.env` da aplicacao
+- configuracao do Nginx
+- `pm2 dump`
+- uploads locais, se existirem
 
 ### Banco
 
 - dump regular do Supabase/PostgreSQL
-- guardar fora da VPS
 
 ### Storage
 
 - backup do bucket `product-images`
-- guardar fora da VPS
+
+## Onde cada camada vive hoje
+
+- app web: VPS Platon
+- banco: Supabase
+- storage de imagens: Supabase Storage/S3
+- codigo: GitHub
 
 ## Backup portatil da VPS
 
@@ -43,22 +46,38 @@ sudo tar -czf /home/ubuntu/catalogofacil-vps-backup-$(date +%F).tar.gz \
   /var/www/catalogos-api-lab/uploads
 ```
 
-## Restore base
+## Ordem recomendada de restore
 
-1. Provisionar nova VPS
-2. Instalar Node, PM2, Nginx e dependencias do Playwright
-3. Clonar o repositorio correto
-4. Restaurar `.env`
-5. Restaurar configuracao do Nginx
-6. Restaurar PM2 ou fazer deploy limpo
-7. Restaurar banco
-8. Restaurar storage
-9. Rodar deploy
-10. Validar `/dashboard` e fluxos criticos
+1. provisionar nova VPS
+2. instalar Node, PM2, Nginx e dependencias do Playwright
+3. clonar o repositorio correto
+4. restaurar `.env`
+5. restaurar configuracao do Nginx
+6. restaurar banco Supabase/PostgreSQL
+7. restaurar bucket/storage
+8. restaurar PM2 ou fazer deploy limpo
+9. rodar deploy oficial
+10. validar fluxos criticos
 
-## Frequencia sugerida
+## Checklist pos-restore
+
+- `curl http://127.0.0.1:3000/dashboard`
+- `curl https://catalogofacil.solucaoviavel.com/dashboard`
+- login administrativo funcionando
+- dashboard abrindo
+- Base Geral acessivel
+- Share Links abrindo
+- exportacao PDF funcionando
+- integracao Varejonline com status consistente
+
+## Frequencia recomendada
 
 - snapshot da VPS: antes de mudancas grandes e semanalmente
-- dump do banco: semanal ou diario, conforme criticidade
+- dump do banco: diario ou semanal, conforme criticidade
 - backup de storage: semanal
-- teste de restore: mensal
+- teste de restore: mensal ou a cada mudanca estrutural grande
+
+## Regra operacional
+
+Backup so e confiavel quando existe restore compreendido e testado.
+Nao tratar snapshot, dump e backup de storage como equivalentes; cada camada cobre um risco diferente.

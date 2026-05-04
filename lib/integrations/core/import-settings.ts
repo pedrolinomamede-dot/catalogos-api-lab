@@ -33,6 +33,8 @@ const pricingSettingsSchema = z.object({
   importCostPrice: z.boolean(),
   importDiscountRules: z.boolean(),
   priceTablesMode: z.enum(["NONE", "SELECTED"]),
+  selectedPriceTableRefs: z.array(z.string()),
+  primaryPriceTableRef: z.string().nullable(),
   selectedPriceTableIds: z.array(z.string()),
   primaryPriceTableId: z.string().nullable(),
 });
@@ -42,6 +44,9 @@ const inventorySettingsSchema = z.object({
   importCurrentStock: z.boolean(),
   importMinMax: z.boolean(),
   importControlMethod: z.boolean(),
+  currentStockSource: z.enum(["PRODUCT_PAYLOAD", "SELECTED_ENTITY"]),
+  stockEntityRef: z.string().nullable(),
+  stockBalanceType: z.enum(["LIQUID"]),
 });
 
 const imagesSettingsSchema = z.object({
@@ -106,6 +111,8 @@ export const defaultIntegrationImportSettings: IntegrationImportSettings = {
     importCostPrice: true,
     importDiscountRules: true,
     priceTablesMode: "NONE",
+    selectedPriceTableRefs: [],
+    primaryPriceTableRef: null,
     selectedPriceTableIds: [],
     primaryPriceTableId: null,
   },
@@ -114,6 +121,9 @@ export const defaultIntegrationImportSettings: IntegrationImportSettings = {
     importCurrentStock: true,
     importMinMax: true,
     importControlMethod: true,
+    currentStockSource: "PRODUCT_PAYLOAD",
+    stockEntityRef: null,
+    stockBalanceType: "LIQUID",
   },
   images: {
     enabled: true,
@@ -223,6 +233,19 @@ export function normalizeIntegrationImportSettings(
   const logistics = getNestedRecord(value, "logistics");
   const selectedPriceTableIds = normalizeStringArray(pricing.selectedPriceTableIds);
   const primaryPriceTableId = normalizeNullableString(pricing.primaryPriceTableId);
+  const selectedPriceTableRefs = normalizeStringArray(
+    pricing.selectedPriceTableRefs,
+  );
+  const primaryPriceTableRef = normalizeNullableString(
+    pricing.primaryPriceTableRef,
+  );
+  const effectiveSelectedPriceTableRefs =
+    selectedPriceTableRefs.length > 0
+      ? selectedPriceTableRefs
+      : selectedPriceTableIds;
+  const effectivePrimaryPriceTableRef =
+    primaryPriceTableRef ?? primaryPriceTableId;
+  const stockEntityRef = normalizeNullableString(inventory.stockEntityRef);
 
   const merged = {
     ...defaults,
@@ -251,15 +274,20 @@ export function normalizeIntegrationImportSettings(
           : pricing.primarySource ?? defaults.pricing.primarySource,
       priceTablesMode: normalizePriceTablesMode(
         pricing,
-        selectedPriceTableIds,
-        primaryPriceTableId,
+        effectiveSelectedPriceTableRefs,
+        effectivePrimaryPriceTableRef,
       ),
-      selectedPriceTableIds,
-      primaryPriceTableId,
+      selectedPriceTableRefs: effectiveSelectedPriceTableRefs,
+      primaryPriceTableRef: effectivePrimaryPriceTableRef,
+      selectedPriceTableIds: selectedPriceTableIds.length
+        ? selectedPriceTableIds
+        : effectiveSelectedPriceTableRefs,
+      primaryPriceTableId: primaryPriceTableId ?? effectivePrimaryPriceTableRef,
     },
     inventory: {
       ...defaults.inventory,
       ...inventory,
+      stockEntityRef,
     },
     images: {
       ...defaults.images,
@@ -288,20 +316,29 @@ export function getIntegrationImportSettingsSyncError(value: unknown) {
 
   if (
     settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
-    !settings.pricing.primaryPriceTableId
+    !settings.pricing.primaryPriceTableRef
   ) {
-    return "Informe o ID da tabela principal antes de sincronizar.";
+    return "Informe o nome ou ID da tabela principal antes de sincronizar.";
   }
 
   if (
     settings.pricing.priceTablesMode === "SELECTED" &&
-    settings.pricing.selectedPriceTableIds.length === 0 &&
+    settings.pricing.selectedPriceTableRefs.length === 0 &&
     !(
       settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
-      settings.pricing.primaryPriceTableId
+      settings.pricing.primaryPriceTableRef
     )
   ) {
-    return "Informe os IDs das tabelas de preco antes de sincronizar.";
+    return "Informe os nomes ou IDs das tabelas de preco antes de sincronizar.";
+  }
+
+  if (
+    settings.inventory.enabled &&
+    settings.inventory.importCurrentStock &&
+    settings.inventory.currentStockSource === "SELECTED_ENTITY" &&
+    !settings.inventory.stockEntityRef
+  ) {
+    return "Informe o nome ou ID da entidade de estoque antes de sincronizar.";
   }
 
   return null;

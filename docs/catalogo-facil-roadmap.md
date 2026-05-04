@@ -2,69 +2,74 @@
 
 ## Objetivo
 
-Fechar o Catalogo Facil como produto funcional, seguro e operavel para o cliente atual, sem perder a capacidade de evolucao para e-commerce assistido e modulos futuros.
+Fechar o Catalogo Facil como produto funcional, seguro e operavel para o cliente atual, mantendo a base preparada para evolucao futura sem misturar esse repositorio com a documentacao de outros projetos.
 
-## Prioridade imediata
+## Concluido
 
-1. Finalizar integracao Varejonline no escopo atual:
-   - precos
-   - importacao gradual em base maior
-   - validacao fiscal, logistica e categorias
-   - observabilidade dos jobs
-   - estoque atual apenas quando existir endpoint oficial OAuth
-2. Criar motor de permissoes personalizadas
-3. Criar motor de descontos
-4. Criar e-commerce assistido reaproveitando Base Geral, carrinho e WhatsApp
+- estabilizacao principal do repositório e da documentacao
+- definicao de `main` como branch oficial
+- deploy real em VPS Platon com PM2, Nginx e Playwright
+- Super Admin, tenants e usuarios por tenant
+- Base Geral local
+- catalogos V2
+- Share Links publicos com carrinho
+- finalizacao assistida por WhatsApp
+- `OrderIntent`
+- `StockReservation`
+- `CustomerProfile`
+- `ProductRequest`
+- analytics base
+- OAuth Varejonline com validacao por CNPJ
+- sync read-only de produtos via endpoint oficial
+- configuracao de leitura da integracao
+- politica de reimportacao e bloqueio por produto
 
-## Entregas do produto
+## Em andamento
 
-### Fase 1
+- fechamento operacional da integracao Varejonline no escopo atual
+- revisao e fortalecimento da documentacao tecnica e operacional
 
-- estabilizacao de repositorio, docs e backup
-- revisao basica de seguranca multi-tenant
-- detalhe de deploy e restore
+## Implementado, mas pendente de validacao final
 
-### Fase 2
+- tabela de preco Varejonline por nome ou ID
+- entidades Varejonline por nome ou ID
+- uso de `/apps/api/tabelas-preco` para resolver tabela principal e tabelas adicionais
+- uso de `/apps/api/entidades` para resolver entidade de estoque
+- uso de `/apps/api/saldos-mercadorias/liquido` para estoque atual oficial por entidade
+- gravacao de `stockQuantity` a partir de `saldoAtual`
+- preservacao do saldo exato, reservado e em transito em `logisticsInfoJson`
 
-- precos Varejonline
-- importacao gradual 100 -> 300 -> 500 -> 1000 -> total
-- validacao de categorias, fiscal e logistica
-- tela de observabilidade de jobs
+Status atual desse bloco:
 
-### Fase 3
+- implementado localmente
+- testes focados passando
+- `npm run build` passando
+- aguardando deploy e validacao real na VPS
+
+## Proximo bloco de implementacao
+
+### Integracao Varejonline
+
+- validar em VPS o fluxo de preco por nome/ID
+- validar em VPS o estoque oficial por entidade
+- ampliar importacao real de 100 para 300, 500, 1000 e total
+- validar categorias, fiscal e logistica com base maior
+- melhorar observabilidade de jobs
+
+### Produto
 
 - permissoes granulares por usuario
-- auditoria de alteracoes de acesso
-
-### Fase 4
-
-- descontos locais
-- integracao de desconto progressivo vindo da Varejonline
-- aplicacao de desconto em Share Links
-
-### Fase 5
-
-- e-commerce assistido com:
-  - todos os produtos ativos
-  - carrinho
-  - escolha de vendedor
-  - desconto
-  - frete
-  - WhatsApp
-  - `OrderIntent`
+- auditoria de alteracoes sensiveis
+- motor local de descontos
+- integracao de desconto progressivo
+- e-commerce assistido com todos os produtos ativos
+- escolha de vendedor
+- frete
+- desconto no carrinho
 
 ## Pendencias conhecidas
 
-- estoque atual por entidade depende de endpoint oficial da Varejonline
-- fiscal completo nao entra nesta etapa
-- baixa real de estoque no ERP continua fora do escopo atual
-
-## Criterio de pronto desta etapa
-
-O Catalogo Facil desta fase estara pronto quando:
-
-- a integracao importar os dados necessarios com confiabilidade
-- o admin puder controlar reimportacao e permissoes
-- descontos funcionarem no carrinho
-- a vitrine/e-commerce assistido funcionar com WhatsApp
-- backup, deploy e restore estiverem documentados
+- a implementacao atual de preco por nome/ID e estoque oficial ainda precisa de validacao final na VPS
+- baixa real de estoque no ERP continua fora do escopo
+- escrita na Varejonline continua proibida sem aprovacao explicita
+- fiscal completo e modulos ERP continuam fora desta etapa

@@ -13,11 +13,26 @@ import { decryptSecret } from "@/lib/integrations/core/secrets";
 import { withBrand } from "@/lib/prisma";
 import { createVarejonlineClient } from "@/lib/integrations/providers/varejonline/client";
 import { mapVarejonlineProduct } from "@/lib/integrations/providers/varejonline/mapper";
+import {
+  getExternalProductId,
+  listVarejonlineEntities,
+  listVarejonlinePriceTables,
+  resolveVarejonlineEntityRef,
+  resolveVarejonlinePriceTableRef,
+  type VarejonlineEntityReference,
+  type VarejonlineLiquidStockBalance,
+  type VarejonlinePriceTableReference,
+} from "@/lib/integrations/providers/varejonline/reference-data";
 
 const DEFAULT_PAGE_SIZE = 100;
 const DEFAULT_MAX_ITEMS = 1000;
 const DEFAULT_BATCH_SIZE = 10;
+const STOCK_BALANCE_BATCH_SIZE = 100;
 type Tx = PrismaClient;
+type EnrichedExternalProduct = NormalizedExternalProduct & {
+  inventoryBalance?: VarejonlineLiquidStockBalance | null;
+  inventoryEntity?: VarejonlineEntityReference | null;
+};
 
 function readPositiveIntegerEnv(name: string, fallback: number) {
   const raw = process.env[name]?.trim();
@@ -86,20 +101,73 @@ function resolveStoredTablePrices(
   );
 }
 
-function resolveRequestedPriceTableIds(settings: IntegrationImportSettings) {
+function resolveRequestedPriceTableRefs(settings: IntegrationImportSettings) {
   const ids = new Set<string>();
 
   if (settings.pricing.primarySource === "SELECTED_PRICE_TABLE") {
-    if (settings.pricing.primaryPriceTableId) {
-      ids.add(settings.pricing.primaryPriceTableId);
+    if (settings.pricing.primaryPriceTableRef) {
+      ids.add(settings.pricing.primaryPriceTableRef);
     }
   }
 
   if (settings.pricing.priceTablesMode === "SELECTED") {
-    settings.pricing.selectedPriceTableIds.forEach((id) => ids.add(id));
+    settings.pricing.selectedPriceTableRefs.forEach((id) => ids.add(id));
   }
 
   return [...ids];
+}
+
+function resolvePriceTableIds(
+  settings: IntegrationImportSettings,
+  priceTables: VarejonlinePriceTableReference[],
+) {
+  const resolvedRefs = new Map<string, string>();
+  const requestedRefs = resolveRequestedPriceTableRefs(settings);
+
+  requestedRefs.forEach((ref) => {
+    const resolved = resolveVarejonlinePriceTableRef(priceTables, ref);
+    resolvedRefs.set(ref, String(resolved.id));
+  });
+
+  const primaryPriceTableId =
+    settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
+    settings.pricing.primaryPriceTableRef
+      ? resolvedRefs.get(settings.pricing.primaryPriceTableRef) ?? null
+      : null;
+
+  const selectedPriceTableIds =
+    settings.pricing.priceTablesMode === "SELECTED"
+      ? settings.pricing.selectedPriceTableRefs
+          .map((ref) => resolvedRefs.get(ref))
+          .filter((id): id is string => Boolean(id))
+      : [];
+
+  return {
+    primaryPriceTableId,
+    selectedPriceTableIds,
+    requestedPriceTableIds: Array.from(
+      new Set(
+        [
+          primaryPriceTableId,
+          ...selectedPriceTableIds,
+        ].filter((id): id is string => Boolean(id)),
+      ),
+    ),
+  };
+}
+
+function createResolvedPricingSettings(
+  settings: IntegrationImportSettings,
+  resolved: ReturnType<typeof resolvePriceTableIds>,
+): IntegrationImportSettings {
+  return {
+    ...settings,
+    pricing: {
+      ...settings.pricing,
+      primaryPriceTableId: resolved.primaryPriceTableId,
+      selectedPriceTableIds: resolved.selectedPriceTableIds,
+    },
+  };
 }
 
 function createSyncConfigurationError(message: string) {
@@ -119,23 +187,34 @@ function validatePricingSettings(settings: IntegrationImportSettings) {
 
   if (
     settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
-    !settings.pricing.primaryPriceTableId
+    !settings.pricing.primaryPriceTableRef
   ) {
     throw createSyncConfigurationError(
-      "Informe o ID da tabela principal antes de sincronizar.",
+      "Informe o nome ou ID da tabela principal antes de sincronizar.",
     );
   }
 
   if (
     settings.pricing.priceTablesMode === "SELECTED" &&
-    settings.pricing.selectedPriceTableIds.length === 0 &&
+    settings.pricing.selectedPriceTableRefs.length === 0 &&
     !(
       settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
-      settings.pricing.primaryPriceTableId
+      settings.pricing.primaryPriceTableRef
     )
   ) {
     throw createSyncConfigurationError(
-      "Informe os IDs das tabelas de preco antes de sincronizar.",
+      "Informe os nomes ou IDs das tabelas de preco antes de sincronizar.",
+    );
+  }
+
+  if (
+    settings.inventory.enabled &&
+    settings.inventory.importCurrentStock &&
+    settings.inventory.currentStockSource === "SELECTED_ENTITY" &&
+    !settings.inventory.stockEntityRef
+  ) {
+    throw createSyncConfigurationError(
+      "Informe o nome ou ID da entidade de estoque antes de sincronizar.",
     );
   }
 }
@@ -225,6 +304,108 @@ async function cleanupEmptyFiscalCategories(
   return cleaned;
 }
 
+function chunkArray<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function readLiquidStockProductId(balance: VarejonlineLiquidStockBalance) {
+  const id = balance.produto?.id;
+  return typeof id === "number" && Number.isFinite(id) ? String(id) : null;
+}
+
+function normalizeLiquidStockBalance(payload: unknown) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const saldoAtual = Number(record.saldoAtual);
+  if (!Number.isFinite(saldoAtual)) {
+    return null;
+  }
+
+  return record as VarejonlineLiquidStockBalance;
+}
+
+async function fetchLiquidStockBalances(
+  client: ReturnType<typeof createVarejonlineClient>,
+  products: NormalizedExternalProduct[],
+  entity: VarejonlineEntityReference,
+) {
+  const productIds = Array.from(
+    new Set(
+      products
+        .map((product) => getExternalProductId(product.rawPayload))
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+  const balances = new Map<string, VarejonlineLiquidStockBalance>();
+
+  for (const chunk of chunkArray(productIds, STOCK_BALANCE_BATCH_SIZE)) {
+    const payload = await client.get<unknown>("/saldos-mercadorias/liquido", {
+      produtos: chunk.join(","),
+      entidades: entity.id,
+      alteradoApos: "01/01/2000 00:00:00",
+      carregarQuantidadeReservada: true,
+      carregarEstoqueEmTransito: false,
+      carregarQuantidadeEpcs: false,
+    });
+    const items = Array.isArray(payload) ? payload : [];
+
+    items.forEach((item) => {
+      const balance = normalizeLiquidStockBalance(item);
+      if (!balance) {
+        return;
+      }
+
+      const productId = readLiquidStockProductId(balance);
+      if (productId) {
+        balances.set(productId, balance);
+      }
+    });
+  }
+
+  return balances;
+}
+
+export function applyOfficialStockBalances(
+  products: NormalizedExternalProduct[],
+  balances: Map<string, VarejonlineLiquidStockBalance>,
+  entity: VarejonlineEntityReference,
+) {
+  return products.map((product): EnrichedExternalProduct => {
+    const productId = getExternalProductId(product.rawPayload);
+    const balance = productId ? balances.get(productId) ?? null : null;
+
+    if (!balance) {
+      return {
+        ...product,
+        inventoryBalance: null,
+        inventoryEntity: entity,
+      };
+    }
+
+    return {
+      ...product,
+      stockQuantity: Math.trunc(balance.saldoAtual),
+      minStockQuantity: balance.estoqueMinimo ?? product.minStockQuantity,
+      maxStockQuantity: balance.estoqueMaximo ?? product.maxStockQuantity,
+      logisticsInfo: {
+        ...product.logisticsInfo,
+        stockQuantity: Math.trunc(balance.saldoAtual),
+        minStockQuantity: balance.estoqueMinimo ?? product.minStockQuantity,
+        maxStockQuantity: balance.estoqueMaximo ?? product.maxStockQuantity,
+      },
+      inventoryBalance: balance,
+      inventoryEntity: entity,
+    };
+  });
+}
+
 async function resolveCategoryIds(
   tx: Tx,
   brandId: string,
@@ -281,7 +462,7 @@ async function resolveCategoryIds(
 async function upsertProduct(
   tx: Tx,
   context: IntegrationSyncContext,
-  product: NormalizedExternalProduct,
+  product: EnrichedExternalProduct,
   settings: IntegrationImportSettings,
 ) {
   const sku = normalizeSku(product);
@@ -545,6 +726,20 @@ async function upsertProduct(
         lotControl: product.logisticsInfo.lotControl,
         lotValidityControl: product.logisticsInfo.lotValidityControl,
         usedProduct: product.logisticsInfo.usedProduct,
+        officialStockBalance: product.inventoryBalance
+          ? {
+              source: "VAREJONLINE_SALDOS_MERCADORIAS_LIQUIDO",
+              balanceType: "LIQUID",
+              entity: product.inventoryEntity,
+              saldoAtual: product.inventoryBalance.saldoAtual,
+              quantidadeReservada:
+                product.inventoryBalance.quantidadeReservada ?? null,
+              quantidadeEstoqueTransito:
+                product.inventoryBalance.quantidadeEstoqueTransito ?? null,
+              estoqueMinimo: product.inventoryBalance.estoqueMinimo ?? null,
+              estoqueMaximo: product.inventoryBalance.estoqueMaximo ?? null,
+            }
+          : null,
         ...(settings.logistics.importWeight ? { weight: product.weight } : {}),
         ...(settings.logistics.importDimensions
           ? {
@@ -699,7 +894,33 @@ export async function syncVarejonlineProducts(
     context.connection.importSettingsJson,
   );
   validatePricingSettings(importSettings);
-  const requestedPriceTableIds = resolveRequestedPriceTableIds(importSettings);
+  const requestedPriceTableRefs = resolveRequestedPriceTableRefs(importSettings);
+  const priceTables =
+    requestedPriceTableRefs.length > 0
+      ? await listVarejonlinePriceTables(accessToken)
+      : [];
+  const resolvedPriceTables =
+    requestedPriceTableRefs.length > 0
+      ? resolvePriceTableIds(importSettings, priceTables)
+      : {
+          primaryPriceTableId: null,
+          selectedPriceTableIds: [],
+          requestedPriceTableIds: [],
+        };
+  const resolvedImportSettings = createResolvedPricingSettings(
+    importSettings,
+    resolvedPriceTables,
+  );
+  const stockEntity =
+    importSettings.inventory.enabled &&
+    importSettings.inventory.importCurrentStock &&
+    importSettings.inventory.currentStockSource === "SELECTED_ENTITY" &&
+    importSettings.inventory.stockEntityRef
+      ? resolveVarejonlineEntityRef(
+          await listVarejonlineEntities(accessToken),
+          importSettings.inventory.stockEntityRef,
+        )
+      : null;
 
   const stats: IntegrationSyncStats = {
     fetched: 0,
@@ -714,6 +935,10 @@ export async function syncVarejonlineProducts(
     skippedLocked: 0,
     skippedExistingByPolicy: 0,
     categoriesCleaned: 0,
+    priceTablesResolved: resolvedPriceTables.requestedPriceTableIds.length,
+    stockBalancesFetched: 0,
+    stockEntityResolved: Boolean(stockEntity),
+    stockBalancesMissing: 0,
     pageSize,
     maxItems,
     batchSize,
@@ -730,8 +955,8 @@ export async function syncVarejonlineProducts(
       quantidade: quantity,
       somenteAtivos: onlyActive,
       idsTabelasPrecos:
-        requestedPriceTableIds.length > 0
-          ? requestedPriceTableIds.join(",")
+        resolvedPriceTables.requestedPriceTableIds.length > 0
+          ? resolvedPriceTables.requestedPriceTableIds.join(",")
           : undefined,
     });
     const items = Array.isArray(payload)
@@ -761,10 +986,26 @@ export async function syncVarejonlineProducts(
     }
   }
 
-  for (const product of normalizedProducts) {
+  const productsToPersist: EnrichedExternalProduct[] = stockEntity
+    ? applyOfficialStockBalances(
+        normalizedProducts,
+        await fetchLiquidStockBalances(client, normalizedProducts, stockEntity),
+        stockEntity,
+      )
+    : normalizedProducts.map((product): EnrichedExternalProduct => product);
+
+  if (stockEntity) {
+    stats.stockBalancesFetched = productsToPersist.filter(
+      (product) => product.inventoryBalance,
+    ).length;
+    stats.stockBalancesMissing =
+      productsToPersist.length - (stats.stockBalancesFetched ?? 0);
+  }
+
+  for (const product of productsToPersist) {
     try {
       const result = await withBrand(context.brandId, async (tx) =>
-        upsertProduct(tx, context, product, importSettings),
+        upsertProduct(tx, context, product, resolvedImportSettings),
       );
       stats.created += result.created;
       stats.updated += result.updated;
@@ -798,7 +1039,7 @@ export async function syncVarejonlineProducts(
     }
   }
 
-  const fiscalCategoryNames = collectFiscalCategoryNames(normalizedProducts);
+  const fiscalCategoryNames = collectFiscalCategoryNames(productsToPersist);
   if (fiscalCategoryNames.size > 0) {
     await withBrand(context.brandId, async (tx) => {
       stats.categoriesCleaned = await cleanupEmptyFiscalCategories(

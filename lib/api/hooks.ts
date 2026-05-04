@@ -86,6 +86,7 @@ import {
   createIntegrationConnectionV2,
   disconnectIntegrationConnectionV2,
   getIntegrationConnectionV2,
+  listVarejonlineReferenceDataV2,
   listIntegrationConnectionJobsV2,
   listIntegrationConnectionsV2,
   listIntegrationProvidersV2,
@@ -852,6 +853,37 @@ export function useUpdateIntegrationConnectionImportSettingsV2() {
         queryKey: queryKeys.v2.integrations.connectionById(variables.connectionId),
       });
     },
+  });
+}
+
+export function useVarejonlineReferenceDataV2(
+  connectionId: string,
+  resource: "price-tables" | "entities",
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.v2.integrations.referenceData(connectionId, resource),
+    queryFn: () =>
+      resource === "price-tables"
+        ? listVarejonlineReferenceDataV2(connectionId, "price-tables")
+        : listVarejonlineReferenceDataV2(connectionId, "entities"),
+    enabled: Boolean(connectionId && enabled),
+  });
+}
+
+export function useVarejonlinePriceTablesV2(connectionId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.v2.integrations.referenceData(connectionId, "price-tables"),
+    queryFn: () => listVarejonlineReferenceDataV2(connectionId, "price-tables"),
+    enabled: Boolean(connectionId && enabled),
+  });
+}
+
+export function useVarejonlineEntitiesV2(connectionId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.v2.integrations.referenceData(connectionId, "entities"),
+    queryFn: () => listVarejonlineReferenceDataV2(connectionId, "entities"),
+    enabled: Boolean(connectionId && enabled),
   });
 }
 

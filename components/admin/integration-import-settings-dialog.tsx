@@ -35,7 +35,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getErrorMessage } from "@/lib/api/error";
-import { useUpdateIntegrationConnectionImportSettingsV2 } from "@/lib/api/hooks";
+import {
+  useUpdateIntegrationConnectionImportSettingsV2,
+  useVarejonlineEntitiesV2,
+  useVarejonlinePriceTablesV2,
+} from "@/lib/api/hooks";
 import { toastError, toastSuccess } from "@/lib/ui/toast";
 
 const productFieldLabels: Array<{
@@ -53,7 +57,7 @@ const productFieldLabels: Array<{
   { key: "attributes", label: "Grade e atributos" },
 ];
 
-function parsePriceTableIds(rawValue: string) {
+function parseReferenceList(rawValue: string) {
   return Array.from(
     new Set(
       rawValue
@@ -62,6 +66,15 @@ function parsePriceTableIds(rawValue: string) {
         .filter(Boolean),
     ),
   );
+}
+
+function formatReferenceOption(item: { id: number; nome: string }) {
+  return `${item.id} - ${item.nome}`;
+}
+
+function stripReferenceOptionPrefix(value: string) {
+  const match = value.trim().match(/^(\d+)\s+-\s+.+$/);
+  return match ? match[1] : value.trim();
 }
 
 function SettingsSection({
@@ -121,6 +134,14 @@ function IntegrationImportSettingsForm({
   onClose: () => void;
 }) {
   const updateMutation = useUpdateIntegrationConnectionImportSettingsV2();
+  const priceTablesQuery = useVarejonlinePriceTablesV2(
+    connection.id,
+    connection.provider === "VAREJONLINE" && connection.status === "CONNECTED",
+  );
+  const entitiesQuery = useVarejonlineEntitiesV2(
+    connection.id,
+    connection.provider === "VAREJONLINE" && connection.status === "CONNECTED",
+  );
   const [settings, setSettings] = useState<IntegrationImportSettings>(() =>
     normalizeIntegrationImportSettings(
       connection.importSettingsJson ?? buildDefaultIntegrationImportSettings(),
@@ -133,11 +154,11 @@ function IntegrationImportSettingsForm({
     if (
       settings.pricing.enabled &&
       settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
-      !settings.pricing.primaryPriceTableId
+      !settings.pricing.primaryPriceTableRef
     ) {
       toastError(
         "Tabela obrigatoria",
-        "Informe o ID da tabela principal para usar preco por tabela.",
+        "Informe o nome ou ID da tabela principal para usar preco por tabela.",
       );
       return;
     }
@@ -145,15 +166,28 @@ function IntegrationImportSettingsForm({
     if (
       settings.pricing.enabled &&
       settings.pricing.priceTablesMode === "SELECTED" &&
-      settings.pricing.selectedPriceTableIds.length === 0 &&
+      settings.pricing.selectedPriceTableRefs.length === 0 &&
       !(
         settings.pricing.primarySource === "SELECTED_PRICE_TABLE" &&
-        settings.pricing.primaryPriceTableId
+        settings.pricing.primaryPriceTableRef
       )
     ) {
       toastError(
-        "IDs obrigatorios",
-        "Informe ao menos um ID de tabela para usar a leitura de tabelas selecionadas.",
+        "Tabelas obrigatorias",
+        "Informe ao menos um nome ou ID de tabela para usar a leitura de tabelas selecionadas.",
+      );
+      return;
+    }
+
+    if (
+      settings.inventory.enabled &&
+      settings.inventory.importCurrentStock &&
+      settings.inventory.currentStockSource === "SELECTED_ENTITY" &&
+      !settings.inventory.stockEntityRef
+    ) {
+      toastError(
+        "Entidade obrigatoria",
+        "Informe o nome ou ID da entidade que alimenta o estoque principal.",
       );
       return;
     }
@@ -402,7 +436,7 @@ function IntegrationImportSettingsForm({
             <SelectContent>
               <SelectItem value="NONE">Nao importar tabelas</SelectItem>
               <SelectItem value="SELECTED">
-                Importar tabelas por IDs selecionados
+                Importar tabelas por nome ou ID
               </SelectItem>
             </SelectContent>
           </Select>
@@ -439,20 +473,33 @@ function IntegrationImportSettingsForm({
             }
           />
         </div>
+        {connection.provider === "VAREJONLINE" ? (
+          <datalist id={`price-table-options-${connection.id}`}>
+            {(priceTablesQuery.data ?? [])
+              .filter((item) => item.ativo !== false && item.disponivel !== false)
+              .map((item) => (
+                <option key={item.id} value={formatReferenceOption(item)} />
+              ))}
+          </datalist>
+        ) : null}
         {settings.pricing.primarySource === "SELECTED_PRICE_TABLE" ? (
           <div className="grid gap-2">
-            <Label htmlFor="pricing-primary-table-id">ID da tabela principal</Label>
+            <Label htmlFor="pricing-primary-table-id">
+              Nome ou ID da tabela principal
+            </Label>
             <Input
               id="pricing-primary-table-id"
-              value={settings.pricing.primaryPriceTableId ?? ""}
+              list={`price-table-options-${connection.id}`}
+              value={settings.pricing.primaryPriceTableRef ?? ""}
               disabled={!settings.pricing.enabled}
-              placeholder="Ex.: 45"
+              placeholder="Ex.: 2 ou TABELA ATACADO"
               onChange={(event) =>
                 setSettings((current) => ({
                   ...current,
                   pricing: {
                     ...current.pricing,
-                    primaryPriceTableId: event.target.value.trim() || null,
+                    primaryPriceTableRef:
+                      stripReferenceOptionPrefix(event.target.value) || null,
                   },
                 }))
               }
@@ -462,25 +509,28 @@ function IntegrationImportSettingsForm({
         {settings.pricing.priceTablesMode === "SELECTED" ? (
           <div className="grid gap-2">
           <Label htmlFor="pricing-table-ids">
-            IDs de tabela de preco (separados por virgula)
+            Nomes ou IDs de tabela de preco (separados por virgula)
           </Label>
           <Input
             id="pricing-table-ids"
-            value={settings.pricing.selectedPriceTableIds.join(", ")}
+            list={`price-table-options-${connection.id}`}
+            value={settings.pricing.selectedPriceTableRefs.join(", ")}
             disabled={!settings.pricing.enabled}
-            placeholder="Ex.: 12, 45"
+            placeholder="Ex.: TABELA ATACADO, FILIAIS"
             onChange={(event) =>
               setSettings((current) => ({
                 ...current,
                 pricing: {
                   ...current.pricing,
-                  selectedPriceTableIds: parsePriceTableIds(event.target.value),
+                  selectedPriceTableRefs: parseReferenceList(
+                    event.target.value,
+                  ).map(stripReferenceOptionPrefix),
                 },
               }))
             }
           />
           <p className="text-xs text-muted-foreground">
-            Informe um ou mais IDs de tabela que o Catalogo Facil deve solicitar
+            Informe nomes ou IDs das tabelas que o Catalogo Facil deve solicitar
             a Varejonline, como atacado e outras tabelas comerciais.
           </p>
           </div>
@@ -556,6 +606,74 @@ function IntegrationImportSettingsForm({
             }
           />
         </div>
+        {settings.inventory.importCurrentStock ? (
+          <div className="grid gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="inventory-stock-source">Origem do estoque atual</Label>
+              <Select
+                value={settings.inventory.currentStockSource}
+                disabled={!settings.inventory.enabled}
+                onValueChange={(
+                  value: IntegrationImportSettings["inventory"]["currentStockSource"],
+                ) =>
+                  setSettings((current) => ({
+                    ...current,
+                    inventory: {
+                      ...current.inventory,
+                      currentStockSource: value,
+                    },
+                  }))
+                }
+              >
+                <SelectTrigger id="inventory-stock-source">
+                  <SelectValue placeholder="Selecione a origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PRODUCT_PAYLOAD">
+                    Payload do produto
+                  </SelectItem>
+                  <SelectItem value="SELECTED_ENTITY">
+                    Entidade especifica
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <datalist id={`entity-options-${connection.id}`}>
+              {(entitiesQuery.data ?? []).map((item) => (
+                <option key={item.id} value={formatReferenceOption(item)} />
+              ))}
+            </datalist>
+            {settings.inventory.currentStockSource === "SELECTED_ENTITY" ? (
+              <div className="grid gap-2">
+                <Label htmlFor="inventory-stock-entity">
+                  Nome ou ID da entidade de estoque
+                </Label>
+                <Input
+                  id="inventory-stock-entity"
+                  list={`entity-options-${connection.id}`}
+                  value={settings.inventory.stockEntityRef ?? ""}
+                  disabled={!settings.inventory.enabled}
+                  placeholder="Ex.: 4 ou MAQUIADA MATRIZ"
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      inventory: {
+                        ...current.inventory,
+                        stockEntityRef:
+                          stripReferenceOptionPrefix(event.target.value) || null,
+                        stockBalanceType: "LIQUID",
+                      },
+                    }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  O estoque principal usara saldo liquido oficial da entidade
+                  selecionada e preservara reservas na metadata.
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </SettingsSection>
 
       <SettingsSection

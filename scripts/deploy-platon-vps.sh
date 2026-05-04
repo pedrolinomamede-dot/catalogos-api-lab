@@ -5,7 +5,7 @@ APP_DIR="${APP_DIR:-/var/www/catalogos-api-lab/app}"
 APP_NAME="${APP_NAME:-catalogos-api-lab}"
 APP_PORT="${APP_PORT:-3000}"
 APP_DOMAIN="${APP_DOMAIN:-catalogofacil.solucaoviavel.com}"
-BRANCH="${BRANCH:-codex/super-admin-platform-foundation}"
+BRANCH="${BRANCH:-main}"
 PM2_HOME="${PM2_HOME:-${HOME}/.pm2}"
 
 export PM2_HOME

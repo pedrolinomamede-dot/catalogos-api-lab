@@ -83,6 +83,8 @@ export const queryKeys = {
       providers: ["v2", "integrations", "providers"] as const,
       connections: ["v2", "integrations", "connections"] as const,
       connectionById: (id: string) => ["v2", "integrations", "connections", id] as const,
+      referenceData: (id: string, resource: string) =>
+        ["v2", "integrations", "connections", id, "reference-data", resource] as const,
       jobs: (id: string, paramsKey?: unknown) =>
         ["v2", "integrations", "connections", id, "jobs", paramsKey ?? "all"] as const,
     },

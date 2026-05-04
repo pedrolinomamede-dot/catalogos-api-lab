@@ -603,6 +603,21 @@ export type UpdateIntegrationConnectionImportSettingsRequest = {
   importSettings: IntegrationImportSettings;
 };
 
+export type VarejonlinePriceTableReference = {
+  id: number;
+  nome: string;
+  idsEntidades?: number[];
+  ativo?: boolean;
+  disponivel?: boolean;
+  permanente?: boolean;
+};
+
+export type VarejonlineEntityReference = {
+  id: number;
+  nome: string;
+  documento?: string | null;
+};
+
 export type CreateShareLinkV2Request = {
   name: string;
   catalogIds: string[];

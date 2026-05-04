@@ -30,6 +30,8 @@ describe("integration import settings", () => {
 
     expect(settings.pricing.primarySource).toBe("SELECTED_PRICE_TABLE");
     expect(settings.pricing.priceTablesMode).toBe("SELECTED");
+    expect(settings.pricing.selectedPriceTableRefs).toEqual(["12", "45"]);
+    expect(settings.pricing.primaryPriceTableRef).toBe("45");
     expect(settings.pricing.selectedPriceTableIds).toEqual(["12", "45"]);
     expect(settings.pricing.primaryPriceTableId).toBe("45");
     expect(settings.categories.enabled).toBe(false);
@@ -67,10 +69,11 @@ describe("integration import settings", () => {
 
     expect(withoutPrimary.pricing.priceTablesMode).toBe("NONE");
     expect(withPrimary.pricing.priceTablesMode).toBe("SELECTED");
+    expect(withPrimary.pricing.primaryPriceTableRef).toBe("45");
     expect(withPrimary.pricing.primaryPriceTableId).toBe("45");
   });
 
-  it("reports a clear sync error for selected table pricing without a primary ID", () => {
+  it("reports a clear sync error for selected table pricing without a primary ref", () => {
     expect(
       getIntegrationImportSettingsSyncError({
         pricing: {
@@ -78,7 +81,39 @@ describe("integration import settings", () => {
           primaryPriceTableId: null,
         },
       }),
-    ).toBe("Informe o ID da tabela principal antes de sincronizar.");
+    ).toBe("Informe o nome ou ID da tabela principal antes de sincronizar.");
+  });
+
+  it("normalizes explicit price table refs and selected stock entity", () => {
+    const settings = normalizeIntegrationImportSettings({
+      pricing: {
+        primarySource: "SELECTED_PRICE_TABLE",
+        primaryPriceTableRef: " TABELA ATACADO ",
+        priceTablesMode: "SELECTED",
+        selectedPriceTableRefs: [" PADRAO ", "2", "PADRAO"],
+      },
+      inventory: {
+        currentStockSource: "SELECTED_ENTITY",
+        stockEntityRef: " MAQUIADA MATRIZ ",
+      },
+    });
+
+    expect(settings.pricing.primaryPriceTableRef).toBe("TABELA ATACADO");
+    expect(settings.pricing.selectedPriceTableRefs).toEqual(["PADRAO", "2"]);
+    expect(settings.inventory.currentStockSource).toBe("SELECTED_ENTITY");
+    expect(settings.inventory.stockEntityRef).toBe("MAQUIADA MATRIZ");
+    expect(settings.inventory.stockBalanceType).toBe("LIQUID");
+  });
+
+  it("reports a clear sync error for selected entity stock without entity ref", () => {
+    expect(
+      getIntegrationImportSettingsSyncError({
+        inventory: {
+          currentStockSource: "SELECTED_ENTITY",
+          stockEntityRef: null,
+        },
+      }),
+    ).toBe("Informe o nome ou ID da entidade de estoque antes de sincronizar.");
   });
 
   it("keeps the global sync policy when partially configured", () => {

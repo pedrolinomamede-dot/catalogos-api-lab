@@ -2,52 +2,66 @@
 
 ## Objetivo
 
-Reduzir risco operacional e proteger tenants, usuarios, dados e integracoes do Catalogo Facil.
+Documentar os controles de seguranca ja existentes no Catalogo Facil, os riscos conhecidos e os proximos reforcos necessarios para operar o produto com mais confiabilidade.
 
-## Frentes principais
+## Controles ja implementados
 
 ### Multi-tenant
 
-- revisar todas as APIs para garantir escopo por `brandId`
-- impedir acesso cruzado entre tenants
-- reforcar `withBrand` como padrao
+- escopo de tenant por `brandId`
+- isolamento server-side via `withBrand`
+- APIs autenticadas exigem contexto de usuario e tenant
+- marcas podem ser suspensas
 
-### Permissoes
+### Autorizacao
 
-- sair de roles fixas apenas
-- adotar permissoes granulares
-- proteger APIs no servidor, nao apenas a UI
+- autenticacao via `NextAuth`
+- protecao server-side com `requireRole`, `requireRoles` e `requirePlatformAdmin`
+- separacao atual de papeis:
+  - `SUPER_ADMIN`
+  - `ADMIN`
+  - `SELLER`
+  - `VIEWER`
 
-### Segredos
+### Segredos e integracoes
 
-- manter tokens e segredos apenas no servidor
-- revisar `.env`
-- manter copia segura fora da VPS
-- nunca expor credenciais em logs ou respostas
+- tokens OAuth mantidos apenas no servidor
+- segredos da integracao criptografados antes de persistir
+- validacao de CNPJ na conexao Varejonline
+- politica read-only para Varejonline
 
-### Integracoes
+### Operacao
 
-- Varejonline continua read-only
-- nao usar endpoint interno autenticado por cookie
-- nao fazer escrita no ERP sem aprovacao explicita
-
-### Auditoria
-
-- registrar alteracoes de usuario
-- registrar alteracoes de permissao
-- registrar sincronizacoes ERP
-- registrar alteracoes manuais criticas
-
-### VPS e operacao
-
-- deploy sempre por script oficial
+- deploy por script oficial
 - restart de PM2 com carregamento explicito do `.env`
-- snapshots regulares
-- plano de restore testado
+- documentacao dedicada para deploy e restore
 
-## Pendencias prioritarias
+## Riscos conhecidos
 
-1. sistema de permissoes por acao
-2. auditoria
-3. revisao server-side de acesso por tenant
-4. politica de backup e restore
+- o modelo atual de autorizacao ainda depende demais de papeis fixos
+- ainda faltam permissoes granulares por acao
+- ainda falta auditoria estruturada de alteracoes sensiveis
+- ainda precisamos reforcar revisao sistematica de todas as APIs por `brandId`
+- a implementacao nova de preco por nome/ID e estoque oficial ainda aguarda validacao final em VPS
+
+## Proximas implementacoes
+
+### Alta prioridade
+
+- permissoes granulares por recurso e acao
+- auditoria de alteracoes criticas
+- revisao server-side completa de acesso por tenant
+- rotina operacional de backup e restore
+
+### Media prioridade
+
+- politica de senha mais explicita
+- avaliacao de 2FA para Super Admin futuramente
+- monitoramento mais estruturado de jobs e falhas
+
+## Regras permanentes
+
+- nunca commitar tokens ou credenciais
+- nunca usar endpoint interno da Varejonline com cookie/sessao
+- nunca fazer escrita no ERP sem aprovacao explicita
+- seguranca de API vale mais que permissao visual de interface
