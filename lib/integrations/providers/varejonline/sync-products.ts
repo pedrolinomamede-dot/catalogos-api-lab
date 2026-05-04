@@ -25,7 +25,6 @@ import {
 } from "@/lib/integrations/providers/varejonline/reference-data";
 
 const DEFAULT_PAGE_SIZE = 100;
-const DEFAULT_MAX_ITEMS = 1000;
 const DEFAULT_BATCH_SIZE = 10;
 const STOCK_BALANCE_BATCH_SIZE = 100;
 type Tx = PrismaClient;
@@ -42,6 +41,21 @@ function readPositiveIntegerEnv(name: string, fallback: number) {
 
   const parsed = Number(raw);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function readMaxItemsEnv(name: string) {
+  const raw = process.env[name]?.trim();
+  if (!raw) {
+    return null;
+  }
+
+  const normalized = raw.toLowerCase();
+  if (["all", "0", "false", "unlimited", "sem-limite"].includes(normalized)) {
+    return null;
+  }
+
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 function toJsonValue(value: unknown): Prisma.InputJsonValue {
@@ -907,10 +921,7 @@ export async function syncVarejonlineProducts(
     "VAREJONLINE_PRODUCTS_PAGE_SIZE",
     DEFAULT_PAGE_SIZE,
   );
-  const maxItems = readPositiveIntegerEnv(
-    "VAREJONLINE_PRODUCTS_MAX_ITEMS",
-    DEFAULT_MAX_ITEMS,
-  );
+  const maxItems = readMaxItemsEnv("VAREJONLINE_PRODUCTS_MAX_ITEMS");
   const batchSize = readPositiveIntegerEnv(
     "VAREJONLINE_PRODUCTS_BATCH_SIZE",
     DEFAULT_BATCH_SIZE,
@@ -975,9 +986,12 @@ export async function syncVarejonlineProducts(
   };
   const normalizedProducts: NormalizedExternalProduct[] = [];
 
-  for (let start = 0; start < maxItems; start += pageSize) {
-    const remaining = maxItems - start;
-    const quantity = Math.min(pageSize, remaining);
+  for (let start = 0; ; start += pageSize) {
+    const remaining = maxItems === null ? null : maxItems - start;
+    if (remaining !== null && remaining <= 0) {
+      break;
+    }
+    const quantity = remaining === null ? pageSize : Math.min(pageSize, remaining);
     const payload = await client.get<unknown>("/produtos", {
       inicio: start,
       quantidade: quantity,

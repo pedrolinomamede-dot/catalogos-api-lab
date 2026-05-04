@@ -79,4 +79,5 @@ bash ./scripts/restart-platon-pm2-with-env.sh
 - o `postbuild` prepara os assets do standalone
 - `next start` nao deve ser usado nesta VPS
 - se o PDF falhar por browser ausente, validar `npx playwright install chromium`
+- para importar todos os produtos da Varejonline, `VAREJONLINE_PRODUCTS_MAX_ITEMS` pode ficar vazio ou usar `all`/`0`
 - o ultimo `statsJson` da sync Varejonline registra `maxItems`, `pageSize`, `batchSize` e `onlyActive`

@@ -126,7 +126,7 @@ export type IntegrationSyncStats = {
   stockEntityResolved?: boolean;
   stockBalancesMissing?: number;
   pageSize?: number;
-  maxItems?: number;
+  maxItems?: number | null;
   batchSize?: number;
   onlyActive?: boolean;
   errors?: Array<{
