@@ -16,6 +16,7 @@ import {
   Settings,
   Users,
   X,
+  ShieldCheck,
 } from "lucide-react";
 
 import { useMe } from "@/lib/api/hooks";
@@ -43,6 +44,7 @@ const links: SidebarLink[] = [
   { href: "/dashboard/catalogs", label: "Catálogos", icon: FileStack },
   { href: "/dashboard/orders", label: "Pedidos", icon: ShoppingCart },
   { href: "/dashboard/product-requests", label: "Solicitações", icon: Search },
+  { href: "/dashboard/data-quality", label: "Qualidade dos dados", icon: ShieldCheck, adminOnly: true },
   { href: "/dashboard/share-links", label: "Share Links", icon: Link2 },
   { href: "/dashboard/team", label: "Equipe", icon: Users, adminOnly: true },
   { href: "/dashboard/settings", label: "Configurações", icon: Settings, adminOnly: true },

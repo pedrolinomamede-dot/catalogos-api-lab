@@ -78,6 +78,12 @@ export const queryKeys = {
       root: ["v2", "dashboard"] as const,
       summary: ["v2", "dashboard", "summary"] as const,
     },
+    dataQuality: {
+      root: ["v2", "data-quality"] as const,
+      summary: ["v2", "data-quality", "summary"] as const,
+      issues: (paramsKey?: unknown) =>
+        ["v2", "data-quality", "issues", paramsKey ?? "all"] as const,
+    },
     integrations: {
       root: ["v2", "integrations"] as const,
       providers: ["v2", "integrations", "providers"] as const,

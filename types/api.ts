@@ -337,6 +337,39 @@ export type BaseProductsImportResultV2 = {
   errors: BaseProductsImportErrorV2[];
 };
 
+export type DataQualityIssueType =
+  | "missing_sku"
+  | "duplicate_sku"
+  | "missing_price"
+  | "missing_image"
+  | "missing_category"
+  | "missing_subcategory"
+  | "missing_description"
+  | "possible_duplicate_category"
+  | "possible_duplicate_subcategory";
+
+export type DataQualityIssueRow = {
+  id: string;
+  issueType: DataQualityIssueType;
+  entityType: "product" | "category" | "subcategory";
+  name: string;
+  sku?: string | null;
+  sourceType?: ProductSourceType | null;
+  sourceProvider?: IntegrationProvider | null;
+  normalizedName?: string | null;
+  duplicateCount?: number | null;
+  relatedIds?: string[];
+  details?: string | null;
+  updatedAt?: Date | null;
+};
+
+export type DataQualitySummary = {
+  totalProducts: number;
+  totalCategories: number;
+  totalSubcategories: number;
+  issueCounts: Record<DataQualityIssueType, number>;
+};
+
 export type CategoryV2 = {
   id: string;
   brandId: string;

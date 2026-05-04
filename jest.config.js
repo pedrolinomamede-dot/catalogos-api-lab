@@ -6,4 +6,5 @@ module.exports = {
     "^@/(.*)$": "<rootDir>/$1",
   },
   testMatch: ["**/__tests__/**/*.test.ts"],
+  modulePathIgnorePatterns: ["<rootDir>/.next/"],
 };

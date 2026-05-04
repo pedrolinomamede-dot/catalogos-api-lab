@@ -2,6 +2,8 @@ import type {
   AppUserV2,
   DashboardSummaryV2,
   BaseProductsImportResultV2,
+  DataQualityIssueRow,
+  DataQualitySummary,
   CreateBrandRequest,
   CreatePlatformTenantRequest,
   CreateCatalogItemV2Request,
@@ -71,6 +73,10 @@ import {
   updateBaseProductV2,
   updateBaseProductImageV2,
 } from "@/lib/api/v2/base-products";
+import {
+  getDataQualitySummaryV2,
+  listDataQualityIssuesV2,
+} from "@/lib/api/v2/data-quality";
 import { getDashboardSummaryV2 } from "@/lib/api/v2/dashboard";
 import {
   addCatalogItemV2,
@@ -172,6 +178,7 @@ type ShareLinksV2Params = Parameters<typeof listShareLinksV2>[0];
 type OrderIntentsV2Params = Parameters<typeof listOrderIntentsV2>[0];
 type ProductRequestsV2Params = Parameters<typeof listProductRequestsV2>[0];
 type IntegrationConnectionJobsParams = Parameters<typeof listIntegrationConnectionJobsV2>[1];
+type DataQualityIssuesParams = Parameters<typeof listDataQualityIssuesV2>[0];
 type UpdateUserV2Input = { id: string; data: UpdateUserV2Request };
 type UpdateOrderIntentStatusInput = {
   id: string;
@@ -347,6 +354,24 @@ export function useDashboardSummaryV2() {
   return useQuery<DashboardSummaryV2>({
     queryKey: queryKeys.v2.dashboard.summary,
     queryFn: getDashboardSummaryV2,
+  });
+}
+
+export function useDataQualitySummaryV2() {
+  return useQuery<DataQualitySummary>({
+    queryKey: queryKeys.v2.dataQuality.summary,
+    queryFn: getDataQualitySummaryV2,
+  });
+}
+
+export function useDataQualityIssuesV2(params: DataQualityIssuesParams) {
+  return useQuery<{
+    data: DataQualityIssueRow[];
+    meta: { page: number; pageSize: number; total: number; totalPages: number };
+  }>({
+    queryKey: queryKeys.v2.dataQuality.issues(params),
+    queryFn: () => listDataQualityIssuesV2(params),
+    enabled: Boolean(params.type),
   });
 }
 
