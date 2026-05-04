@@ -34,6 +34,31 @@ import {
 } from "@/lib/api/hooks";
 import { toastError, toastSuccess } from "@/lib/ui/toast";
 
+function formatDuration(ms: number) {
+  if (ms < 60_000) return `${Math.floor(ms / 1000)}s`;
+  const min = Math.floor(ms / 60_000);
+  const sec = Math.floor((ms % 60_000) / 1000);
+  return sec > 0 ? `${min}min ${sec}s` : `${min}min`;
+}
+
+function parseStats(statsJson: unknown) {
+  if (!statsJson || typeof statsJson !== "object") return null;
+  const s = statsJson as Record<string, unknown>;
+  return {
+    fetched: typeof s.fetched === "number" ? s.fetched : null,
+    created: typeof s.created === "number" ? s.created : null,
+    updated: typeof s.updated === "number" ? s.updated : null,
+    skipped: typeof s.skipped === "number" ? s.skipped : null,
+    failed: typeof s.failed === "number" ? s.failed : null,
+  };
+}
+
+function parseErrorMessage(errorJson: unknown): string | null {
+  if (!errorJson || typeof errorJson !== "object") return null;
+  const e = errorJson as Record<string, unknown>;
+  return typeof e.message === "string" ? e.message : null;
+}
+
 function formatDate(value?: Date | string | null) {
   if (!value) {
     return "-";
@@ -96,6 +121,8 @@ function IntegrationJobsPreview({ connectionId }: { connectionId: string }) {
     },
   );
 
+  const [now, setNow] = useState(() => Date.now());
+
   const jobs = Array.isArray(data) ? data : data?.data ?? [];
   const hasRunningJob = jobs.some((job) => job.status === "RUNNING");
 
@@ -104,11 +131,18 @@ function IntegrationJobsPreview({ connectionId }: { connectionId: string }) {
       return;
     }
 
-    const timer = window.setInterval(() => {
+    const pollTimer = window.setInterval(() => {
       refetch();
     }, 5000);
 
-    return () => window.clearInterval(timer);
+    const tickTimer = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(pollTimer);
+      window.clearInterval(tickTimer);
+    };
   }, [hasRunningJob, refetch]);
 
   if (isLoading) {
@@ -124,30 +158,75 @@ function IntegrationJobsPreview({ connectionId }: { connectionId: string }) {
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Recurso</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Inicio</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {jobs.map((job) => (
-          <TableRow key={job.id}>
-            <TableCell className="text-xs">{job.resource}</TableCell>
-            <TableCell>
-              <Badge variant={job.status === "SUCCESS" ? "default" : job.status === "FAILED" ? "destructive" : "outline"}>
+    <div className="space-y-2">
+      {jobs.map((job) => {
+        const stats = parseStats(job.statsJson);
+        const errorMessage = parseErrorMessage(job.errorJson);
+        const startedAt = job.startedAt ? new Date(job.startedAt).getTime() : null;
+        const finishedAt = job.finishedAt ? new Date(job.finishedAt).getTime() : null;
+        const updatedAt = job.updatedAt ? new Date(job.updatedAt).getTime() : null;
+        const durationMs = startedAt
+          ? (finishedAt ?? now) - startedAt
+          : null;
+        const lastUpdateMs = updatedAt ? now - updatedAt : null;
+        const isStuck =
+          job.status === "RUNNING" &&
+          startedAt !== null &&
+          now - startedAt > 4 * 60_000 &&
+          lastUpdateMs !== null &&
+          lastUpdateMs > 4 * 60_000;
+
+        return (
+          <div key={job.id} className="rounded-md border px-3 py-2 space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium">{job.resource}</span>
+              <Badge
+                variant={
+                  job.status === "SUCCESS"
+                    ? "default"
+                    : job.status === "FAILED"
+                      ? "destructive"
+                      : "outline"
+                }
+              >
                 {job.status}
               </Badge>
-            </TableCell>
-            <TableCell className="text-xs text-muted-foreground">
-              {formatDate(job.startedAt ?? job.createdAt)}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+              {durationMs !== null && (
+                <span className="text-xs text-muted-foreground">
+                  {formatDuration(durationMs)}
+                </span>
+              )}
+              {isStuck && (
+                <Badge variant="outline" className="text-yellow-600 border-yellow-400">
+                  Sem atualiz. ha {formatDuration(lastUpdateMs ?? 0)}
+                </Badge>
+              )}
+              <span className="text-xs text-muted-foreground ml-auto">
+                {formatDate(job.startedAt ?? job.createdAt)}
+              </span>
+            </div>
+            {stats && (
+              <p className="text-xs text-muted-foreground">
+                {[
+                  stats.fetched !== null && `fetched ${stats.fetched}`,
+                  stats.created !== null && `criados ${stats.created}`,
+                  stats.updated !== null && `atualizados ${stats.updated}`,
+                  stats.skipped !== null && stats.skipped > 0 && `pulados ${stats.skipped}`,
+                  stats.failed !== null && stats.failed > 0 && `falhas ${stats.failed}`,
+                ]
+                  .filter(Boolean)
+                  .join(" • ")}
+              </p>
+            )}
+            {errorMessage && (
+              <p className="text-xs text-destructive truncate" title={errorMessage}>
+                {errorMessage}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

@@ -1023,6 +1023,8 @@ export async function syncVarejonlineProducts(
       }
     }
 
+    await context.onProgress?.(stats).catch(() => undefined);
+
     if (items.length < quantity) {
       break;
     }
@@ -1044,6 +1046,7 @@ export async function syncVarejonlineProducts(
       productsToPersist.length - (stats.stockBalancesFetched ?? 0);
   }
 
+  let persistedCount = 0;
   for (const product of productsToPersist) {
     try {
       const result = await withBrand(context.brandId, async (tx) =>
@@ -1078,6 +1081,11 @@ export async function syncVarejonlineProducts(
         externalCode: product.externalCode,
         message,
       });
+    }
+
+    persistedCount += 1;
+    if (persistedCount % pageSize === 0) {
+      await context.onProgress?.(stats).catch(() => undefined);
     }
   }
 

@@ -9,7 +9,18 @@ import type {
   IntegrationSyncStats,
 } from "@/lib/integrations/core/types";
 import { getIntegrationImportSettingsSyncError } from "@/lib/integrations/core/import-settings";
-import { withBrand } from "@/lib/prisma";
+import { prisma, withBrand } from "@/lib/prisma";
+
+async function updateJobProgress(jobId: string, stats: IntegrationSyncStats) {
+  try {
+    await prisma.integrationSyncJobV2.update({
+      where: { id: jobId },
+      data: { statsJson: stats as unknown as never },
+    });
+  } catch {
+    // progress updates are best-effort — never interrupt the sync
+  }
+}
 
 type Tx = Parameters<Parameters<typeof withBrand>[1]>[0];
 
@@ -182,6 +193,7 @@ async function runIntegrationSyncJob(
       connection,
       resource: input.resource,
       mode: input.mode,
+      onProgress: (currentStats) => updateJobProgress(job.id, currentStats),
     });
     const finishedAt = new Date();
     const hasSuccessfulItems = stats.created + stats.updated + stats.skipped > 0;

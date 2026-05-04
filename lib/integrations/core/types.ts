@@ -141,6 +141,7 @@ export type IntegrationSyncContext = {
   connection: IntegrationSyncConnectionContext;
   resource: IntegrationSyncResource;
   mode: IntegrationSyncJobMode;
+  onProgress?: (stats: IntegrationSyncStats) => Promise<void>;
 };
 
 export type IntegrationProviderAdapter = {
