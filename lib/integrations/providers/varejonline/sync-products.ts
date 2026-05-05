@@ -1069,12 +1069,9 @@ export async function syncVarejonlineProducts(
     } catch (error) {
       stats.failed += 1;
       const message =
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-          ? "SKU already exists in Base Geral for another source."
-          : error instanceof Error
-            ? error.message
-            : "Could not persist Varejonline product";
+        error instanceof Error
+          ? error.message
+          : "Could not persist Varejonline product";
 
       stats.errors?.push({
         externalId: product.externalId,

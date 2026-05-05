@@ -259,13 +259,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ ok: true, data: baseProduct }, { status: 201 });
     });
-  } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      return jsonError(409, "base_product_conflict", "SKU already exists");
-    }
+  } catch {
     return jsonError(500, "base_product_create_failed", "Could not create base product");
   }
 }

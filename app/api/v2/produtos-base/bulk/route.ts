@@ -379,36 +379,6 @@ export async function POST(request: Request) {
       addSubcategoryToLookup(subcategory);
     });
 
-    const validCodes = parsedRows
-      .filter((row) => !errorsByRow.has(row.sourceIndex) && row.normalizedCode)
-      .map((row) => row.normalizedCode as string);
-
-    if (validCodes.length > 0) {
-      const existing = await tx.productBaseV2.findMany({
-        where: {
-          brandId: auth.brandId,
-          sku: { in: Array.from(new Set(validCodes)) },
-        },
-        select: { sku: true },
-      });
-
-      const existingCodes = new Set(existing.map((item) => item.sku));
-
-      parsedRows.forEach((row) => {
-        if (errorsByRow.has(row.sourceIndex) || !row.normalizedCode) {
-          return;
-        }
-        if (existingCodes.has(row.normalizedCode)) {
-          setError(
-            errorsByRow,
-            row,
-            "duplicate_code_db",
-            "Normalized code already exists in Base Geral",
-          );
-        }
-      });
-    }
-
     for (const row of parsedRows) {
       if (errorsByRow.has(row.sourceIndex)) {
         continue;
@@ -601,19 +571,6 @@ export async function POST(request: Request) {
         });
         created += 1;
       } catch (error) {
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === "P2002"
-        ) {
-          setError(
-            errorsByRow,
-            row,
-            "duplicate_code_db",
-            "Normalized code already exists in Base Geral",
-          );
-          continue;
-        }
-
         if (error instanceof Error) {
           const message = error.message.toLowerCase();
           if (
