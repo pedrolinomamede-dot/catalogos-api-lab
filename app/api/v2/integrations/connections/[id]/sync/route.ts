@@ -67,6 +67,8 @@ export async function POST(
         ? "not_found"
         : result.statusCode === 400
           ? "validation_error"
+          : result.statusCode === 409
+            ? "conflict"
         : "integration_sync_failed",
       result.message,
       "jobId" in result ? { jobId: result.jobId } : undefined,

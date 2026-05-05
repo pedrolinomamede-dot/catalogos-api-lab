@@ -351,6 +351,12 @@ function chunkArray<T>(items: T[], size: number) {
   return chunks;
 }
 
+function toErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "Could not persist Varejonline product";
+}
+
 function readLiquidStockProductId(balance: VarejonlineLiquidStockBalance) {
   const id = balance.produto?.id;
   return typeof id === "number" && Number.isFinite(id) ? String(id) : null;
@@ -1050,44 +1056,54 @@ export async function syncVarejonlineProducts(
   }
 
   let persistedCount = 0;
-  for (const product of productsToPersist) {
-    if (persistedCount % pageSize === 0 && (await context.isCancelled?.())) {
+  const persistenceBatches = chunkArray(productsToPersist, batchSize);
+
+  for (const batch of persistenceBatches) {
+    if (await context.isCancelled?.()) {
       break;
     }
-    try {
-      const result = await withBrand(context.brandId, async (tx) =>
-        upsertProduct(tx, context, product, resolvedImportSettings),
-      );
-      stats.created += result.created;
-      stats.updated += result.updated;
-      stats.skipped += result.skipped;
-      stats.imagesCreated = (stats.imagesCreated ?? 0) + result.imagesCreated;
-      stats.imageUrlUpdated =
-        (stats.imageUrlUpdated ?? 0) + result.imageUrlUpdated;
-      stats.galleryRebuilt =
-        (stats.galleryRebuilt ?? 0) + result.galleryRebuilt;
-      stats.imagesSkippedBySettings =
-        (stats.imagesSkippedBySettings ?? 0) + result.imagesSkippedBySettings;
-      stats.skippedLocked =
-        (stats.skippedLocked ?? 0) + result.skippedLocked;
-      stats.skippedExistingByPolicy =
-        (stats.skippedExistingByPolicy ?? 0) + result.skippedExistingByPolicy;
-    } catch (error) {
-      stats.failed += 1;
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Could not persist Varejonline product";
 
+    // Process chunks in parallel to avoid one-transaction-per-item bottleneck.
+    const settled = await Promise.allSettled(
+      batch.map((product) =>
+        withBrand(context.brandId, async (tx) =>
+          upsertProduct(tx, context, product, resolvedImportSettings),
+        ),
+      ),
+    );
+
+    settled.forEach((entry, index) => {
+      const product = batch[index];
+
+      if (entry.status === "fulfilled") {
+        const result = entry.value;
+        stats.created += result.created;
+        stats.updated += result.updated;
+        stats.skipped += result.skipped;
+        stats.imagesCreated = (stats.imagesCreated ?? 0) + result.imagesCreated;
+        stats.imageUrlUpdated =
+          (stats.imageUrlUpdated ?? 0) + result.imageUrlUpdated;
+        stats.galleryRebuilt =
+          (stats.galleryRebuilt ?? 0) + result.galleryRebuilt;
+        stats.imagesSkippedBySettings =
+          (stats.imagesSkippedBySettings ?? 0) + result.imagesSkippedBySettings;
+        stats.skippedLocked = (stats.skippedLocked ?? 0) + result.skippedLocked;
+        stats.skippedExistingByPolicy =
+          (stats.skippedExistingByPolicy ?? 0) +
+          result.skippedExistingByPolicy;
+        return;
+      }
+
+      stats.failed += 1;
       stats.errors?.push({
         externalId: product.externalId,
         externalCode: product.externalCode,
-        message,
+        message: toErrorMessage(entry.reason),
       });
-    }
+    });
 
-    persistedCount += 1;
-    if (persistedCount % pageSize === 0) {
+    persistedCount += batch.length;
+    if (persistedCount % pageSize === 0 || persistedCount === productsToPersist.length) {
       await context.onProgress?.(stats).catch(() => undefined);
     }
   }

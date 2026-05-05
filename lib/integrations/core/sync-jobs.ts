@@ -53,6 +53,7 @@ type SyncJobSetup = {
     id: string;
   };
   startedAt: Date;
+  existingRunningJobId?: string;
 };
 
 function getErrorStatusCode(error: unknown) {
@@ -151,6 +152,27 @@ async function createSyncJobSetup(input: TriggerSyncJobInput) {
 
     if (!connection) {
       return null;
+    }
+
+    const runningJob = await tx.integrationSyncJobV2.findFirst({
+      where: {
+        brandId: input.brandId,
+        integrationConnectionId: connection.id,
+        status: {
+          in: ["RUNNING", "QUEUED"],
+        },
+      },
+      orderBy: [{ createdAt: "desc" }],
+      select: { id: true },
+    });
+
+    if (runningJob) {
+      return {
+        connection,
+        job: { id: runningJob.id },
+        startedAt,
+        existingRunningJobId: runningJob.id,
+      };
     }
 
     const job = await tx.integrationSyncJobV2.create({
@@ -388,6 +410,15 @@ export async function triggerIntegrationSyncJob(input: TriggerSyncJobInput) {
   const setupResult = await createSyncJobSetup(input);
   if (!setupResult.ok) {
     return setupResult;
+  }
+
+  if (setupResult.setup.existingRunningJobId) {
+    return {
+      ok: false as const,
+      statusCode: 409,
+      message: "Ja existe uma sincronizacao em andamento para esta conexao.",
+      jobId: setupResult.setup.existingRunningJobId,
+    };
   }
 
   const validationMessage = getIntegrationImportSettingsSyncError(
