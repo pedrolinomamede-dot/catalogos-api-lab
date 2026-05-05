@@ -67,8 +67,6 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --from=builder /app/node_modules/@sparticuz ./node_modules/@sparticuz
 COPY --from=builder /app/node_modules/playwright-core ./node_modules/playwright-core
-COPY --from=builder /app/scripts ./scripts
-
 # Create uploads directory and fix permissions
 RUN mkdir -p /app/public/uploads && \
     chown -R nextjs:nodejs /app/public/uploads
@@ -77,4 +75,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node scripts/migrate-deploy.js && node server.js"]
+CMD ["node", "server.js"]
