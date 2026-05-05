@@ -76,4 +76,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node server.js"]
+CMD ["node", "server.js"]
