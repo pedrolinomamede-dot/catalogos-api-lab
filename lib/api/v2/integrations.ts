@@ -108,6 +108,20 @@ export async function syncIntegrationConnectionV2(
   return res.data;
 }
 
+export async function cancelIntegrationSyncJobV2(
+  connectionId: string,
+  jobId: string,
+): Promise<{ jobId: string; status: string }> {
+  const res = await apiPost<
+    Record<string, never>,
+    ApiEnvelope<{ jobId: string; status: string }>
+  >(
+    `/api/v2/integrations/connections/${connectionId}/sync/${jobId}/cancel`,
+    {},
+  );
+  return res.data;
+}
+
 export async function listIntegrationConnectionJobsV2(
   id: string,
   params?: { page?: number; pageSize?: number },

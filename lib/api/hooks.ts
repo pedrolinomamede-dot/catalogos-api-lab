@@ -89,6 +89,7 @@ import {
   updateCatalogV2,
 } from "@/lib/api/v2/catalogs";
 import {
+  cancelIntegrationSyncJobV2,
   createIntegrationConnectionV2,
   disconnectIntegrationConnectionV2,
   getIntegrationConnectionV2,
@@ -937,6 +938,25 @@ export function useSyncIntegrationConnectionV2() {
         queryClient.invalidateQueries({ queryKey: ["v2", "subcategories"] });
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.v2.dashboard.summary });
+    },
+  });
+}
+
+export function useCancelIntegrationSyncJobV2() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      connectionId,
+      jobId,
+    }: {
+      connectionId: string;
+      jobId: string;
+    }) => cancelIntegrationSyncJobV2(connectionId, jobId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.v2.integrations.jobs(variables.connectionId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.v2.integrations.connections });
     },
   });
 }

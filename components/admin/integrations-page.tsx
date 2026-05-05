@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { getErrorMessage } from "@/lib/api/error";
 import {
+  useCancelIntegrationSyncJobV2,
   useCreateIntegrationConnectionV2,
   useDisconnectIntegrationConnectionV2,
   useIntegrationConnectionJobs,
@@ -121,10 +122,26 @@ function IntegrationJobsPreview({ connectionId }: { connectionId: string }) {
     },
   );
 
+  const cancelMutation = useCancelIntegrationSyncJobV2();
   const [now, setNow] = useState(() => Date.now());
 
   const jobs = Array.isArray(data) ? data : data?.data ?? [];
   const hasRunningJob = jobs.some((job) => job.status === "RUNNING");
+
+  async function handleCancel(jobId: string) {
+    try {
+      const result = await cancelMutation.mutateAsync({ connectionId, jobId });
+      toastSuccess(
+        result.status === "ALREADY_FINISHED"
+          ? "Job ja havia finalizado"
+          : "Cancelamento solicitado. A sincronizacao para no proximo lote.",
+      );
+      refetch();
+    } catch (error) {
+      const message = getErrorMessage(error);
+      toastError(message.title, message.description ?? "Tente novamente.");
+    }
+  }
 
   useEffect(() => {
     if (!hasRunningJob) {
@@ -200,6 +217,16 @@ function IntegrationJobsPreview({ connectionId }: { connectionId: string }) {
                 <Badge variant="outline" className="text-yellow-600 border-yellow-400">
                   Sem atualiz. ha {formatDuration(lastUpdateMs ?? 0)}
                 </Badge>
+              )}
+              {job.status === "RUNNING" && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleCancel(job.id)}
+                  disabled={cancelMutation.isPending}
+                >
+                  Parar
+                </Button>
               )}
               <span className="text-xs text-muted-foreground ml-auto">
                 {formatDate(job.startedAt ?? job.createdAt)}

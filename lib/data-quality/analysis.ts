@@ -112,12 +112,27 @@ function removeDiacritics(value: string) {
 }
 
 function singularizeWord(word: string) {
-  if (
-    word.length > 4 &&
-    word.endsWith("s") &&
-    !word.endsWith("ss") &&
-    !word.endsWith("is")
-  ) {
+  if (word.length <= 3 || !word.endsWith("s") || word.endsWith("ss")) {
+    return word;
+  }
+  // Irregular Portuguese plurals (after diacritics removed):
+  // botoes -> botao, paes -> pao, maos -> mao
+  if (word.endsWith("oes") || word.endsWith("aes")) {
+    return word.slice(0, -3) + "ao";
+  }
+  // animais -> animal, paineis -> painel, lencois -> lencol, paul -> pauis
+  if (word.length > 4) {
+    if (word.endsWith("ais")) return word.slice(0, -3) + "al";
+    if (word.endsWith("eis")) return word.slice(0, -3) + "el";
+    if (word.endsWith("ois")) return word.slice(0, -3) + "ol";
+    if (word.endsWith("uis")) return word.slice(0, -3) + "ul";
+  }
+  // homens -> homem, jovens -> jovem
+  if (word.length > 4 && word.endsWith("ns")) {
+    return word.slice(0, -2) + "m";
+  }
+  // generic plural: drop trailing s (espelhos -> espelho)
+  if (!word.endsWith("is")) {
     return word.slice(0, -1);
   }
   return word;

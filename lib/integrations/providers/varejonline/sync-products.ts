@@ -987,6 +987,9 @@ export async function syncVarejonlineProducts(
   const normalizedProducts: NormalizedExternalProduct[] = [];
 
   for (let start = 0; ; start += pageSize) {
+    if (await context.isCancelled?.()) {
+      break;
+    }
     const remaining = maxItems === null ? null : maxItems - start;
     if (remaining !== null && remaining <= 0) {
       break;
@@ -1048,6 +1051,9 @@ export async function syncVarejonlineProducts(
 
   let persistedCount = 0;
   for (const product of productsToPersist) {
+    if (persistedCount % pageSize === 0 && (await context.isCancelled?.())) {
+      break;
+    }
     try {
       const result = await withBrand(context.brandId, async (tx) =>
         upsertProduct(tx, context, product, resolvedImportSettings),

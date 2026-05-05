@@ -22,6 +22,21 @@ async function updateJobProgress(jobId: string, stats: IntegrationSyncStats) {
   }
 }
 
+async function isJobCancelled(jobId: string): Promise<boolean> {
+  try {
+    const job = await prisma.integrationSyncJobV2.findUnique({
+      where: { id: jobId },
+      select: { status: true },
+    });
+    if (!job) return false;
+    return job.status !== "RUNNING";
+  } catch {
+    return false;
+  }
+}
+
+export const SYNC_CANCELLED_MESSAGE = "Sincronização cancelada pelo usuário";
+
 type Tx = Parameters<Parameters<typeof withBrand>[1]>[0];
 
 type TriggerSyncJobInput = {
@@ -48,6 +63,45 @@ function getErrorStatusCode(error: unknown) {
     }
   }
   return 500;
+}
+
+export async function cancelIntegrationSyncJob(
+  tx: Tx,
+  input: { brandId: string; connectionId: string; jobId: string },
+): Promise<
+  | { ok: true; status: "CANCELLED" | "ALREADY_FINISHED" }
+  | { ok: false; statusCode: number; message: string }
+> {
+  const job = await tx.integrationSyncJobV2.findFirst({
+    where: {
+      id: input.jobId,
+      brandId: input.brandId,
+      integrationConnectionId: input.connectionId,
+    },
+    select: { id: true, status: true },
+  });
+
+  if (!job) {
+    return { ok: false, statusCode: 404, message: "Sync job not found" };
+  }
+
+  if (job.status !== "RUNNING" && job.status !== "QUEUED") {
+    return { ok: true, status: "ALREADY_FINISHED" };
+  }
+
+  await tx.integrationSyncJobV2.update({
+    where: { id: job.id },
+    data: {
+      status: "FAILED",
+      finishedAt: new Date(),
+      errorJson: {
+        message: SYNC_CANCELLED_MESSAGE,
+        cancelled: true,
+      },
+    },
+  });
+
+  return { ok: true, status: "CANCELLED" };
 }
 
 export async function listIntegrationJobs(
@@ -193,12 +247,41 @@ async function runIntegrationSyncJob(
       connection,
       resource: input.resource,
       mode: input.mode,
+      jobId: job.id,
       onProgress: (currentStats) => updateJobProgress(job.id, currentStats),
+      isCancelled: () => isJobCancelled(job.id),
     });
     const finishedAt = new Date();
     const hasSuccessfulItems = stats.created + stats.updated + stats.skipped > 0;
     const jobStatus =
       stats.failed > 0 && hasSuccessfulItems ? "PARTIAL" : "SUCCESS";
+
+    const wasCancelled = await isJobCancelled(job.id);
+    if (wasCancelled) {
+      await withBrand(input.brandId, async (tx) => {
+        await tx.integrationSyncJobV2.update({
+          where: { id: job.id },
+          data: {
+            finishedAt,
+            statsJson: stats,
+          },
+        });
+        await tx.integrationConnectionV2.update({
+          where: { id: connection.id },
+          data: {
+            status: connection.status,
+            lastSyncAt: startedAt,
+            lastSyncError: SYNC_CANCELLED_MESSAGE,
+          },
+        });
+      });
+      return {
+        ok: false as const,
+        statusCode: 499,
+        message: SYNC_CANCELLED_MESSAGE,
+        jobId: job.id,
+      };
+    }
 
     await withBrand(input.brandId, async (tx) => {
       await tx.integrationSyncJobV2.update({

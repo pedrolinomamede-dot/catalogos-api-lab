@@ -141,7 +141,9 @@ export type IntegrationSyncContext = {
   connection: IntegrationSyncConnectionContext;
   resource: IntegrationSyncResource;
   mode: IntegrationSyncJobMode;
+  jobId?: string;
   onProgress?: (stats: IntegrationSyncStats) => Promise<void>;
+  isCancelled?: () => Promise<boolean>;
 };
 
 export type IntegrationProviderAdapter = {
